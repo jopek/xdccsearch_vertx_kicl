@@ -2,6 +2,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import irc.Bot;
 
 import static io.vertx.core.http.HttpMethod.GET;
 

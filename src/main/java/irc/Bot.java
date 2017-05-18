@@ -2,9 +2,13 @@ package irc;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
@@ -15,36 +19,42 @@ import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static io.vertx.core.http.HttpMethod.GET;
-
 public class Bot extends AbstractVerticle {
     public static final String ADDRESS = "bot";
     private EventBus eventBus;
 
     @Override
     public void start() {
-
         eventBus = vertx.eventBus();
-
-        eventBus.consumer("bot.start", handler -> {
-            JsonObject body = (JsonObject) handler.body();
-            String nick = body.getString("nick");
-
-            startBot(nick);
-        });
+        eventBus.consumer("bot.start", this::parseBotStartMessage);
 
         Router router = Router.router(vertx);
-        router.route(GET, "/").handler(this::getRoot);
+
+        //WARNING: Setting handler for a route more than once!
+        router.post("/xfers").handler(BodyHandler.create()).handler(this::parseBotStartMessageByHttp);
+
         vertx.createHttpServer()
                 .requestHandler(router::accept)
                 .listen(8080);
-
     }
 
-    private void getRoot(RoutingContext routingContext) {
-        routingContext.response()
-                .end("boom BOT " + deploymentID());
+    private void parseBotStartMessageByHttp(RoutingContext routingContext) {
+        HttpServerResponse response = routingContext.response();
+        HttpServerRequest request = routingContext.request();
+        int statusCode = response.getStatusCode();
+        System.out.println("STATUS CODE: " + statusCode);
 
+        String s = routingContext.getBodyAsJson().encodePrettily();
+        System.out.println(s);
+
+        response.end();
+    }
+
+    private void parseBotStartMessage(Message<Object> objectMessage) {
+        JsonObject body = (JsonObject) objectMessage.body();
+        String nick = body.getString("nick");
+
+        startBot(nick);
     }
 
     private void startBot(String nick) {

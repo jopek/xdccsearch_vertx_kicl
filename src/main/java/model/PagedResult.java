@@ -1,10 +1,12 @@
-package search;
+package model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 
 import java.util.Collections;
 import java.util.List;
 
+@Getter
 public class PagedResult<T> {
     // Count of all available results
     @JsonProperty("c")

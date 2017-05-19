@@ -1,14 +1,17 @@
 package irc;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import model.PackInfo;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
@@ -29,9 +32,10 @@ public class Bot extends AbstractVerticle {
         eventBus.consumer("bot.start", this::parseBotStartMessage);
 
         Router router = Router.router(vertx);
+        router.route().handler(BodyHandler.create());
 
-        //WARNING: Setting handler for a route more than once!
-        router.post("/xfers").handler(BodyHandler.create()).handler(this::parseBotStartMessageByHttp);
+        router.post("/xfers")
+                .handler(this::parseBotStartMessageByHttp);
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)
@@ -44,8 +48,10 @@ public class Bot extends AbstractVerticle {
         int statusCode = response.getStatusCode();
         System.out.println("STATUS CODE: " + statusCode);
 
-        String s = routingContext.getBodyAsJson().encodePrettily();
-        System.out.println(s);
+        Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        PackInfo packInfo = Json.decodeValue(routingContext.getBodyAsString(), PackInfo.class);
+
+        System.out.println(packInfo);
 
         response.end();
     }

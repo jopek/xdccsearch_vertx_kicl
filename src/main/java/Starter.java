@@ -5,8 +5,12 @@ import search.Search;
 public class Starter {
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
-        vertx.deployVerticle(Bot.class.getName());
-        vertx.deployVerticle(Search.class.getName());
-        vertx.deployVerticle(EventLogger.class.getName());
+
+        String name;
+        vertx.deployVerticle(Bot.class.getName(), event -> System.out.println(Bot.class.getName() + " deployed"));
+
+        vertx.deployVerticle(Search.class.getName(), event -> System.out.println(Search.class.getName() + " deployed"));
+
+        vertx.deployVerticle(EventLogger.class.getName(), event -> System.out.println(EventLogger.class.getName() + " deployed"));
     }
 }

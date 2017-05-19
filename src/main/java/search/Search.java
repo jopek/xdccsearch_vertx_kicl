@@ -53,9 +53,6 @@ public class Search extends AbstractVerticle {
         if (ar.succeeded()) {
             HttpResponse<JsonObject> searchResponse = ar.result();
             System.out.println("Got HTTP searchResponse body");
-
-            vertx.eventBus().publish(RESULTS, searchResponse.body());
-
             routingResponse.end(searchResponse.body().encodePrettily());
         } else {
             ar.cause().printStackTrace();

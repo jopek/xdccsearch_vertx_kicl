@@ -2,11 +2,10 @@ package com.lxbluem;
 
 import com.lxbluem.model.RouterRegistryMessage;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
-public class RouteVerticle extends AbstractVerticle {
+public abstract class AbstractRouteVerticle extends AbstractVerticle {
 
   protected void registerRoute(HttpMethod method, String route) {
     RouterRegistryMessage routerRegistryMessage = RouterRegistryMessage.builder()

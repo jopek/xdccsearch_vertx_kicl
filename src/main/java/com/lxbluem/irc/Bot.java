@@ -1,6 +1,6 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.RouteVerticle;
+import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.PackInfo;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
@@ -20,7 +20,7 @@ import java.util.Date;
 
 import static io.vertx.core.http.HttpMethod.POST;
 
-public class Bot extends RouteVerticle {
+public class Bot extends AbstractRouteVerticle {
   public static final String ADDRESS = "bot";
   private EventBus eventBus;
 

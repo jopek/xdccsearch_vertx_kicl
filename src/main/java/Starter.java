@@ -1,5 +1,6 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
+import com.lxbluem.RouterVerticle;
 import com.lxbluem.irc.Bot;
 import com.lxbluem.search.Search;
 import io.vertx.core.AsyncResult;
@@ -18,9 +19,9 @@ public class Starter {
       System.out.println(RouterVerticle.class.getName() + " deployed " + event.result());
       deploy(vertx, Search.class.getName());
       deploy(vertx, Bot.class.getName());
-      deploy(vertx, ServiceVerticleA.class.getName());
-      deploy(vertx, ServiceVerticleA.class.getName());
-      deploy(vertx, ServiceVerticleB.class.getName());
+//      deploy(vertx, ServiceVerticleA.class.getName());
+//      deploy(vertx, ServiceVerticleA.class.getName());
+//      deploy(vertx, ServiceVerticleB.class.getName());
     });
   }
 

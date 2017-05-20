@@ -1,3 +1,5 @@
+package com.lxbluem;
+
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;

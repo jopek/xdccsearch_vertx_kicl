@@ -1,6 +1,6 @@
 package com.lxbluem.search;
 
-import com.lxbluem.RouteVerticle;
+import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 import static io.vertx.core.http.HttpMethod.GET;
 
-public class Search extends RouteVerticle {
+public class Search extends AbstractRouteVerticle {
 
   @Override
   public void start() {

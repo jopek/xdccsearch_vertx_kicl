@@ -1,5 +1,5 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" level="INFO">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" level="DEBUG">
         <encoder>
             <pattern>[%-5level] %logger{15} - %msg%n</pattern>
         </encoder>
@@ -17,6 +17,6 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <root level="INFO">
+    <root level="DEBUG">
     </root>
 </configuration>

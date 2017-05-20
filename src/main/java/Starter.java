@@ -1,16 +1,35 @@
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.lxbluem.EventLogger;
+import com.lxbluem.irc.Bot;
+import com.lxbluem.search.Search;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import irc.Bot;
-import search.Search;
+import io.vertx.core.json.Json;
 
 public class Starter {
-    public static void main(String[] args) {
-        Vertx vertx = Vertx.vertx();
+  public static void main(String[] args) throws InterruptedException {
 
-        String name;
-        vertx.deployVerticle(Bot.class.getName(), event -> System.out.println(Bot.class.getName() + " deployed"));
+    Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        vertx.deployVerticle(Search.class.getName(), event -> System.out.println(Search.class.getName() + " deployed"));
+    Vertx vertx = Vertx.vertx();
+    deploy(vertx, EventLogger.class.getName());
+    deploy(vertx, RouterVerticle.class.getName(), event -> {
+      System.out.println(RouterVerticle.class.getName() + " deployed " + event.result());
+      deploy(vertx, Search.class.getName());
+      deploy(vertx, Bot.class.getName());
+      deploy(vertx, ServiceVerticleA.class.getName());
+      deploy(vertx, ServiceVerticleA.class.getName());
+      deploy(vertx, ServiceVerticleB.class.getName());
+    });
+  }
 
-        vertx.deployVerticle(EventLogger.class.getName(), event -> System.out.println(EventLogger.class.getName() + " deployed"));
-    }
+  private static void deploy(Vertx vertx, String verticleClassname) {
+    vertx.deployVerticle(verticleClassname, event ->
+        System.out.println(verticleClassname + " deployed " + event.result()));
+  }
+
+  private static void deploy(Vertx vertx, String verticleClassname, Handler<AsyncResult<String>> asyncResultHandler) {
+    vertx.deployVerticle(verticleClassname, asyncResultHandler);
+  }
 }

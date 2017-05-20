@@ -7,9 +7,9 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import java.util.HashMap;
@@ -36,22 +36,11 @@ public class RouterVerticle extends AbstractVerticle {
           }
         });
 
-    vertx.eventBus()
-        .consumer("route", message -> {
-          setupRouter(router, message);
-        });
-
-//    vertx.eventBus()
-//        .consumer("unroute", message -> {
-//          unroute(router, message);
-//        });
-
+    vertx.eventBus().consumer("route", message -> setupRouter(router, message));
   }
 
   private void unroute(Router router, Message<Object> message) {
-    System.out.println(">>> " + message.body());
-    JsonObject newRouteMesage = (JsonObject) message.body();
-    String target = newRouteMesage.getString("target");
+    String target = ((JsonObject) message.body()).getString("target");
     verticleCounter.get(target).decrementAndGet();
     publishVerticleRouteStats();
   }
@@ -60,7 +49,7 @@ public class RouterVerticle extends AbstractVerticle {
     vertx.eventBus().publish("router.stats", new JsonObject().put("verticles", verticleCounter));
   }
 
-  void setupRouter(Router router, Message<Object> newRouteRequestMessage) {
+  private void setupRouter(Router router, Message<Object> newRouteRequestMessage) {
     JsonObject messageBody = (JsonObject) newRouteRequestMessage.body();
     String path = messageBody.getString("path");
     String target = messageBody.getString("target");
@@ -89,7 +78,7 @@ public class RouterVerticle extends AbstractVerticle {
       vertx.eventBus()
           .send(target, JsonObject.mapFrom(serializedRequest), replyMessage -> {
             if (replyMessage.succeeded())
-              sendHttpReply(rc, replyMessage);
+              sendHttpResponse(rc.response(), replyMessage);
             else
               rc.response()
                   .setStatusCode(400)
@@ -100,12 +89,11 @@ public class RouterVerticle extends AbstractVerticle {
 
   }
 
-  private void sendHttpReply(RoutingContext rc, AsyncResult<Message<Object>> replyMessage) {
-    Message<Object> result = replyMessage.result();
-    JsonObject jsonObject = (JsonObject) result.body();
+  private void sendHttpResponse(HttpServerResponse response, AsyncResult<Message<Object>> replyMessage) {
+    JsonObject jsonObject = (JsonObject) replyMessage.result().body();
     Buffer buffer = Buffer.buffer(jsonObject.encode());
 
-    rc.response().end(buffer);
+    response.end(buffer);
   }
 
 }

@@ -4,7 +4,6 @@ import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -15,21 +14,12 @@ import java.util.Map;
 
 import static io.vertx.core.http.HttpMethod.GET;
 
-public class Search extends AbstractRouteVerticle {
+public class SearchVerticle extends AbstractRouteVerticle {
 
   @Override
   public void start() {
-    registerRoute(GET, "/search");
 
-    vertx.eventBus().consumer(getClass().getSimpleName(), message -> {
-      String messageBody = message.body().toString();
-      SerializedRequest request = Json.decodeValue(messageBody, SerializedRequest.class);
-
-      Future<JsonObject> future = Future.future();
-      future.compose(message::reply, Future.future().setHandler(e -> message.fail(500, e.cause().getMessage())));
-
-      handleSearchRequest(request, future);
-    });
+    registerRouteWithHandler(getClass().getSimpleName(), GET, "/search", this::handleSearchRequest);
   }
 
 

@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class PackInfo {
+public class Pack {
     @JsonProperty(value = "pid")
     private long packId;
 

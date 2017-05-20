@@ -10,8 +10,10 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
+import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelMessageEvent;
+import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 
@@ -19,8 +21,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static io.vertx.core.http.HttpMethod.POST;
+import static java.util.stream.Collectors.toSet;
 
 public class BotVerticle extends AbstractRouteVerticle {
   private static final String ADDRESS = "bot";
@@ -34,7 +38,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     eventBus.consumer("bot.start", this::parseBotStartMessage);
 
-    registerRouteWithHandler(getClass().getSimpleName(), "POST", "/xfers", this::readPackInfo);
+    registerRouteWithHandler(getClass().getSimpleName(), POST, "/xfers", this::readPackInfo);
   }
 
   private void parseBotStartMessage(Message<Object> objectMessage) {
@@ -54,9 +58,9 @@ public class BotVerticle extends AbstractRouteVerticle {
         .serverHost(pack.getServerHostName())
         .serverPort(pack.getServerPort())
         .secure(false)
-        .listenInput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[I] " + line))
-        .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
-        .listenException(Throwable::printStackTrace)
+//        .listenInput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[I] " + line))
+//        .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
+//        .listenException(Throwable::printStackTrace)
         .build();
 
     client.getEventManager().registerEventListener(this);
@@ -68,8 +72,6 @@ public class BotVerticle extends AbstractRouteVerticle {
 
   @Handler
   public void onJoin(ChannelJoinEvent event) {
-    System.out.println(event);
-
     StringBuilder buf = new StringBuilder();
     event.getAffectedChannel().ifPresent(buf::append);
     JsonObject message = new JsonObject()
@@ -78,7 +80,31 @@ public class BotVerticle extends AbstractRouteVerticle {
     eventBus.send(ADDRESS, message);
 
     Pack pack = packsByBot.get(event.getClient());
-    event.getClient().sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+    event.getAffectedChannel().ifPresent(channel -> {
+      if (channel.getName().equalsIgnoreCase(pack.getChannelName()))
+        event.getClient().sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+    });
+  }
+
+
+  @Handler
+  public void onChannelTopic(ChannelTopicEvent event) {
+    Set<String> channels = event.getClient()
+        .getChannels()
+        .stream()
+        .map(Channel::getName)
+        .collect(toSet());
+
+    TopicExtractor topicExtractor = new TopicExtractor();
+    event.getTopic()
+        .getValue()
+        .ifPresent(topic -> {
+          if (topicExtractor.newChannelsMentioned(topic, channels)) {
+            String[] channelsArray = new String[channels.size()];
+
+            event.getClient().addChannel(channels.toArray(channelsArray));
+          }
+        });
   }
 
   @Handler

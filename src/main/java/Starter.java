@@ -17,12 +17,18 @@ public class Starter {
     deploy(vertx, EventLogger.class.getName());
     deploy(vertx, RouterVerticle.class.getName(), event -> {
       System.out.println(RouterVerticle.class.getName() + " deployed " + event.result());
+
       deploy(vertx, SearchVerticle.class.getName());
       deploy(vertx, BotVerticle.class.getName());
 //      deploy(vertx, ServiceVerticleA.class.getName());
 //      deploy(vertx, ServiceVerticleA.class.getName());
 //      deploy(vertx, ServiceVerticleB.class.getName());
     });
+//    deploy(vertx, Receiver.class.getName());
+//    deploy(vertx, Receiver.class.getName());
+//    deploy(vertx, Sender.class.getName());
+//    deploy(vertx, Sender.class.getName());
+//    deploy(vertx, Sender.class.getName());
   }
 
   private static void deploy(Vertx vertx, String verticleClassname) {

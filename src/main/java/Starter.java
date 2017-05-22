@@ -2,6 +2,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
 import com.lxbluem.irc.BotVerticle;
+import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.search.SearchVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -20,6 +21,7 @@ public class Starter {
 
       deploy(vertx, SearchVerticle.class.getName());
       deploy(vertx, BotVerticle.class.getName());
+      deploy(vertx, DccReceiverVerticle.class.getName());
 //      deploy(vertx, ServiceVerticleA.class.getName());
 //      deploy(vertx, ServiceVerticleA.class.getName());
 //      deploy(vertx, ServiceVerticleB.class.getName());

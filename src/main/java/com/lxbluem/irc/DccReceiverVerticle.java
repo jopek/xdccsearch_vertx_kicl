@@ -33,7 +33,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
 //        fileOutput.seek(startPosition);
         String host = transformToIpString(message.getLong("ip"));
 
-        int buffersize = 1 << 18;
+        int buffersize = 1 << 15;
 
         NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(buffersize);
         NetClient netClient = vertx.createNetClient(netClientOptions);

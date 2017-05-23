@@ -28,10 +28,22 @@ public class DccReceiverVerticle extends AbstractVerticle {
     }
 
     private void transferFile(JsonObject message) throws IOException {
+        Boolean passive = message.getBoolean("passive");
+        if (passive) {
+            transferFilePassive(message);
+        } else {
+            transferFileActive(message);
+        }
+    }
 
-//        RandomAccessFile fileOutput = new RandomAccessFile(file.getCanonicalPath(), "rw");
+    private void transferFilePassive(JsonObject message) {
+
+    }
+
+    private void transferFileActive(JsonObject message) {
+        //        RandomAccessFile fileOutput = new RandomAccessFile(file.getCanonicalPath(), "rw");
 //        fileOutput.seek(startPosition);
-        String host = transformToIpString(message.getLong("ip"));
+        String host = message.getString("ip");
 
         int buffersize = 1 << 15;
 
@@ -86,13 +98,4 @@ public class DccReceiverVerticle extends AbstractVerticle {
             }
         });
     }
-
-    private String transformToIpString(long ip) {
-        StringJoiner joiner = new StringJoiner(".");
-        for (int i = 3; i >= 0; i--) {
-            joiner.add(String.valueOf((ip >> 8 * (i)) & 0xff));
-        }
-        return joiner.toString();
-    }
-
 }

@@ -157,15 +157,16 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         if (matcher.find()) {
             String fname = matcher.group(1);
-            long ip = Long.parseLong(matcher.group(2));
+            long parsedIp = Long.parseLong(matcher.group(2));
+            String ip = transformToIpString(parsedIp);
             int port = Integer.parseInt(matcher.group(3));
             long size = Long.parseLong(matcher.group(4));
             boolean passive = false;
             int token = 0;
 
             String tokenMatch = matcher.group(5);
-            if (matcher.groupCount() > 4 && tokenMatch != null) {
-                token = Integer.parseInt(tokenMatch.trim());
+            if (port == 0) {
+                token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
                 passive = true;
             }
 
@@ -180,10 +181,19 @@ public class BotVerticle extends AbstractRouteVerticle {
                     .put("passive", passive)
                     .put("token", token)
                     .put("pack", JsonObject.mapFrom(pack))
-                    .put("bot", event.getActor().getNick())
+                    .put("bot", event.getClient().getNick())
             );
         }
     }
+
+    private String transformToIpString(long ip) {
+        StringJoiner joiner = new StringJoiner(".");
+        for (int i = 3; i >= 0; i--) {
+            joiner.add(String.valueOf((ip >> 8 * (i)) & 0xff));
+        }
+        return joiner.toString();
+    }
+
 
     @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {

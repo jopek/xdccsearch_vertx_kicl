@@ -150,52 +150,6 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     @Handler
-    public void onPrivateCTCPQuery(PrivateCTCPQueryEvent event) {
-        String message = event.getMessage();
-        Pattern pattern = Pattern.compile("DCC SEND ([\\w.-]+) (\\d+) (\\d+) (\\d+)( \\d+)?");
-        Matcher matcher = pattern.matcher(message);
-
-        if (matcher.find()) {
-            String fname = matcher.group(1);
-            long parsedIp = Long.parseLong(matcher.group(2));
-            String ip = transformToIpString(parsedIp);
-            int port = Integer.parseInt(matcher.group(3));
-            long size = Long.parseLong(matcher.group(4));
-            boolean passive = false;
-            int token = 0;
-
-            String tokenMatch = matcher.group(5);
-            if (port == 0) {
-                token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
-                passive = true;
-            }
-
-            Pack pack = packsByBot.get(event.getClient());
-            eventBus.send("bot.dcc.init", new JsonObject()
-                    .put("event", event.getClass().getSimpleName())
-                    .put("message", message)
-                    .put("ip", ip)
-                    .put("port", port)
-                    .put("size", size)
-                    .put("filename", fname)
-                    .put("passive", passive)
-                    .put("token", token)
-                    .put("pack", JsonObject.mapFrom(pack))
-                    .put("bot", event.getClient().getNick())
-            );
-        }
-    }
-
-    private String transformToIpString(long ip) {
-        StringJoiner joiner = new StringJoiner(".");
-        for (int i = 3; i >= 0; i--) {
-            joiner.add(String.valueOf((ip >> 8 * (i)) & 0xff));
-        }
-        return joiner.toString();
-    }
-
-
-    @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {
         eventBus.publish("bot.notice", new JsonObject()
                 .put("message", event.getMessage()));
@@ -207,6 +161,60 @@ public class BotVerticle extends AbstractRouteVerticle {
         eventBus.publish("bot", new JsonObject()
                 .put("event", event.getClass().getSimpleName())
                 .put("message", event.getAttemptedNick()));
+    }
+
+    @Handler
+    public void onPrivateCTCPQuery(PrivateCTCPQueryEvent event) {
+        String message = event.getMessage();
+        if (!message.startsWith("DCC ")) {
+            System.out.println("message is not a DCC command");
+            return;
+        }
+
+        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) ([\\w.-]+) (\\d+) (\\d+) (\\d+)( \\d+)?");
+        Matcher matcher = pattern.matcher(message);
+
+        if (!matcher.find()) {
+            System.out.println("message is not a DCC SEND nor ACCEPT command");
+            return;
+        }
+
+        String subType = matcher.group(1);
+        String fname = matcher.group(2);
+        long parsedIp = Long.parseLong(matcher.group(3));
+        String ip = transformToIpString(parsedIp);
+        int port = Integer.parseInt(matcher.group(4));
+        long size = Long.parseLong(matcher.group(5));
+        boolean passive = false;
+        int token = 0;
+
+        String tokenMatch = matcher.group(6);
+        if (port == 0) {
+            token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
+            passive = true;
+        }
+
+        Pack pack = packsByBot.get(event.getClient());
+        eventBus.send("bot.dcc.init", new JsonObject()
+                .put("event", event.getClass().getSimpleName())
+                .put("message", message)
+                .put("ip", ip)
+                .put("port", port)
+                .put("size", size)
+                .put("filename", fname)
+                .put("passive", passive)
+                .put("token", token)
+                .put("pack", JsonObject.mapFrom(pack))
+                .put("bot", event.getClient().getNick())
+        );
+    }
+
+    private String transformToIpString(long ip) {
+        StringJoiner joiner = new StringJoiner(".");
+        for (int i = 3; i >= 0; i--) {
+            joiner.add(String.valueOf((ip >> 8 * (i)) & 0xff));
+        }
+        return joiner.toString();
     }
 
 

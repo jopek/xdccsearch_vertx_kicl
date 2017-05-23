@@ -3,6 +3,7 @@ package com.lxbluem.irc;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
+import io.netty.channel.local.LocalAddress;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -24,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.vertx.core.http.HttpMethod.POST;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
 public class BotVerticle extends AbstractRouteVerticle {
@@ -185,27 +187,48 @@ public class BotVerticle extends AbstractRouteVerticle {
         String ip = transformToIpString(parsedIp);
         int port = Integer.parseInt(matcher.group(4));
         long size = Long.parseLong(matcher.group(5));
-        boolean passive = false;
+
+        String activePassiveAddress;
         int token = 0;
 
         String tokenMatch = matcher.group(6);
         if (port == 0) {
             token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
-            passive = true;
+            activePassiveAddress = "passive";
+        } else {
+            activePassiveAddress = "active";
         }
+        final int tokenFinal = token;
 
         Pack pack = packsByBot.get(event.getClient());
-        eventBus.send("bot.dcc.init", new JsonObject()
-                .put("event", event.getClass().getSimpleName())
-                .put("message", message)
-                .put("ip", ip)
-                .put("port", port)
-                .put("size", size)
-                .put("filename", fname)
-                .put("passive", passive)
-                .put("token", token)
-                .put("pack", JsonObject.mapFrom(pack))
-                .put("bot", event.getClient().getNick())
+        eventBus.send("bot.dcc.init." + activePassiveAddress,
+                new JsonObject()
+                        .put("event", event.getClass().getSimpleName())
+                        .put("message", message)
+                        .put("ip", ip)
+                        .put("port", port)
+                        .put("size", size)
+                        .put("filename", fname)
+                        .put("token", tokenFinal)
+                        .put("pack", JsonObject.mapFrom(pack))
+                        .put("bot", event.getClient().getNick()),
+                verticleReplyHandler -> {
+                    if (verticleReplyHandler.succeeded()) {
+                        Message<Object> verticleReplyMessage = verticleReplyHandler.result();
+                        JsonObject verticleReplyBody = (JsonObject) verticleReplyMessage.body();
+//                        verticleReplyMessage
+                        // << DCC SEND <filename> <peer-ip> <port> <filesize> <token>
+
+                        String botReply = format("DCC SEND %s %s %d %d %d",
+                                fname,
+                                "192.168.99.1",
+                                verticleReplyBody.getInteger("port"),
+                                size,
+                                tokenFinal
+                        );
+                        event.setReply(botReply);
+                    }
+                }
         );
     }
 

@@ -8,36 +8,17 @@ import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 
-import java.io.IOException;
-import java.util.StringJoiner;
-
-public class DccReceiverVerticle extends AbstractVerticle {
+public class ActiveDccReceiverVerticle extends AbstractVerticle {
 
     private EventBus eventBus;
 
     @Override
     public void start() throws Exception {
         eventBus = vertx.eventBus();
-        eventBus.consumer("bot.dcc.init", event -> {
-            try {
-                transferFile((JsonObject) event.body());
-            } catch (IOException e) {
-                eventBus.publish("bot", new JsonObject().put("error", e.getMessage()));
-            }
-        });
-    }
-
-    private void transferFile(JsonObject message) throws IOException {
-        Boolean passive = message.getBoolean("passive");
-        if (passive) {
-            transferFilePassive(message);
-        } else {
+        eventBus.consumer("bot.dcc.init.active", event -> {
+            JsonObject message = (JsonObject) event.body();
             transferFileActive(message);
-        }
-    }
-
-    private void transferFilePassive(JsonObject message) {
-
+        });
     }
 
     private void transferFileActive(JsonObject message) {

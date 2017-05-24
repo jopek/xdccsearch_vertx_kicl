@@ -7,7 +7,6 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
-import io.vertx.core.net.SocketAddress;
 
 public class PassiveDccReceiverVerticle extends AbstractVerticle {
 
@@ -24,7 +23,6 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
     }
 
     private void transferFile(JsonObject message, Handler<JsonObject> replyHandler) {
-        System.out.println("PASSIVE DCC TRANSFER");
         int buffersize = 1 << 15;
         JsonObject pack = (JsonObject) message.getValue("pack");
 

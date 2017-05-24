@@ -3,7 +3,6 @@ package com.lxbluem.irc;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
-import io.netty.channel.local.LocalAddress;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -90,13 +89,12 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .user("user_" + nick)
                 .realName("realname_" + nick)
                 .secure(false)
-                .listenInput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[I] " + line))
-                .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
+//                .listenInput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[I] " + line))
+//                .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
 //                .listenException(Throwable::printStackTrace)
                 .build();
 
         client.getEventManager().registerEventListener(this);
-
         client.addChannel(pack.getChannelName());
 
         packsByBot.putIfAbsent(client, pack);
@@ -114,24 +112,22 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     @Handler
     public void onJoin(ChannelJoinEvent event) {
-        StringBuilder buf = new StringBuilder();
-        event.getAffectedChannel().ifPresent(buf::append);
-        JsonObject message = new JsonObject()
-                .put("event", event.getClass().getSimpleName())
-                .put("channel", buf.toString());
-        eventBus.publish("bot", message);
+        event.getAffectedChannel().ifPresent(channel ->
+                eventBus.publish("bot", new JsonObject()
+                        .put("event", event.getClass().getSimpleName())
+                        .put("channel", channel.getName()))
+        );
 
-        Pack pack = packsByBot.get(event.getClient());
+        Client ircClient = event.getClient();
+        Pack pack = packsByBot.get(ircClient);
         event.getAffectedChannel().ifPresent(channel -> {
             if (channel.getName().equalsIgnoreCase(pack.getChannelName()))
-                event.getClient().sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+                ircClient.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
         });
     }
 
-    @Handler
+//    @Handler
     public void onChannelTopic(ChannelTopicEvent event) {
-        if (true)
-            return;
 
         Set<String> channels = event.getClient()
                 .getChannels()
@@ -139,37 +135,29 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .map(Channel::getName)
                 .collect(toSet());
 
-//    TopicExtractor topicExtractor = new TopicExtractor();
-//    event.getTopic()
-//        .getValue()
-//        .ifPresent(topic -> {
-//          if (topicExtractor.newChannelsMentioned(topic, channels)) {
-//            String[] channelsArray = new String[channels.size()];
-//
-//            event.getClient().addChannel(channels.toArray(channelsArray));
-//          }
-//        });
     }
 
     @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {
+        Pack pack = packsByBot.get(event.getClient());
         eventBus.publish("bot.notice", new JsonObject()
-                .put("message", event.getMessage()));
+                .put("message", event.getMessage())
+                .put("pack", pack));
     }
 
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
         event.getClient().shutdown("bye!");
+        Pack pack = packsByBot.get(event.getClient());
         eventBus.publish("bot", new JsonObject()
-                .put("event", event.getClass().getSimpleName())
-                .put("message", event.getAttemptedNick()));
+                .put("message", event.getAttemptedNick())
+                .put("pack", pack));
     }
 
     @Handler
     public void onPrivateCTCPQuery(PrivateCTCPQueryEvent event) {
         String message = event.getMessage();
         if (!message.startsWith("DCC ")) {
-            System.out.println("message is not a DCC command");
             return;
         }
 
@@ -177,21 +165,19 @@ public class BotVerticle extends AbstractRouteVerticle {
         Matcher matcher = pattern.matcher(message);
 
         if (!matcher.find()) {
-            System.out.println("message is not a DCC SEND nor ACCEPT command");
             return;
         }
 
         String subType = matcher.group(1);
         String fname = matcher.group(2);
         long parsedIp = Long.parseLong(matcher.group(3));
-        String ip = transformToIpString(parsedIp);
+        String ip = transformLongToIpString(parsedIp);
         int port = Integer.parseInt(matcher.group(4));
         long size = Long.parseLong(matcher.group(5));
-
+        String tokenMatch = matcher.group(6);
         String activePassiveAddress;
         int token = 0;
 
-        String tokenMatch = matcher.group(6);
         if (port == 0) {
             token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
             activePassiveAddress = "passive";
@@ -200,7 +186,8 @@ public class BotVerticle extends AbstractRouteVerticle {
         }
         final int tokenFinal = token;
 
-        Pack pack = packsByBot.get(event.getClient());
+        Client ircClient = event.getClient();
+        Pack pack = packsByBot.get(ircClient);
         eventBus.send("bot.dcc.init." + activePassiveAddress,
                 new JsonObject()
                         .put("event", event.getClass().getSimpleName())
@@ -211,34 +198,44 @@ public class BotVerticle extends AbstractRouteVerticle {
                         .put("filename", fname)
                         .put("token", tokenFinal)
                         .put("pack", JsonObject.mapFrom(pack))
-                        .put("bot", event.getClient().getNick()),
+                        .put("bot", ircClient.getNick()),
                 verticleReplyHandler -> {
                     if (verticleReplyHandler.succeeded()) {
                         Message<Object> verticleReplyMessage = verticleReplyHandler.result();
                         JsonObject verticleReplyBody = (JsonObject) verticleReplyMessage.body();
-//                        verticleReplyMessage
-                        // << DCC SEND <filename> <peer-ip> <port> <filesize> <token>
 
-                        String botReply = format("DCC SEND %s %s %d %d %d",
-                                fname,
-                                "192.168.99.1",
-                                verticleReplyBody.getInteger("port"),
-                                size,
-                                tokenFinal
-                        );
-                        event.setReply(botReply);
+                        ircClient.getUser().ifPresent(user -> {
+                            String host = user.getHost();
+                            String botReply = format("DCC SEND %s %d %d %d %d",
+                                    fname,
+                                    transformToIpLong(host),
+                                    verticleReplyBody.getInteger("port"),
+                                    size,
+                                    tokenFinal
+                            );
+
+                            ircClient.sendCTCPMessage(pack.getNickName(), botReply);
+                        });
+
                     }
                 }
         );
     }
 
-    private String transformToIpString(long ip) {
+    private String transformLongToIpString(long ip) {
         StringJoiner joiner = new StringJoiner(".");
         for (int i = 3; i >= 0; i--) {
-            joiner.add(String.valueOf((ip >> 8 * (i)) & 0xff));
+            joiner.add(String.valueOf(ip >> 8 * i & 0xff));
         }
         return joiner.toString();
     }
 
-
+    private long transformToIpLong(String ipString) {
+        String[] ipParts = ipString.trim().split("\\.");
+        long ipLong = 0;
+        for (int i = 0; i <= 3; i++) {
+            ipLong += Long.parseLong(ipParts[i]) << 8 * (3 - i);
+        }
+        return ipLong;
+    }
 }

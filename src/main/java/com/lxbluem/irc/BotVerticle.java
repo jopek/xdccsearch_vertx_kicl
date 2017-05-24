@@ -60,11 +60,13 @@ public class BotVerticle extends AbstractRouteVerticle {
             long packId = pack.getPackId();
             long mappedPackId = body.getJsonObject("pack").getLong("pid");
             if (packId == mappedPackId) {
-                vertx.setTimer(5000, event -> ircClient.shutdown());
+                vertx.setTimer(5000, event -> {
+                    ircClient.shutdown();
+                    packsByBot.remove(mutableClientObject.getValue());
+                });
                 mutableClientObject.setValue(ircClient);
             }
         });
-        packsByBot.remove(mutableClientObject.getValue());
     }
 
     private void startBot(Message<Object> objectMessage) {
@@ -112,12 +114,6 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     @Handler
     public void onJoin(ChannelJoinEvent event) {
-        event.getAffectedChannel().ifPresent(channel ->
-                eventBus.publish("bot", new JsonObject()
-                        .put("event", event.getClass().getSimpleName())
-                        .put("channel", channel.getName()))
-        );
-
         Client ircClient = event.getClient();
         Pack pack = packsByBot.get(ircClient);
         event.getAffectedChannel().ifPresent(channel -> {
@@ -126,7 +122,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         });
     }
 
-//    @Handler
+    //    @Handler
     public void onChannelTopic(ChannelTopicEvent event) {
 
         Set<String> channels = event.getClient()
@@ -142,7 +138,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         Pack pack = packsByBot.get(event.getClient());
         eventBus.publish("bot.notice", new JsonObject()
                 .put("message", event.getMessage())
-                .put("pack", pack));
+                .put("pack", JsonObject.mapFrom(pack)));
     }
 
     @Handler
@@ -151,7 +147,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         Pack pack = packsByBot.get(event.getClient());
         eventBus.publish("bot", new JsonObject()
                 .put("message", event.getAttemptedNick())
-                .put("pack", pack));
+                .put("pack", JsonObject.mapFrom(pack)));
     }
 
     @Handler

@@ -62,14 +62,18 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                     );
                 });
 
-                socket.exceptionHandler(event -> eventBus.publish("bot.dcc.fail", new JsonObject()
-                        .put("message", event.getMessage())
-                        .put("pack", pack)
-                ));
+                socket.exceptionHandler(event ->
+                        eventBus.publish("bot.dcc.fail", new JsonObject()
+                                .put("message", event.getMessage())
+                                .put("pack", pack)
+                        )
+                );
 
-                socket.endHandler(end -> eventBus.publish("bot.dcc.finish", new JsonObject()
-                        .put("pack", pack)
-                ));
+                socket.endHandler(end ->
+                        eventBus.publish("bot.dcc.finish", new JsonObject()
+                                .put("pack", pack)
+                        )
+                );
 
             } else {
                 eventBus.publish("bot.dcc.fail", new JsonObject()

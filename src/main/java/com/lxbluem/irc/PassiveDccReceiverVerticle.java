@@ -1,12 +1,12 @@
 package com.lxbluem.irc;
 
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
+import io.vertx.rxjava.core.AbstractVerticle;
+import io.vertx.rxjava.core.buffer.Buffer;
+import io.vertx.rxjava.core.eventbus.EventBus;
+import io.vertx.rxjava.core.net.NetServer;
 
 public class PassiveDccReceiverVerticle extends AbstractVerticle {
 
@@ -15,11 +15,14 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
     @Override
     public void start() throws Exception {
         eventBus = vertx.eventBus();
-        eventBus.consumer("bot.dcc.init.passive", event -> {
-            JsonObject message = (JsonObject) event.body();
-            Handler<JsonObject> handler = event::reply;
-            transferFile(message, handler);
-        });
+        eventBus.consumer("bot.dcc.init.passive")
+                .toObservable()
+                .subscribe(event -> {
+                            JsonObject message = (JsonObject) event.body();
+                            Handler<JsonObject> handler = event::reply;
+                            transferFile(message, handler);
+                        }
+                );
     }
 
     private void transferFile(JsonObject message, Handler<JsonObject> replyHandler) {
@@ -37,53 +40,51 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
             byte[] outBuffer = new byte[4];
             final long[] bytesTransferedValue = {0};
 
+            socket.toObservable()
+                    .subscribe(
+                            buffer -> {
+                                long bytesTransfered = bytesTransferedValue[0];
+                                bytesTransfered += buffer.length();
+                                outBuffer[0] = (byte) ((bytesTransfered >> 24) & 0xff);
+                                outBuffer[1] = (byte) ((bytesTransfered >> 16) & 0xff);
+                                outBuffer[2] = (byte) ((bytesTransfered >> 8) & 0xff);
+                                outBuffer[3] = (byte) (bytesTransfered & 0xff);
+                                socket.write(Buffer.newInstance(io.vertx.core.buffer.Buffer.buffer(outBuffer)));
+                                bytesTransferedValue[0] = bytesTransfered;
 
-            socket.handler(buffer -> {
-                long bytesTransfered = bytesTransferedValue[0];
-
-                bytesTransfered += buffer.getBytes().length;
-
-                //Send back an acknowledgement of how many bytes we have got so far.
-                //Convert bytesTransfered to an "unsigned, 4 byte integer in network byte order", per DCC specification
-                outBuffer[0] = (byte) ((bytesTransfered >> 24) & 0xff);
-                outBuffer[1] = (byte) ((bytesTransfered >> 16) & 0xff);
-                outBuffer[2] = (byte) ((bytesTransfered >> 8) & 0xff);
-                outBuffer[3] = (byte) (bytesTransfered & 0xff);
-                socket.write(Buffer.buffer(outBuffer));
-                bytesTransferedValue[0] = bytesTransfered;
-
-                eventBus.publish("bot.dcc.progress", new JsonObject()
-                        .put("bytes", bytesTransfered)
-                        .put("pack", pack)
-                );
-            });
-
-            socket.exceptionHandler(event -> eventBus.publish("bot.dcc.fail", new JsonObject()
-                    .put("message", event.getMessage())
-                    .put("pack", pack)
-            ));
-
-            socket.endHandler(end -> eventBus.publish("bot.dcc.finish", new JsonObject()
-                    .put("pack", pack)
-            ));
+                                eventBus.publish("bot.dcc.progress", new JsonObject()
+                                        .put("bytes", bytesTransfered)
+                                        .put("pack", pack)
+                                );
+                            },
+                            error -> eventBus.publish("bot.dcc.fail", new JsonObject()
+                                    .put("message", error.getMessage())
+                                    .put("pack", pack)
+                            ),
+                            () -> eventBus.publish("bot.dcc.finish", new JsonObject()
+                                    .put("pack", pack)
+                            )
+                    );
         });
 
-        netServer.listen(0, res -> {
-            if (res.succeeded()) {
-                eventBus.publish("bot.dcc.start", new JsonObject()
-                        .put("pack", pack)
-                );
+        netServer.rxListen(0)
+                .toObservable()
+                .subscribe(
+                        server -> {
+                            eventBus.publish("bot.dcc.start", new JsonObject()
+                                    .put("pack", pack)
+                            );
 
-                replyHandler.handle(new JsonObject()
-                        .put("port", res.result().actualPort())
-                );
+                            replyHandler.handle(new JsonObject()
+                                    .put("port", server.actualPort())
+                            );
+                        },
 
-            } else {
-                eventBus.publish("bot.dcc.fail", new JsonObject()
-                        .put("message", res.cause().getMessage())
-                        .put("pack", pack)
+                        error ->
+                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                        .put("message", error.getMessage())
+                                        .put("pack", pack)
+                                )
                 );
-            }
-        });
     }
 }

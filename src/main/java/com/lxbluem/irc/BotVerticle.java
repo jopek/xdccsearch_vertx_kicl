@@ -17,7 +17,7 @@ import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
-import rx.Single;
+import rx.*;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -46,6 +46,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         Pack mybotDCC = Pack.builder()
                 .channelName("#download")
                 .nickName("mybotDCC")
+                .packId(9812)
                 .packNumber(3)
                 .serverHostName("192.168.99.100")
                 .serverPort(6667)
@@ -185,7 +186,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         Client ircClient = event.getClient();
         Pack pack = packsByBot.get(ircClient);
-        Single<Message<JsonObject>> singleResponse = eventBus.rxSend(
+        Single<Message<JsonObject>> singleResponse = eventBus.<JsonObject>rxSend(
                 "bot.dcc.init." + activePassiveAddress,
                 new JsonObject()
                         .put("event", event.getClass().getSimpleName())
@@ -199,6 +200,11 @@ public class BotVerticle extends AbstractRouteVerticle {
                         .put("bot", ircClient.getNick())
         );
 
+        if ("active".equals(activePassiveAddress)) {
+            singleResponse.subscribe().unsubscribe();
+            return;
+        }
+
         singleResponse.subscribe(verticleReplyHandler ->
                 ircClient.getUser().ifPresent(user -> {
                     String host = user.getHost();
@@ -211,9 +217,12 @@ public class BotVerticle extends AbstractRouteVerticle {
                     );
 
                     ircClient.sendCTCPMessage(pack.getNickName(), botReply);
-                })
-        );
+                }),
 
+                throwable -> eventBus.publish("bot.fail", new JsonObject()
+                        .put("error", throwable.getMessage())
+                )
+        );
     }
 
     private String transformLongToIpString(long ip) {

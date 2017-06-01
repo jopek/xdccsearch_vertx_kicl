@@ -7,9 +7,6 @@ import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetClient;
 
-import java.time.Instant;
-import java.util.Date;
-
 public class ActiveDccReceiverVerticle extends AbstractVerticle {
 
     private EventBus eventBus;

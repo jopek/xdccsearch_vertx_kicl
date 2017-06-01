@@ -8,6 +8,8 @@ import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetServer;
 
+import java.time.Instant;
+
 public class PassiveDccReceiverVerticle extends AbstractVerticle {
 
     private EventBus eventBus;
@@ -54,6 +56,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
 
                                 eventBus.publish("bot.dcc.progress", new JsonObject()
                                         .put("bytes", bytesTransfered)
+                                        .put("timestamp", Instant.now().toEpochMilli())
                                         .put("pack", pack)
                                 );
                             },

@@ -1,4 +1,4 @@
-package com.lxbluem;
+package com.lxbluem.stats;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;

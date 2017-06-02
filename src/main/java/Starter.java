@@ -1,7 +1,7 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
-import com.lxbluem.StatsVerticle;
+import com.lxbluem.stats.StatsVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.ActiveDccReceiverVerticle;
 import com.lxbluem.irc.PassiveDccReceiverVerticle;

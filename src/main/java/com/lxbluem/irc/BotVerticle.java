@@ -4,10 +4,10 @@ import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava.core.eventbus.EventBus;
+import io.vertx.rxjava.core.eventbus.Message;
 import net.engio.mbassy.listener.Handler;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.kitteh.irc.client.library.Client;
@@ -17,6 +17,7 @@ import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
+import rx.*;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -45,6 +46,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         Pack mybotDCC = Pack.builder()
                 .channelName("#download")
                 .nickName("mybotDCC")
+                .packId(9812)
                 .packNumber(3)
                 .serverHostName("192.168.99.100")
                 .serverPort(6667)
@@ -69,8 +71,8 @@ public class BotVerticle extends AbstractRouteVerticle {
         });
     }
 
-    private void startBot(Message<Object> objectMessage) {
-        JsonObject body = (JsonObject) objectMessage.body();
+    private void startBot(Message<JsonObject> objectMessage) {
+        JsonObject body = objectMessage.body();
         String nick = body.getString("nick");
     }
 
@@ -184,7 +186,8 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         Client ircClient = event.getClient();
         Pack pack = packsByBot.get(ircClient);
-        eventBus.send("bot.dcc.init." + activePassiveAddress,
+        Single<Message<JsonObject>> singleResponse = eventBus.<JsonObject>rxSend(
+                "bot.dcc.init." + activePassiveAddress,
                 new JsonObject()
                         .put("event", event.getClass().getSimpleName())
                         .put("message", message)
@@ -194,27 +197,31 @@ public class BotVerticle extends AbstractRouteVerticle {
                         .put("filename", fname)
                         .put("token", tokenFinal)
                         .put("pack", JsonObject.mapFrom(pack))
-                        .put("bot", ircClient.getNick()),
-                verticleReplyHandler -> {
-                    if (verticleReplyHandler.succeeded()) {
-                        Message<Object> verticleReplyMessage = verticleReplyHandler.result();
-                        JsonObject verticleReplyBody = (JsonObject) verticleReplyMessage.body();
+                        .put("bot", ircClient.getNick())
+        );
 
-                        ircClient.getUser().ifPresent(user -> {
-                            String host = user.getHost();
-                            String botReply = format("DCC SEND %s %d %d %d %d",
-                                    fname,
-                                    transformToIpLong(host),
-                                    verticleReplyBody.getInteger("port"),
-                                    size,
-                                    tokenFinal
-                            );
+        if ("active".equals(activePassiveAddress)) {
+            singleResponse.subscribe().unsubscribe();
+            return;
+        }
 
-                            ircClient.sendCTCPMessage(pack.getNickName(), botReply);
-                        });
+        singleResponse.subscribe(verticleReplyHandler ->
+                ircClient.getUser().ifPresent(user -> {
+                    String host = user.getHost();
+                    String botReply = format("DCC SEND %s %d %d %d %d",
+                            fname,
+                            transformToIpLong(host),
+                            verticleReplyHandler.body().getInteger("port"),
+                            size,
+                            tokenFinal
+                    );
 
-                    }
-                }
+                    ircClient.sendCTCPMessage(pack.getNickName(), botReply);
+                }),
+
+                throwable -> eventBus.publish("bot.fail", new JsonObject()
+                        .put("error", throwable.getMessage())
+                )
         );
     }
 

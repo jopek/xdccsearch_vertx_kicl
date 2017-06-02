@@ -2,11 +2,11 @@ package com.lxbluem;
 
 import com.lxbluem.model.RouterRegistryMessage;
 import com.lxbluem.model.SerializedRequest;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava.core.AbstractVerticle;
 
 import java.util.function.BiConsumer;
 

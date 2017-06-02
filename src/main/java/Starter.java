@@ -24,15 +24,7 @@ public class Starter {
       deploy(vertx, BotVerticle.class.getName());
       deploy(vertx, ActiveDccReceiverVerticle.class.getName());
       deploy(vertx, PassiveDccReceiverVerticle.class.getName());
-//      deploy(vertx, ServiceVerticleA.class.getName());
-//      deploy(vertx, ServiceVerticleA.class.getName());
-//      deploy(vertx, ServiceVerticleB.class.getName());
     });
-//    deploy(vertx, Receiver.class.getName());
-//    deploy(vertx, Receiver.class.getName());
-//    deploy(vertx, Sender.class.getName());
-//    deploy(vertx, Sender.class.getName());
-//    deploy(vertx, Sender.class.getName());
   }
 
   private static void deploy(Vertx vertx, String verticleClassname) {

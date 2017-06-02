@@ -31,7 +31,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
         String host = message.getString("ip");
         JsonObject pack = (JsonObject) message.getValue("pack");
 
-        int buffersize = 1 << 15;
+        int buffersize = 1 << 18;
 
         NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(buffersize);
         NetClient netClient = vertx.createNetClient(netClientOptions);
@@ -60,6 +60,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
 
                                                 eventBus.publish("bot.dcc.progress", new JsonObject()
                                                         .put("bytes", bytesTransfered)
+                                                        .put("bufferBytes", buffer.length())
                                                         .put("timestamp", Instant.now().toEpochMilli())
                                                         .put("pack", pack)
                                                 );

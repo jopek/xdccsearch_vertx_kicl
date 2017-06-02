@@ -28,7 +28,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
     }
 
     private void transferFile(JsonObject message, Handler<JsonObject> replyHandler) {
-        int buffersize = 1 << 15;
+        int buffersize = 1 << 18;
         JsonObject pack = (JsonObject) message.getValue("pack");
 
         NetServerOptions netServerOptions = new NetServerOptions().setReceiveBufferSize(buffersize);
@@ -56,6 +56,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
 
                                 eventBus.publish("bot.dcc.progress", new JsonObject()
                                         .put("bytes", bytesTransfered)
+                                        .put("bufferBytes", buffer.length())
                                         .put("timestamp", Instant.now().toEpochMilli())
                                         .put("pack", pack)
                                 );

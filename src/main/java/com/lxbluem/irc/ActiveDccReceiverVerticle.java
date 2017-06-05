@@ -41,6 +41,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                         netSocket -> {
                             eventBus.publish("bot.dcc.start", new JsonObject()
                                     .put("pack", pack)
+                                    .put("timestamp", Instant.now().toEpochMilli())
                             );
 
                             byte[] outBuffer = new byte[4];
@@ -69,10 +70,12 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                     eventBus.publish("bot.dcc.fail", new JsonObject()
                                                             .put("message", error.getMessage())
                                                             .put("pack", pack)
+                                                            .put("timestamp", Instant.now().toEpochMilli())
                                                     ),
                                             () ->
                                                     eventBus.publish("bot.dcc.finish", new JsonObject()
                                                             .put("pack", pack)
+                                                            .put("timestamp", Instant.now().toEpochMilli())
                                                     )
                                     );
                         },

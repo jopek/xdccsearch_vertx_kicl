@@ -15,7 +15,7 @@ public class MovingAverageTest {
 
     @Before
     public void setUp() throws Exception {
-        movingAverage = new MovingAverage(3);
+        movingAverage = new MovingAverage(1);
     }
 
     @Test
@@ -47,11 +47,12 @@ public class MovingAverageTest {
     @Test
     public void averages_are_correct_for_4_elements() throws Exception {
         long milli = now().toEpochMilli();
-        movingAverage.addValue(new Progress( 0, milli + 0));
+        movingAverage.addValue(new Progress( 0, milli));
         movingAverage.addValue(new Progress(40, milli + 100));
         movingAverage.addValue(new Progress(60, milli + 200));
         assertEquals(0.3d, movingAverage.average(), 0.01);
-        movingAverage.addValue(new Progress(100, milli + 400));
+
+        movingAverage.addValue(new Progress(10000, milli + 10000));
         assertEquals(0.2d, movingAverage.average(), 0.01);
     }
 

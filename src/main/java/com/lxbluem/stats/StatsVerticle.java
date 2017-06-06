@@ -3,12 +3,12 @@ package com.lxbluem.stats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;
-import io.vertx.rxjava.core.TimeoutStream;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.lxbluem.stats.BotState.*;
 
@@ -44,10 +44,15 @@ public class StatsVerticle extends AbstractVerticle {
                             MovingAverage movingAverage = stateMap.get(pack).getMovingAverage();
                             movingAverage.addValue(new Progress(bytes, millis));
 
-                            List<BotState> list = stateMap.get(pack).getBotstates();
+                            List<BotState> list = stateMap.get(pack)
+                                    .getBotstates()
+                                    .stream()
+                                    .filter(bs -> !bs.equals(PROGRESS))
+                                    .collect(Collectors.toList());
                             BotState state = PROGRESS;
                             state.setTimestamp(millis);
                             list.add(state);
+                            stateMap.get(pack).setBotstates(list);
                         }
                 );
     }
@@ -121,8 +126,8 @@ public class StatsVerticle extends AbstractVerticle {
                 .build());
     }
 
-    private TimeoutStream setupStatsInterval() {
-        return vertx.periodicStream(5000)
+    private void setupStatsInterval() {
+        vertx.periodicStream(5000)
                 .handler(h -> {
                     JsonArray bots = new JsonArray();
 

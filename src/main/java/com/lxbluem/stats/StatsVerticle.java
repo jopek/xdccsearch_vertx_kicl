@@ -4,35 +4,18 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.TimeoutStream;
-import lombok.*;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.lxbluem.stats.BotState.*;
 
 public class StatsVerticle extends AbstractVerticle {
-    private Map<JsonObject, State> averageSpeedMap = new HashMap<>();
-    private Map<JsonObject, List<BotState>> botStateMap = new HashMap<>();
-    private Map<JsonObject, List<String>> botNoticeMap = new HashMap<>();
-    private Map<JsonObject, State> stateMap = new HashMap<>();
-
-    private AtomicInteger counter = new AtomicInteger();
+    private Map<JsonObject, StatsVerticleState> stateMap = new HashMap<>();
 
     private static final int AVG_SIZE_SEC = 5;
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    private class State {
-        private MovingAverage movingAverage;
-        private List<BotState> botstates;
-        private List<String> notices;
-        private long started;
-        private long ended;
-    }
 
 
     @Override
@@ -42,28 +25,7 @@ public class StatsVerticle extends AbstractVerticle {
         subBotDccFinish();
         subBotNotice();
 
-        TimeoutStream timeoutStream = vertx.periodicStream(5000)
-                .handler(h -> {
-                    JsonArray bots = new JsonArray();
-
-                    stateMap.forEach((pack, state) -> {
-                        JsonObject bot = new JsonObject()
-                                .put("started", new Date(state.getStarted()))
-                                .put("duration", state.getEnded() - state.getStarted())
-                                .put("speed", state.getMovingAverage().average())
-                                .put("state", state.getBotstates().get(botStateMap.get(pack).size() - 1))
-                                .put("notices", state.getNotices());
-                        bots.add(bot);
-                    });
-
-                    JsonObject message = new JsonObject()
-                            .put("bots", bots)
-                            .put("cnt", counter.incrementAndGet());
-
-                    vertx.eventBus().publish("stats", message);
-                });
-
-
+        setupStatsInterval();
     }
 
     private void subBotDccProgress() {
@@ -77,17 +39,15 @@ public class StatsVerticle extends AbstractVerticle {
                             long millis = body.getLong("timestamp", 1L);
                             JsonObject pack = body.getJsonObject("pack");
 
-//                            stateMap.putIfAbsent(pack, State.builder().movingAverage().build());
+                            getState(pack);
 
                             MovingAverage movingAverage = stateMap.get(pack).getMovingAverage();
                             movingAverage.addValue(new Progress(bytes, millis));
-//                            averageMap.putIfAbsent(pack, movingAverage);
 
                             List<BotState> list = stateMap.get(pack).getBotstates();
                             BotState state = PROGRESS;
                             state.setTimestamp(millis);
                             list.add(state);
-                            botStateMap.putIfAbsent(pack, list);
                         }
                 );
     }
@@ -102,11 +62,15 @@ public class StatsVerticle extends AbstractVerticle {
                             JsonObject pack = body.getJsonObject("pack");
                             long timestamp = body.getLong("timestamp");
 
-                            List<BotState> list = botStateMap.getOrDefault(pack, new ArrayList<>());
-                            BotState state = START;
-                            state.setTimestamp(timestamp);
-                            list.add(state);
-                            botStateMap.putIfAbsent(pack, list);
+                            getState(pack);
+
+                            StatsVerticleState state = stateMap.get(pack);
+                            state.setStarted(timestamp);
+
+                            List<BotState> botStates = state.getBotstates();
+                            BotState botState = START;
+                            botState.setTimestamp(timestamp);
+                            botStates.add(botState);
                         }
                 );
     }
@@ -121,11 +85,12 @@ public class StatsVerticle extends AbstractVerticle {
                             JsonObject pack = body.getJsonObject("pack");
                             long timestamp = body.getLong("timestamp");
 
-                            List<BotState> list = botStateMap.getOrDefault(pack, new ArrayList<>());
+                            getState(pack);
+
+                            List<BotState> list = stateMap.get(pack).getBotstates();
                             BotState state = FINISH;
                             state.setTimestamp(timestamp);
                             list.add(state);
-                            botStateMap.putIfAbsent(pack, list);
                         }
                 );
     }
@@ -140,11 +105,45 @@ public class StatsVerticle extends AbstractVerticle {
                             JsonObject pack = body.getJsonObject("pack");
                             String message = body.getString("message");
 
-                            List<String> messageList = botNoticeMap.getOrDefault(pack, new ArrayList<>());
+                            getState(pack);
+
+                            List<String> messageList = stateMap.get(pack).getNotices();
                             messageList.add(message);
-                            botNoticeMap.putIfAbsent(pack, messageList);
                         }
                 );
+    }
+
+    private void getState(JsonObject key) {
+        stateMap.putIfAbsent(key, StatsVerticleState.builder()
+                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
+                .botstates(new ArrayList<>())
+                .notices(new ArrayList<>())
+                .build());
+    }
+
+    private TimeoutStream setupStatsInterval() {
+        return vertx.periodicStream(5000)
+                .handler(h -> {
+                    JsonArray bots = new JsonArray();
+
+                    stateMap.forEach((pack, state) -> {
+                        List<BotState> botstates = state.getBotstates();
+                        BotState latestBotState = botstates.get(botstates.size() - 1);
+
+                        JsonObject bot = new JsonObject()
+                                .put("started", state.getStarted())
+                                .put("duration", latestBotState.getTimestamp() - state.getStarted())
+                                .put("speed", state.getMovingAverage().average())
+                                .put("state", latestBotState)
+                                .put("notices", state.getNotices());
+                        bots.add(bot);
+                    });
+
+                    JsonObject message = new JsonObject()
+                            .put("bots", bots);
+
+                    vertx.eventBus().publish("stats", message);
+                });
     }
 
 }

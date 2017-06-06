@@ -1,6 +1,7 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
+import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.stats.StatsVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.ActiveDccReceiverVerticle;
@@ -21,6 +22,7 @@ public class Starter {
     deploy(vertx, StatsVerticle.class.getName());
     deploy(vertx, ActiveDccReceiverVerticle.class.getName());
     deploy(vertx, PassiveDccReceiverVerticle.class.getName());
+    deploy(vertx, ExternalNotificationVerticle.class.getName());
 
     deploy(vertx, RouterVerticle.class.getName(), event -> {
       System.out.println(RouterVerticle.class.getName() + " deployed " + event.result());

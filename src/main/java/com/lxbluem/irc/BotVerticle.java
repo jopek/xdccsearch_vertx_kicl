@@ -50,6 +50,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .packNumber(3)
                 .serverHostName("192.168.99.100")
                 .serverPort(6667)
+                .packName("exampleFile1m")
                 .build();
         initTx(mybotDCC);
     }
@@ -186,7 +187,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         Client ircClient = event.getClient();
         Pack pack = packsByBot.get(ircClient);
-        Single<Message<JsonObject>> singleResponse = eventBus.<JsonObject>rxSend(
+        Single<Message<JsonObject>> singleResponse = eventBus.rxSend(
                 "bot.dcc.init." + activePassiveAddress,
                 new JsonObject()
                         .put("event", event.getClass().getSimpleName())

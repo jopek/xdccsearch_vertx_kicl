@@ -5,13 +5,14 @@ import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Launcher;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+
+import static java.lang.String.format;
 
 public class ExternalNotificationVerticle extends AbstractVerticle {
-    private String url;
-    private HttpClient client;
+    private JsonObject clientConfig;
+    private WebClient client;
 
 
     public static void main(String[] args) {
@@ -20,25 +21,9 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-        client = vertx.createHttpClient();
+        client = WebClient.create(vertx);
 
-        ConfigStoreOptions store = new ConfigStoreOptions()
-                .setType("file")
-                .setFormat("yaml")
-                .setConfig(new JsonObject()
-                        .put("path", "webhooks.yaml")
-                );
-
-        ConfigRetriever retriever = ConfigRetriever.create(vertx,
-                new ConfigRetrieverOptions().addStore(store));
-
-        retriever.getConfig(ar -> {
-            if (ar.succeeded()) {
-                JsonObject config = ar.result();
-                url = config.getString("url");
-                System.out.println(url);
-            }
-        });
+        updateConfiguration();
 
         vertx.eventBus().consumer("bot.dcc.finish", handler -> {
             JsonObject body = (JsonObject) handler.body();
@@ -48,15 +33,68 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                     .put("value1", pack.getString("szf"))
                     .put("value2", pack.getString("name"));
 
-            client.post(url, response -> {
-                System.out.println("Received response with status code " + response.statusCode());
-            })
-                    .putHeader("content-type", "application/json")
-                    .write(requestData.encode())
-                    .handler(clientResponse -> {
-                        clientResponse.bodyHandler(event -> System.out.println(event.toString()));
-                    })
-                    .end();
         });
+
+    }
+
+    private void updateConfiguration() {
+        ConfigStoreOptions store = new ConfigStoreOptions()
+                .setType("file")
+                .setFormat("yaml")
+                .setConfig(new JsonObject()
+                        .put("path", "webhooks.yaml")
+                        .put("cache", "false")
+                );
+
+        ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions()
+                .setScanPeriod(1000)
+                .addStore(store);
+
+        ConfigRetriever retriever = ConfigRetriever.create(vertx, retrieverOptions);
+
+        retriever.getConfig(ar -> {
+            if (ar.succeeded()) {
+                updateConfig(ar.result());
+            }
+        });
+
+        retriever.listen(change -> {
+            System.out.println("CHANGE");
+            updateConfig(change.getNewConfiguration());
+        });
+    }
+
+    private void updateConfig(JsonObject config) {
+        String string = config.getString("use");
+        clientConfig = config.getJsonObject(string);
+
+        System.out.println(clientConfig.encode());
+
+//        xxx();
+    }
+
+    private void xxx() {
+        JsonObject requestPayload = new JsonObject().put("value1", "bllllaaaaaaa");
+
+        System.out.println("send request to " + format("%s://%s:%d%s",
+                clientConfig.getBoolean("useSsl") ? "https" : "http",
+                clientConfig.getString("host"),
+                clientConfig.getInteger("port"),
+                clientConfig.getString("uri")
+        ));
+
+        client
+                .post(
+                        clientConfig.getInteger("port"),
+                        clientConfig.getString("host"),
+                        clientConfig.getString("uri"))
+                .ssl(clientConfig.getBoolean("useSsl", false))
+                .sendJsonObject(requestPayload, clientResponse -> {
+                    if (clientResponse.succeeded()) {
+                        System.out.println("RESULT: " + clientResponse.result().body());
+                    } else {
+                        System.out.println("failure cause: " + clientResponse.cause().getMessage());
+                    }
+                });
     }
 }

@@ -1,0 +1,14 @@
+use: srv1
+
+srv1:
+  host: maker.ifttt.com
+  port: 443
+  useSsl: true
+  something: else
+  uri: /trigger/dcc_finished/with/key/feMgUvd6P6Ld6ld8DSMtnYU3wGbLZUFZTwfyjj0RIVN
+
+srv2:
+  host: localhost
+  port: 3000
+  useSsl: false
+  uri: /makers

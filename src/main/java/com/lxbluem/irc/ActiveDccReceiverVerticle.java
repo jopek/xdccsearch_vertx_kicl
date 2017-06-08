@@ -7,6 +7,8 @@ import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetClient;
 
+import java.time.Instant;
+
 public class ActiveDccReceiverVerticle extends AbstractVerticle {
 
     private EventBus eventBus;
@@ -29,7 +31,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
         String host = message.getString("ip");
         JsonObject pack = (JsonObject) message.getValue("pack");
 
-        int buffersize = 1 << 15;
+        int buffersize = 1 << 18;
 
         NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(buffersize);
         NetClient netClient = vertx.createNetClient(netClientOptions);
@@ -39,6 +41,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                         netSocket -> {
                             eventBus.publish("bot.dcc.start", new JsonObject()
                                     .put("pack", pack)
+                                    .put("timestamp", Instant.now().toEpochMilli())
                             );
 
                             byte[] outBuffer = new byte[4];
@@ -58,6 +61,8 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
 
                                                 eventBus.publish("bot.dcc.progress", new JsonObject()
                                                         .put("bytes", bytesTransfered)
+                                                        .put("bufferBytes", buffer.length())
+                                                        .put("timestamp", Instant.now().toEpochMilli())
                                                         .put("pack", pack)
                                                 );
                                             },
@@ -65,10 +70,12 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                     eventBus.publish("bot.dcc.fail", new JsonObject()
                                                             .put("message", error.getMessage())
                                                             .put("pack", pack)
+                                                            .put("timestamp", Instant.now().toEpochMilli())
                                                     ),
                                             () ->
                                                     eventBus.publish("bot.dcc.finish", new JsonObject()
                                                             .put("pack", pack)
+                                                            .put("timestamp", Instant.now().toEpochMilli())
                                                     )
                                     );
                         },

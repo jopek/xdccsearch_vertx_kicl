@@ -23,7 +23,7 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
     public void start() {
         client = WebClient.create(vertx);
 
-        updateConfiguration();
+        readConfiguration();
 
         vertx.eventBus().consumer("bot.dcc.finish", handler -> {
             JsonObject body = (JsonObject) handler.body();
@@ -33,11 +33,12 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                     .put("value1", pack.getString("szf"))
                     .put("value2", pack.getString("name"));
 
+            sendNotification(requestData);
         });
 
     }
 
-    private void updateConfiguration() {
+    private void readConfiguration() {
         ConfigStoreOptions store = new ConfigStoreOptions()
                 .setType("file")
                 .setFormat("yaml")
@@ -46,36 +47,19 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                         .put("cache", "false")
                 );
 
-        ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions()
-                .setScanPeriod(1000)
-                .addStore(store);
-
+        ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions().addStore(store);
         ConfigRetriever retriever = ConfigRetriever.create(vertx, retrieverOptions);
 
         retriever.getConfig(ar -> {
             if (ar.succeeded()) {
-                updateConfig(ar.result());
+                JsonObject config = ar.result();
+                String string = config.getString("use");
+                clientConfig = config.getJsonObject(string);
             }
         });
-
-        retriever.listen(change -> {
-            System.out.println("CHANGE");
-            updateConfig(change.getNewConfiguration());
-        });
     }
 
-    private void updateConfig(JsonObject config) {
-        String string = config.getString("use");
-        clientConfig = config.getJsonObject(string);
-
-        System.out.println(clientConfig.encode());
-
-//        xxx();
-    }
-
-    private void xxx() {
-        JsonObject requestPayload = new JsonObject().put("value1", "bllllaaaaaaa");
-
+    private void sendNotification(JsonObject requestPayload) {
         System.out.println("send request to " + format("%s://%s:%d%s",
                 clientConfig.getBoolean("useSsl") ? "https" : "http",
                 clientConfig.getString("host"),
@@ -87,13 +71,14 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                 .post(
                         clientConfig.getInteger("port"),
                         clientConfig.getString("host"),
-                        clientConfig.getString("uri"))
+                        clientConfig.getString("uri")
+                )
                 .ssl(clientConfig.getBoolean("useSsl", false))
                 .sendJsonObject(requestPayload, clientResponse -> {
                     if (clientResponse.succeeded()) {
                         System.out.println("RESULT: " + clientResponse.result().body());
                     } else {
-                        System.out.println("failure cause: " + clientResponse.cause().getMessage());
+                        System.err.println("failure cause: " + clientResponse.cause().getMessage());
                     }
                 });
     }

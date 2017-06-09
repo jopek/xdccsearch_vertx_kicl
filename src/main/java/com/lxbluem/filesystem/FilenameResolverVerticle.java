@@ -17,7 +17,7 @@ public class FilenameResolverVerticle extends AbstractVerticle {
 //            JsonObject body = (JsonObject) handler.body();
 //            String requestedFilename = body.getString("filename");
 //        });
-        repository = new FileNameRepository(vertx);
+        repository = new FileNameRepository(vertx, "filelist.db");
 
     }
 }

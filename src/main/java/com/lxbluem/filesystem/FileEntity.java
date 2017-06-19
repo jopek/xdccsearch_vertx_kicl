@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 public class FileEntity {
-    private String name;
-    private String rndsuffix;
+    private String packname;
+    private int suffix;
     private long size;
     private long packsize;
     private long createdAt;

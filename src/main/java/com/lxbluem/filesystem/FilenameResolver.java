@@ -14,14 +14,14 @@ import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
-public class FilenameMemDb {
+public class FilenameResolver {
 
     private String path;
     private FileSystem fileSystem;
     private final FilenameMapper filenameMapper;
     private Set<FileEntity> filesOnDisk = new HashSet<>();
 
-    public FilenameMemDb(Vertx vertx, String path, FilenameMapper filenameMapper) {
+    public FilenameResolver(Vertx vertx, String path, FilenameMapper filenameMapper) {
         this.path = path;
         fileSystem = vertx.fileSystem();
         this.filenameMapper = filenameMapper;
@@ -65,7 +65,7 @@ public class FilenameMemDb {
             }
             return Future.failedFuture(new FileSystemException(path + " does not exist"));
         }).recover(throwable -> {
-            if (throwable instanceof FileSystemException) {
+            if (!(throwable instanceof FileSystemException)) {
                 return Future.failedFuture(throwable);
             }
 
@@ -102,12 +102,16 @@ public class FilenameMemDb {
                     if (ar.succeeded()) {
                         FileProps fileProps = filePropsFuture.result();
                         int lastIndexOf = filename.lastIndexOf(path);
-                        String relativeFilename = filename.substring(lastIndexOf, filename.length());
+
+                        String relativeFilename;
+                        if (lastIndexOf < 0) relativeFilename = filename;
+                        else relativeFilename = filename.substring(lastIndexOf + path.length() + 1);
 
                         fileEntityFuture.complete(FileEntity.builder()
-                                .packname(filenameMapper.getPackName(relativeFilename))
+                                .packname(filenameMapper.createPackName(relativeFilename))
+                                .path(path)
                                 .size(fileProps.size())
-                                .suffix(filenameMapper.getPackSuffix(relativeFilename))
+                                .suffix(filenameMapper.createPackSuffix(relativeFilename))
                                 .build()
                         );
                     } else {
@@ -121,22 +125,16 @@ public class FilenameMemDb {
 
     public Future<List<FileEntity>> getPackFilesFromDisk(String packname) {
         List<FileEntity> fileEntities = filesOnDisk.stream()
-                .filter(fe -> {
-                    String fePackname = fe.getPackname();
-                    String fePacknameSubstring = fePackname.substring(path.length() + 1);
-                    return fePacknameSubstring.equalsIgnoreCase(packname);
-                })
+                .filter(fe -> fe.getPackname().equalsIgnoreCase(packname))
                 .collect(toList());
         return Future.succeededFuture(fileEntities);
     }
 
-    public Future<String> getPackFilesName(String requestedPackName) {
+    public Future<String> getFileNameForPackName(String requestedPackName) {
         List<FileEntity> fileEntities = filesOnDisk.stream()
-                .filter(fe -> {
-                    String fePackname = fe.getPackname();
-                    String fePacknameSubstring = fePackname.substring(path.length() + 1);
-                    String packName = filenameMapper.getPackName(fePacknameSubstring);
-                    return fePacknameSubstring.equalsIgnoreCase(packName);
+                .filter(fileEntityOnDisk -> {
+                    String fePackname = fileEntityOnDisk.getPackname();
+                    return fePackname.equalsIgnoreCase(requestedPackName);
                 })
                 .collect(toList());
 
@@ -145,7 +143,16 @@ public class FilenameMemDb {
                 .map(FileEntity::getSuffix)
                 .orElse(0);
 
-        String fsFilename = suffix > 0 ? filenameMapper.getFsFilename(requestedPackName, suffix + 1) : requestedPackName;
+        if (!fileEntities.isEmpty())
+            suffix++;
+
+        String fsFilename;
+//        if (suffix > 0 || !fileEntities.isEmpty())
+//            fsFilename = filenameMapper.getFsFilename(requestedPackName, suffix + 1);
+//
+//        else
+            fsFilename = filenameMapper.getFsFilename(requestedPackName, suffix);
+
         return Future.succeededFuture(fsFilename);
     }
 }

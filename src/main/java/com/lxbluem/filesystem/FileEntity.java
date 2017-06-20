@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 public class FileEntity {
     private String packname;
+    private String path;
     private int suffix;
     private long size;
     private long packsize;

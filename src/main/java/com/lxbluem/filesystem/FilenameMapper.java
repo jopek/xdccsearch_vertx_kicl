@@ -15,7 +15,7 @@ public class FilenameMapper {
     private static final String PART = "part";
     private static final String PATTERN = "_\\d+_";
 
-    public String getPackName(String name) {
+    public String createPackName(String name) {
         List<String> split = getNameElements(name);
         final String PATTERN = "_\\d+_";
 
@@ -62,23 +62,25 @@ public class FilenameMapper {
         return true;
     }
 
-    public String getFsFilename(String packFilename, long counter) {
+    public String getFsFilename(String packFilename, int suffix) {
         List<String> nameElements = getNameElements(packFilename);
         int size = nameElements.size();
 
         if (size == 1) {
-            nameElements.add(String.format("_%d_", counter));
+            if (suffix > 0) {
+                nameElements.add(String.format("_%d_", suffix));
+            }
         } else {
             String extension = nameElements.get(size - 1);
             nameElements.remove(size - 1);
-            nameElements.add(String.format("_%d_", counter));
+            nameElements.add(String.format("_%d_", suffix));
             nameElements.add(extension);
         }
         nameElements.add(PART);
         return StringUtils.join(nameElements, '.');
     }
 
-    public int getPackSuffix(String filename) {
+    public int createPackSuffix(String filename) {
         List<String> split = getNameElements(filename);
 
         if (split.size() == 1)

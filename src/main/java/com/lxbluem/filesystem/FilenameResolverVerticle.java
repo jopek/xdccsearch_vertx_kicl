@@ -1,15 +1,13 @@
 package com.lxbluem.filesystem;
 
-import com.lxbluem.filesystem.repository.FilenameRepository;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Launcher;
-
-import java.util.ArrayList;
-import java.util.List;
+import io.vertx.core.json.JsonObject;
 
 public class FilenameResolverVerticle extends AbstractVerticle {
     private static final String PATH = "downloads";
+
+    public static final String address = "filename.resolve";
 
 
     public static void main(String[] args) {
@@ -18,29 +16,22 @@ public class FilenameResolverVerticle extends AbstractVerticle {
 
     @Override
     public void start() {
-//        vertx.eventBus().consumer("filename.resolve", handler -> {
-//            JsonObject body = (JsonObject) handler.body();
-//            String requestedFilename = body.getString("filename");
-//        });
-//        repository = new FilenameRepositoryImpl(vertx, "downloads.db");
+        FilenameResolver resolver = new FilenameResolver(vertx, PATH, new FilenameMapper());
 
-        cleanDb();
+        vertx.eventBus().consumer(address, handler -> {
+            JsonObject body = (JsonObject) handler.body();
+            String requestedFilename = body.getString("filename");
+            System.out.println(getClass().getSimpleName() + " asked for " + requestedFilename);
+
+            resolver.getFileNameForPackName(requestedFilename).setHandler(filename -> {
+                        System.out.println(getClass().getSimpleName() + " replying with " + filename.result());
+                        if (filename.succeeded())
+                            handler.reply(new JsonObject().put("filename", filename.result()));
+                    }
+            );
+        });
+
     }
 
-    private void cleanDb() {
-//        Future<List<FileEntity>> allDbEntries = getAllDbEntries();
-
-    }
-
-//    private Future<List<FileEntity>> getAllDbEntries() {
-//        Future<List<FileEntity>> allDbEntries = Future.future();
-//        repository.retrieveAll()
-//                .reduce(new ArrayList<FileEntity>(), (list, entity) -> {
-//                    list.add(entity);
-//                    return list;
-//                })
-//                .subscribe(allDbEntries::complete, allDbEntries::fail);
-//        return allDbEntries;
-//    }
 
 }

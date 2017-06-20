@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class FilenameResolverVerticleTest {
@@ -38,7 +39,8 @@ public class FilenameResolverVerticleTest {
         JsonObject message = new JsonObject().put("filename", "file1a");
         vertx.eventBus().send(FilenameResolverVerticle.address, message, replyHandler -> {
             assertTrue(replyHandler.succeeded());
-
+            JsonObject body = (JsonObject) replyHandler.result().body();
+            assertEquals(FilenameResolverVerticle.PATH + "/" + "file1a.part", body.getString("filename"));
         });
     }
 }

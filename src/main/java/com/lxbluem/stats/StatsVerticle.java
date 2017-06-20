@@ -133,7 +133,11 @@ public class StatsVerticle extends AbstractVerticle {
 
                     stateMap.forEach((pack, state) -> {
                         List<BotState> botstates = state.getBotstates();
-                        BotState latestBotState = botstates.get(botstates.size() - 1);
+                        int botStatesSize = botstates.size();
+                        if (botStatesSize == 0)
+                            return;
+
+                        BotState latestBotState = botstates.get(botStatesSize - 1);
 
                         JsonObject bot = new JsonObject()
                                 .put("started", state.getStarted())

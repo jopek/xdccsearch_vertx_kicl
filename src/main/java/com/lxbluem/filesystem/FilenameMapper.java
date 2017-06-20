@@ -67,9 +67,7 @@ public class FilenameMapper {
         int size = nameElements.size();
 
         if (size == 1) {
-            if (suffix > 0) {
-                nameElements.add(String.format("_%d_", suffix));
-            }
+            nameElements.add(String.format("_%d_", suffix));
         } else {
             String extension = nameElements.get(size - 1);
             nameElements.remove(size - 1);

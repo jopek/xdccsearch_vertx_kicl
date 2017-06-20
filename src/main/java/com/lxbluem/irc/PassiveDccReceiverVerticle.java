@@ -8,6 +8,9 @@ import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetServer;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.time.Instant;
 
 public class PassiveDccReceiverVerticle extends AbstractVerticle {
@@ -22,12 +25,22 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                 .subscribe(event -> {
                             JsonObject message = (JsonObject) event.body();
                             Handler<JsonObject> handler = event::reply;
-                            transferFile(message, handler);
+                    try {
+                        transferFile(message, handler);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                         }
                 );
     }
 
-    private void transferFile(JsonObject message, Handler<JsonObject> replyHandler) {
+    private void transferFile(JsonObject message, Handler<JsonObject> replyHandler) throws IOException {
+        String filename = message.getString("filename");
+
+        File file = new File(filename);
+        RandomAccessFile fileOutput = new RandomAccessFile(file.getCanonicalPath(), "rw");
+        fileOutput.seek(0);
+
         int buffersize = 1 << 18;
         JsonObject pack = (JsonObject) message.getValue("pack");
 
@@ -53,6 +66,12 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                 outBuffer[3] = (byte) (bytesTransfered & 0xff);
                                 socket.write(Buffer.newInstance(io.vertx.core.buffer.Buffer.buffer(outBuffer)));
                                 bytesTransferedValue[0] = bytesTransfered;
+
+                                try {
+                                    fileOutput.write(buffer.getDelegate().getBytes(), 0, buffer.length());
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
 
                                 eventBus.publish("bot.dcc.progress", new JsonObject()
                                         .put("bytes", bytesTransfered)

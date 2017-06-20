@@ -7,10 +7,7 @@ import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.FileSystemException;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static java.util.stream.Collectors.toList;
 
@@ -138,20 +135,18 @@ public class FilenameResolver {
                 })
                 .collect(toList());
 
-        Integer suffix = fileEntities.stream()
-                .max(Comparator.comparingInt(FileEntity::getSuffix))
+        Optional<FileEntity> fileEntity = fileEntities
+                .stream()
+                .max(Comparator.comparingInt(FileEntity::getSuffix));
+
+        Integer suffix = fileEntity
                 .map(FileEntity::getSuffix)
                 .orElse(0);
 
         if (!fileEntities.isEmpty())
             suffix++;
 
-        String fsFilename;
-//        if (suffix > 0 || !fileEntities.isEmpty())
-//            fsFilename = filenameMapper.getFsFilename(requestedPackName, suffix + 1);
-//
-//        else
-            fsFilename = filenameMapper.getFsFilename(requestedPackName, suffix);
+        String fsFilename = filenameMapper.getFsFilename(path + "/" + requestedPackName, suffix);
 
         return Future.succeededFuture(fsFilename);
     }

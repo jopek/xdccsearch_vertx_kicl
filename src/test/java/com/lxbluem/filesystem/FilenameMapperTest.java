@@ -32,7 +32,7 @@ public class FilenameMapperTest {
 
     @Test
     public void packname_to_name() {
-        assertEquals("filename.part", mapper.getFsFilename("filename", 0));
+        assertEquals("filename._0_.part", mapper.getFsFilename("filename", 0));
         assertEquals("filename._123123_.part", mapper.getFsFilename("filename", 123123));
         assertEquals("filename._200_.txt.part", mapper.getFsFilename("filename.txt", 200));
     }

@@ -7,6 +7,8 @@ import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +16,7 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 
 public class PassiveDccReceiverVerticle extends AbstractVerticle {
+    private static Logger LOG = LoggerFactory.getLogger(PassiveDccReceiverVerticle.class);
 
     private EventBus eventBus;
 
@@ -51,6 +54,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
             eventBus.publish("bot.dcc.start", new JsonObject()
                     .put("pack", pack)
             );
+            LOG.info("starting transfer of {}", filename);
 
             byte[] outBuffer = new byte[4];
             final long[] bytesTransferedValue = {0};
@@ -80,13 +84,19 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                         .put("pack", pack)
                                 );
                             },
-                            error -> eventBus.publish("bot.dcc.fail", new JsonObject()
-                                    .put("message", error.getMessage())
-                                    .put("pack", pack)
-                            ),
-                            () -> eventBus.publish("bot.dcc.finish", new JsonObject()
-                                    .put("pack", pack)
-                            )
+                            error -> {
+                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                        .put("message", error.getMessage())
+                                        .put("pack", pack)
+                                );
+                                LOG.error("transfer of {} failed {}", filename, error);
+                            },
+                            () -> {
+                                eventBus.publish("bot.dcc.finish", new JsonObject()
+                                        .put("pack", pack)
+                                );
+                                LOG.info("transfer of {} finished", filename);
+                            }
                     );
         });
 

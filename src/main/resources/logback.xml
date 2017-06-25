@@ -1,7 +1,7 @@
 <configuration scan="true">
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" level="DEBUG">
         <encoder>
-            <pattern>%d [%level] %logger{15} - %msg%n</pattern>
+            <pattern>%d %7([%level]) %logger{15} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -11,7 +11,7 @@
 
     <logger name="io.netty.util.internal.PlatformDependent" level="ERROR" />
 
-    <logger name="com.lxbluem.EventLogger" level="TRACE" />
+    <!--<logger name="com.lxbluem.EventLogger" level="TRACE" />-->
 
     <logger name="com.lxbluem" level="DEBUG" />
 

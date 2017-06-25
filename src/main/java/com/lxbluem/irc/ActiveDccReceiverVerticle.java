@@ -6,6 +6,10 @@ import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.BasicMarker;
+import org.slf4j.helpers.BasicMarkerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,6 +17,8 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 
 public class ActiveDccReceiverVerticle extends AbstractVerticle {
+
+    private static Logger LOG = LoggerFactory.getLogger(ActiveDccReceiverVerticle.class);
 
     private EventBus eventBus;
 
@@ -54,6 +60,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                     .put("pack", pack)
                                     .put("timestamp", Instant.now().toEpochMilli())
                             );
+                            LOG.info("starting transfer of {}", filename);
 
                             byte[] outBuffer = new byte[4];
                             final long[] bytesTransferedValue = {0};
@@ -83,24 +90,30 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                         .put("pack", pack)
                                                 );
                                             },
-                                            error ->
-                                                    eventBus.publish("bot.dcc.fail", new JsonObject()
-                                                            .put("message", error.getMessage())
-                                                            .put("pack", pack)
-                                                            .put("timestamp", Instant.now().toEpochMilli())
-                                                    ),
-                                            () ->
-                                                    eventBus.publish("bot.dcc.finish", new JsonObject()
-                                                            .put("pack", pack)
-                                                            .put("timestamp", Instant.now().toEpochMilli())
-                                                    )
+                                            error -> {
+                                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                                        .put("message", error.getMessage())
+                                                        .put("pack", pack)
+                                                        .put("timestamp", Instant.now().toEpochMilli())
+                                                );
+                                                LOG.error("transfer of {} failed {}", filename, error);
+                                            },
+                                            () -> {
+                                                eventBus.publish("bot.dcc.finish", new JsonObject()
+                                                        .put("pack", pack)
+                                                        .put("timestamp", Instant.now().toEpochMilli())
+                                                );
+                                                LOG.info("transfer of {} finished", filename);
+                                            }
                                     );
                         },
-                        error ->
-                                eventBus.publish("bot.dcc.fail", new JsonObject()
-                                        .put("message", error.getMessage())
-                                        .put("pack", pack)
-                                )
+                        error -> {
+                            eventBus.publish("bot.dcc.fail", new JsonObject()
+                                    .put("message", error.getMessage())
+                                    .put("pack", pack)
+                            );
+                            LOG.error("transfer of {} failed {}", filename, error);
+                        }
                 );
     }
 }

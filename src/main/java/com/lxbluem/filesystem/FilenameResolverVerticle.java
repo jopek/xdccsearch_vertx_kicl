@@ -3,8 +3,11 @@ package com.lxbluem.filesystem;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FilenameResolverVerticle extends AbstractVerticle {
+    private static final Logger LOG = LoggerFactory.getLogger(FilenameResolverVerticle.class);
     public static final String PATH = "downloads";
 
     public static final String address = "filename.resolve";
@@ -23,8 +26,10 @@ public class FilenameResolverVerticle extends AbstractVerticle {
             String requestedFilename = body.getString("filename");
             resolver.getFileNameForPackName(requestedFilename)
                     .setHandler(filename -> {
-                                if (filename.succeeded())
+                                if (filename.succeeded()) {
+                                    LOG.debug("resolved {} -> {}", requestedFilename, filename.result());
                                     handler.reply(new JsonObject().put("filename", filename.result()));
+                                }
                             }
                     );
         });

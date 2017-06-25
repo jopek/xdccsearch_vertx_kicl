@@ -11,12 +11,15 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RouterVerticle extends AbstractVerticle {
+  private static final Logger LOG = LoggerFactory.getLogger(RouterVerticle.class);
 
   private Map<String, AtomicInteger> verticleCounter = new HashMap<>();
 
@@ -29,7 +32,7 @@ public class RouterVerticle extends AbstractVerticle {
         .requestHandler(router::accept)
         .listen(8080, event -> {
           if (event.succeeded()) {
-            System.out.printf("listening on port %d\n", event.result().actualPort());
+            LOG.info("listening on port {}  [deployid:{}]", event.result().actualPort(), deploymentID());
             startFuture.complete();
           } else {
             startFuture.fail(event.cause());
@@ -79,11 +82,13 @@ public class RouterVerticle extends AbstractVerticle {
           .send(target, JsonObject.mapFrom(serializedRequest), replyMessage -> {
             if (replyMessage.succeeded())
               sendHttpResponse(rc.response(), replyMessage);
-            else
+            else {
+              LOG.warn("could not setup route {} -> {}", path, target, replyMessage.cause());
               rc.response()
-                  .setStatusCode(400)
-                  .setStatusMessage("somehow not successful")
-                  .end();
+                      .setStatusCode(400)
+                      .setStatusMessage("somehow not successful")
+                      .end();
+            }
           });
     });
 

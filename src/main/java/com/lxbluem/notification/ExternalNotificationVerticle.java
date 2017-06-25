@@ -7,10 +7,13 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.lang.String.format;
 
 public class ExternalNotificationVerticle extends AbstractVerticle {
+    private static final Logger LOG = LoggerFactory.getLogger(ExternalNotificationVerticle.class);
     private JsonObject clientConfig;
     private WebClient client;
 
@@ -55,17 +58,19 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                 JsonObject config = ar.result();
                 String string = config.getString("use");
                 clientConfig = config.getJsonObject(string);
+                LOG.debug("using config {}", clientConfig.encode());
             }
         });
     }
 
     private void sendNotification(JsonObject requestPayload) {
-        System.out.println("send request to " + format("%s://%s:%d%s",
-                clientConfig.getBoolean("useSsl") ? "https" : "http",
-                clientConfig.getString("host"),
-                clientConfig.getInteger("port"),
-                clientConfig.getString("uri")
-        ));
+        LOG.debug("send request to {}",
+                format("%s://%s:%d%s",
+                        clientConfig.getBoolean("useSsl") ? "https" : "http",
+                        clientConfig.getString("host"),
+                        clientConfig.getInteger("port"),
+                        clientConfig.getString("uri")
+                ));
 
         client
                 .post(
@@ -76,9 +81,9 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                 .ssl(clientConfig.getBoolean("useSsl", false))
                 .sendJsonObject(requestPayload, clientResponse -> {
                     if (clientResponse.succeeded()) {
-                        System.out.println("RESULT: " + clientResponse.result().body());
+                        LOG.info("successful post: {}", clientResponse.result().body());
                     } else {
-                        System.err.println("failure cause: " + clientResponse.cause().getMessage());
+                        LOG.warn("failure to post: {}", clientResponse.cause());
                     }
                 });
     }

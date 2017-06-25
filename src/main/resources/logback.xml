@@ -1,22 +1,21 @@
-<configuration>
+<configuration scan="true">
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" level="DEBUG">
         <encoder>
-            <pattern>[%-5level] %logger{15} - %msg%n</pattern>
+            <pattern>%d [%level] %logger{15} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <logger name="io.vertx" level="DEBUG">
-        <appender-ref ref="STDOUT" />
-    </logger>
+    <logger name="io.vertx" level="DEBUG" />
 
-    <logger name="com.hazelcast" level="ERROR">
-        <appender-ref ref="STDOUT" />
-    </logger>
+    <logger name="com.hazelcast" level="ERROR" />
 
-    <logger name="io.netty.util.internal.PlatformDependent" level="ERROR">
-        <appender-ref ref="STDOUT" />
-    </logger>
+    <logger name="io.netty.util.internal.PlatformDependent" level="ERROR" />
 
-    <root level="DEBUG">
+    <logger name="com.lxbluem.EventLogger" level="TRACE" />
+
+    <logger name="com.lxbluem" level="DEBUG" />
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

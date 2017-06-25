@@ -18,6 +18,8 @@ import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rx.Single;
 
 import java.text.SimpleDateFormat;
@@ -30,6 +32,8 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
 public class BotVerticle extends AbstractRouteVerticle {
+    private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
+
     private EventBus eventBus;
 
     private Map<Client, Pack> packsByBot = new HashMap<>();
@@ -99,6 +103,15 @@ public class BotVerticle extends AbstractRouteVerticle {
 //                .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
 //                .listenException(Throwable::printStackTrace)
                 .build();
+
+        client.setExceptionListener(e -> {
+            LOG.error("connection cannot be established: {}->{}({}:{}) {}",
+                    nick,
+                    pack.getNetworkName(),
+                    pack.getServerHostName(),
+                    pack.getServerPort(),
+                    e.getMessage());
+        });
 
         client.getEventManager().registerEventListener(this);
         client.addChannel(pack.getChannelName());
@@ -186,24 +199,30 @@ public class BotVerticle extends AbstractRouteVerticle {
         }
         final int tokenFinal = token;
 
+        LOG.info("receive {} filetransfer for {}", activePassiveAddress, fname);
+
         eventBus.rxSend(FilenameResolverVerticle.address, new JsonObject().put("filename", fname))
                 .subscribe(filenameAnswer -> {
                             String filename = ((JsonObject) filenameAnswer.body()).getString("filename");
                             Client ircClient = event.getClient();
                             Pack pack = packsByBot.get(ircClient);
 
+                            JsonObject botInitMessage = new JsonObject()
+                                    .put("event", event.getClass().getSimpleName())
+                                    .put("message", message)
+                                    .put("ip", ip)
+                                    .put("port", port)
+                                    .put("size", size)
+                                    .put("filename", filename)
+                                    .put("token", tokenFinal)
+                                    .put("pack", JsonObject.mapFrom(pack))
+                                    .put("bot", ircClient.getNick());
+
+                            LOG.info("saving {} -> {}", fname, filename);
+
                             Single<Message<JsonObject>> singleResponse = eventBus.rxSend(
                                     "bot.dcc.init." + activePassiveAddress,
-                                    new JsonObject()
-                                            .put("event", event.getClass().getSimpleName())
-                                            .put("message", message)
-                                            .put("ip", ip)
-                                            .put("port", port)
-                                            .put("size", size)
-                                            .put("filename", filename)
-                                            .put("token", tokenFinal)
-                                            .put("pack", JsonObject.mapFrom(pack))
-                                            .put("bot", ircClient.getNick())
+                                    botInitMessage
                             );
 
                             if ("active".equals(activePassiveAddress)) {

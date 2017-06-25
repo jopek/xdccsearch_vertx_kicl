@@ -7,12 +7,19 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
 
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
+  private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-  protected void registerRouteWithHandler(String address, HttpMethod httpMethod, String route, BiConsumer<SerializedRequest, Future<JsonObject>> requestHandler) {
+  protected void registerRouteWithHandler(
+          String address,
+          HttpMethod httpMethod,
+          String route,
+          BiConsumer<SerializedRequest, Future<JsonObject>> requestHandler) {
     RouterRegistryMessage routerRegistryMessage = RouterRegistryMessage.builder()
         .method(httpMethod.name())
         .path(route)

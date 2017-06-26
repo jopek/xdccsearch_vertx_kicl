@@ -11,7 +11,7 @@
 
     <logger name="io.netty.util.internal.PlatformDependent" level="ERROR" />
 
-    <!--<logger name="com.lxbluem.EventLogger" level="TRACE" />-->
+    <logger name="com.lxbluem.EventLogger" level="TRACE" />
 
     <logger name="com.lxbluem" level="DEBUG" />
 

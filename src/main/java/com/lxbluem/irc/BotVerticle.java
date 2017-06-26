@@ -15,8 +15,10 @@ import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
+import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
+import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ import rx.Single;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +39,11 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private EventBus eventBus;
 
+    private TopicExtractor topicExtractor = new TopicExtractor();
+
+    private Map<Client, AtomicBoolean> initByBot = new HashMap<>();
     private Map<Client, Pack> packsByBot = new HashMap<>();
+    private Map<Client, Set<String>> requiredChannelsByBot = new HashMap<>();
 
     @Override
     public void start() {
@@ -57,7 +64,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .serverPort(6667)
                 .packName("exampleFile1m")
                 .build();
-        initTx(mybotDCC);
+//        initTx(mybotDCC);
     }
 
     private void handleDccFinished(Message<JsonObject> message) {
@@ -99,8 +106,8 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .user("user_" + nick)
                 .realName("realname_" + nick)
                 .secure(false)
-//                .listenInput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[I] " + line))
-//                .listenOutput(line -> System.out.println(sdf.format(new Date()) + ' ' + "[O] " + line))
+//                .listenInput (line -> System.out.println("---> " + sdf.format(new Date()) + ' ' + "[I] " + line))
+//                .listenOutput(line -> System.out.println("---> " + sdf.format(new Date()) + ' ' + "[O] " + line))
 //                .listenException(Throwable::printStackTrace)
                 .build();
 
@@ -111,12 +118,17 @@ public class BotVerticle extends AbstractRouteVerticle {
                     pack.getServerHostName(),
                     pack.getServerPort(),
                     e.getMessage());
+            LOG.error("exception", e);
         });
 
         client.getEventManager().registerEventListener(this);
         client.addChannel(pack.getChannelName());
 
         packsByBot.putIfAbsent(client, pack);
+        Set<String> channels = new HashSet<>();
+        channels.add(pack.getChannelName());
+        requiredChannelsByBot.putIfAbsent(client, channels);
+        initByBot.putIfAbsent(client, new AtomicBoolean(true));
     }
 
     private String getRandomNick() {
@@ -130,29 +142,75 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     @Handler
-    public void onJoin(ChannelJoinEvent event) {
-        Client ircClient = event.getClient();
-        Pack pack = packsByBot.get(ircClient);
-        event.getAffectedChannel().ifPresent(channel -> {
-            if (channel.getName().equalsIgnoreCase(pack.getChannelName()))
-                ircClient.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
-        });
-    }
+    public void onJoin(RequestedChannelJoinCompleteEvent event) {
+        Client client = event.getClient();
 
-    //    @Handler
-    public void onChannelTopic(ChannelTopicEvent event) {
-
-        Set<String> channels = event.getClient()
+        String channelName = event.getChannel().getName();
+        Pack pack = packsByBot.get(client);
+        String packChannelName = pack.getChannelName();
+        Set<String> requiredChannels = requiredChannelsByBot.get(client);
+        Set<String> currentChannels = client
                 .getChannels()
                 .stream()
                 .map(Channel::getName)
                 .collect(toSet());
 
+        boolean isRequiredChannelsJoined = requiredChannels.stream()
+                .allMatch(c -> currentChannels.contains(c.toLowerCase()));
+
+        if (isRequiredChannelsJoined && channelName.equalsIgnoreCase(packChannelName))
+            requestPack(client);
+
+        LOG.info("RequestedChannelJoinComplete {} - required: {}  current: {}",
+                event.getChannel().getName(),
+                requiredChannels,
+                currentChannels
+        );
+    }
+
+    @Handler
+    public void onChannelTopic(ChannelTopicEvent event) {
+        Client client = event.getClient();
+        Set<String> currentChannels = client
+                .getChannels()
+                .stream()
+                .map(Channel::getName)
+                .collect(toSet());
+
+        String topic = event.getTopic().getValue().orElse("");
+
+        initByBot.get(client).set(true);
+        Set<String> topicChannels = topicExtractor.getMentionedChannels(topic);
+        String packChannelName = packsByBot.get(client).getChannelName();
+        String channelName = event.getChannel().getName();
+        if (!topicChannels.isEmpty() && channelName.equalsIgnoreCase(packChannelName)) {
+            Set<String> requiredChannels = requiredChannelsByBot.get(client);
+            requiredChannels.addAll(topicChannels);
+
+            requiredChannels.stream()
+                    .filter(c -> !currentChannels.contains(c.toLowerCase()))
+                    .peek(msg -> initByBot.get(client).set(false))
+                    .forEach(client::addChannel);
+        }
+
+        if (initByBot.get(client).get()) {
+//            requestPack(client);
+        }
+
+        LOG.debug("ChannelTopic: '{}'", event.getTopic().getValue().orElse("<NO TOPIC>"));
+    }
+
+    private void requestPack(Client client) {
+        Pack pack = packsByBot.get(client);
+        client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
     @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {
         Pack pack = packsByBot.get(event.getClient());
+
+        LOG.info("PrivateNotice from '{}': '{}'", event.getActor().getNick(), event.getMessage());
+
         eventBus.publish("bot.notice", new JsonObject()
                 .put("message", event.getMessage())
                 .put("pack", JsonObject.mapFrom(pack)));
@@ -199,7 +257,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         }
         final int tokenFinal = token;
 
-        LOG.info("receive {} filetransfer for {}", activePassiveAddress, fname);
+        LOG.info("Receive {} filetransfer for '{}'", activePassiveAddress, fname);
 
         eventBus.rxSend(FilenameResolverVerticle.address, new JsonObject().put("filename", fname))
                 .subscribe(filenameAnswer -> {

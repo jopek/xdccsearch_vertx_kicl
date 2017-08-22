@@ -95,8 +95,7 @@ target/
 .idea/
 
 .vertx
-
-
+downloads
 
 
 # Created by https://www.gitignore.io/api/node
@@ -162,3 +161,4 @@ typings/
 
 
 # End of https://www.gitignore.io/api/node
+

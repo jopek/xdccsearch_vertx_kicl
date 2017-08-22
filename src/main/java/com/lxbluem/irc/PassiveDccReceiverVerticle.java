@@ -96,6 +96,14 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                         .put("pack", pack)
                                 );
                                 LOG.info("transfer of {} finished", filename);
+
+                                try {
+                                    fileOutput.close();
+                                } catch (IOException e) {
+                                    LOG.error("error closing file after transfer", e);
+                                }
+
+                                removePartExtension(file);
                             }
                     );
         });
@@ -119,5 +127,10 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                         .put("pack", pack)
                                 )
                 );
+    }
+
+    private void removePartExtension(File file) {
+        String filename = file.getPath().replace(".part", "");
+        file.renameTo(new File(filename));
     }
 }

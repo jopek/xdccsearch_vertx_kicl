@@ -24,7 +24,7 @@ public class Starter {
 
     Vertx vertx = Vertx.vertx();
     deploy(vertx, EventLogger.class.getName());
-    deploy(vertx, StatsVerticle.class.getName());
+//    deploy(vertx, StatsVerticle.class.getName());
     deploy(vertx, ActiveDccReceiverVerticle.class.getName());
     deploy(vertx, PassiveDccReceiverVerticle.class.getName());
     deploy(vertx, ExternalNotificationVerticle.class.getName());
@@ -37,15 +37,15 @@ public class Starter {
     });
   }
 
-  private static void logDeployment(String name, AsyncResult<String> event) {
-    LOG.info("deployed {} with id {}", name, event.result());
-  }
-
   private static void deploy(Vertx vertx, String verticleClassname) {
     vertx.deployVerticle(verticleClassname, event -> logDeployment(verticleClassname, event));
   }
 
   private static void deploy(Vertx vertx, String verticleClassname, Handler<AsyncResult<String>> asyncResultHandler) {
     vertx.deployVerticle(verticleClassname, asyncResultHandler);
+  }
+
+  private static void logDeployment(String name, AsyncResult<String> event) {
+    LOG.info("deployed {} with id {}", name, event.result());
   }
 }

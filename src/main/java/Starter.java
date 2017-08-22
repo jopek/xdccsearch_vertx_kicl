@@ -24,7 +24,7 @@ public class Starter {
 
     Vertx vertx = Vertx.vertx();
     deploy(vertx, EventLogger.class.getName());
-    deploy(vertx, StatsVerticle.class.getName());
+//    deploy(vertx, StatsVerticle.class.getName());
     deploy(vertx, ActiveDccReceiverVerticle.class.getName());
     deploy(vertx, PassiveDccReceiverVerticle.class.getName());
     deploy(vertx, ExternalNotificationVerticle.class.getName());

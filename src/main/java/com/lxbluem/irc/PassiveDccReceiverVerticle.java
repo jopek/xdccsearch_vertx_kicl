@@ -28,11 +28,11 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                 .subscribe(event -> {
                             JsonObject message = (JsonObject) event.body();
                             Handler<JsonObject> handler = event::reply;
-                    try {
-                        transferFile(message, handler);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                            try {
+                                transferFile(message, handler);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                 );
     }

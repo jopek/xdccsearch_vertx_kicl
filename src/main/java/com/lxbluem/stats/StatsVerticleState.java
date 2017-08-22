@@ -10,9 +10,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StatsVerticleState {
-        private MovingAverage movingAverage;
-        private List<BotState> botstates;
-        private List<String> notices;
-        private long started;
-        private long ended;
+    private MovingAverage movingAverage;
+    private List<BotState> botstates;
+    private List<String> notices;
+    private long started;
+    private long ended;
 }

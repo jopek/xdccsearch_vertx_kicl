@@ -10,7 +10,7 @@ import java.io.Serializable;
 @Setter
 @Builder
 public class RouterRegistryMessage implements Serializable {
-  private String method;
-  private String path;
-  private String target;
+    private String method;
+    private String path;
+    private String target;
 }

@@ -10,19 +10,19 @@ public class EventLogger extends AbstractVerticle {
 
     private static Logger LOG = LoggerFactory.getLogger(EventLogger.class);
 
-  @Override
-  public void start() throws Exception {
-    EventBus eventBus = vertx.eventBus();
+    @Override
+    public void start() throws Exception {
+        EventBus eventBus = vertx.eventBus();
 
-    eventBus.addInterceptor(handler -> {
-          Message message = handler.message();
-          LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
-              message.address(),
-              message.replyAddress(),
-              message.headers(),
-              message.body());
-          handler.next();
-        }
-    );
-  }
+        eventBus.addInterceptor(handler -> {
+                    Message message = handler.message();
+                    LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
+                            message.address(),
+                            message.replyAddress(),
+                            message.headers(),
+                            message.body());
+                    handler.next();
+                }
+        );
+    }
 }

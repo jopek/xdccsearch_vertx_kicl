@@ -88,6 +88,10 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
         Pack pack = readPackInfo(serializedRequest, jsonObjectFuture);
+
+        if (pack == null)
+            return;
+
         initTx(pack);
     }
 
@@ -166,8 +170,16 @@ public class BotVerticle extends AbstractRouteVerticle {
         boolean isRequiredChannelsJoined = requiredChannels.stream()
                 .allMatch(c -> currentChannels.contains(c.toLowerCase()));
 
-        if (isRequiredChannelsJoined && channelName.equalsIgnoreCase(packChannelName))
-            requestPack(client);
+        if (!isRequiredChannelsJoined)
+            return;
+
+        if (!channelName.equalsIgnoreCase(packChannelName) && currentChannels.size() == 1)
+            return;
+
+        if (currentChannels.size() == 1)
+            return;
+
+        requestPack(client);
 
         LOG.info("RequestedChannelJoinComplete {} - required: {}  current: {}",
                 event.getChannel().getName(),
@@ -192,7 +204,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         String channelName = event.getChannel().getName();
 
         if (!topicChannels.isEmpty() && channelName.equalsIgnoreCase(packChannelName)) {
-            Set<String> requiredChannels = requiredChannelsByBot.get(client);
+            Set<String> requiredChannels = requiredChannelsByBot.getOrDefault(client, new HashSet<>());
             requiredChannels.addAll(topicChannels);
 
             requiredChannels.stream()

@@ -104,6 +104,14 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                         .put("timestamp", Instant.now().toEpochMilli())
                                                 );
                                                 LOG.info("transfer of {} finished", filename);
+
+                                                try {
+                                                    fileOutput.close();
+                                                } catch (IOException e) {
+                                                    LOG.error("error closing file after transfer", e);
+                                                }
+
+                                                removePartExtension(file);
                                             }
                                     );
                         },
@@ -115,5 +123,10 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                             LOG.error("transfer of {} failed {}", filename, error);
                         }
                 );
+    }
+
+    private void removePartExtension(File file) {
+        String filename = file.getPath().replace(".part", "");
+        file.renameTo(new File(filename));
     }
 }

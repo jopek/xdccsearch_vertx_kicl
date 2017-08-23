@@ -5,15 +5,16 @@
         </encoder>
     </appender>
 
-    <logger name="io.vertx" level="DEBUG" />
+    <logger name="io.vertx" level="DEBUG"/>
 
-    <logger name="com.hazelcast" level="ERROR" />
+    <logger name="com.hazelcast" level="ERROR"/>
 
-    <logger name="io.netty.util.internal.PlatformDependent" level="ERROR" />
+    <logger name="io.netty.util.internal.PlatformDependent" level="ERROR"/>
 
-    <logger name="com.lxbluem.EventLogger" level="TRACE" />
+    <logger name="com.lxbluem.EventLogger" level="TRACE"/>
 
-    <logger name="com.lxbluem" level="DEBUG" />
+    <logger name="com.lxbluem.stats" level="off"/>
+    <!--<logger name="com.lxbluem" level="DEBUG"/>-->
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

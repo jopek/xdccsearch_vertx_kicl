@@ -20,6 +20,7 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
             HttpMethod httpMethod,
             String route,
             BiConsumer<SerializedRequest, Future<JsonObject>> requestHandler) {
+
         RouterRegistryMessage routerRegistryMessage = RouterRegistryMessage.builder()
                 .method(httpMethod.name())
                 .path(route)

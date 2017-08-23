@@ -1,16 +1,16 @@
 package com.lxbluem;
 
 import com.lxbluem.model.SerializedRequest;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.rxjava.core.AbstractVerticle;
+import io.vertx.rxjava.core.buffer.Buffer;
+import io.vertx.rxjava.core.eventbus.Message;
+import io.vertx.rxjava.core.http.HttpServerRequest;
+import io.vertx.rxjava.core.http.HttpServerResponse;
+import io.vertx.rxjava.ext.web.Router;
+import io.vertx.rxjava.ext.web.handler.BodyHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,8 @@ public class RouterVerticle extends AbstractVerticle {
                     }
                 });
 
-        vertx.eventBus().consumer("route", message -> setupRouter(router, message));
+        vertx.eventBus()
+                .consumer("route", message -> setupRouter(router, message));
     }
 
     private void unroute(Router router, Message<Object> message) {
@@ -53,10 +54,10 @@ public class RouterVerticle extends AbstractVerticle {
     }
 
     private void setupRouter(Router router, Message<Object> newRouteRequestMessage) {
-        JsonObject messageBody = (JsonObject) newRouteRequestMessage.body();
-        String path = messageBody.getString("path");
-        String target = messageBody.getString("target");
-        String method = messageBody.getString("method");
+        JsonObject newRouteRequestMessageBody = (JsonObject) newRouteRequestMessage.body();
+        String path = newRouteRequestMessageBody.getString("path");
+        String target = newRouteRequestMessageBody.getString("target");
+        String method = newRouteRequestMessageBody.getString("method");
 
         HttpMethod httpMethod = HttpMethod.valueOf(method);
 
@@ -64,40 +65,49 @@ public class RouterVerticle extends AbstractVerticle {
         verticleCounter.get(target).incrementAndGet();
         publishVerticleRouteStats();
 
-        router.route(httpMethod, path).handler(rc -> {
-            Map<String, String> params = new HashMap<>();
-            rc.request().params().forEach(e -> params.put(e.getKey(), e.getValue()));
+        router.route(httpMethod, path)
+                .produces("application/json")
+                .handler(rc -> {
 
-            Map<String, String> headers = new HashMap<>();
-            rc.request().headers().forEach(e -> headers.put(e.getKey(), e.getValue()));
+                    Map<String, String> params = new HashMap<>();
+                    HttpServerRequest httpServerRequest = rc.request();
 
-            SerializedRequest serializedRequest = SerializedRequest.builder()
-                    .method(method)
-                    .body(rc.getBody().toString())
-                    .headers(headers)
-                    .params(params)
-                    .build();
+                    httpServerRequest.params()
+                            .getDelegate()
+                            .forEach(e -> params.put(e.getKey(), e.getValue()));
 
-            vertx.eventBus()
-                    .send(target, JsonObject.mapFrom(serializedRequest), replyMessage -> {
-                        if (replyMessage.succeeded())
-                            sendHttpResponse(rc.response(), replyMessage);
-                        else {
-                            LOG.warn("could not setup route {} -> {}", path, target, replyMessage.cause());
-                            rc.response()
-                                    .setStatusCode(400)
-                                    .setStatusMessage("somehow not successful")
-                                    .end();
-                        }
-                    });
-        });
+                    Map<String, String> headers = new HashMap<>();
+                    httpServerRequest.headers()
+                            .getDelegate()
+                            .forEach(e -> headers.put(e.getKey(), e.getValue()));
+
+                    SerializedRequest serializedRequest = SerializedRequest.builder()
+                            .method(method)
+                            .body(rc.getBody().toString())
+                            .headers(headers)
+                            .params(params)
+                            .build();
+
+                    vertx.eventBus()
+                            .rxSend(target, JsonObject.mapFrom(serializedRequest))
+                            .map(objectMessage -> (JsonObject) objectMessage.body())
+                            .doOnEach(System.out::println)
+                            .subscribe(
+                                    messageBody -> sendHttpResponse(rc.response(), messageBody),
+                                    throwable -> {
+                                        LOG.warn("could not serve route {} -> {}", path, target, throwable.getCause());
+                                        rc.response()
+                                                .setStatusCode(400)
+                                                .setStatusMessage("somehow not successful")
+                                                .end();
+                                    }
+                            );
+                });
 
     }
 
-    private void sendHttpResponse(HttpServerResponse response, AsyncResult<Message<Object>> replyMessage) {
-        JsonObject jsonObject = (JsonObject) replyMessage.result().body();
-        Buffer buffer = Buffer.buffer(jsonObject.encode());
-
+    private void sendHttpResponse(HttpServerResponse response, JsonObject replyMessage) {
+        Buffer buffer = Buffer.buffer(replyMessage.encode());
         response.end(buffer);
     }
 

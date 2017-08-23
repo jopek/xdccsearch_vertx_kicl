@@ -1,6 +1,5 @@
 package com.lxbluem.model;
 
-import io.vertx.core.buffer.Buffer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

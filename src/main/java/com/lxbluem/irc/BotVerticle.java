@@ -10,15 +10,14 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.eventbus.Message;
 import net.engio.mbassy.listener.Handler;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
-import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
-import org.kitteh.irc.client.library.event.user.PrivateMessageEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,12 +25,17 @@ import rx.Single;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class BotVerticle extends AbstractRouteVerticle {
@@ -41,7 +45,6 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private TopicExtractor topicExtractor = new TopicExtractor();
 
-    private Map<Client, AtomicBoolean> initByBot = new HashMap<>();
     private Map<Client, Pack> packsByBot = new HashMap<>();
     private Map<Client, Set<String>> requiredChannelsByBot = new HashMap<>();
 
@@ -49,22 +52,21 @@ public class BotVerticle extends AbstractRouteVerticle {
     public void start() {
         eventBus = vertx.eventBus();
 
-        eventBus.consumer("bot.start", this::startBot);
         eventBus.consumer("bot.dcc.finish", this::handleDccFinished);
         eventBus.consumer("bot.dcc.fail", this::handleDccFinished);
+        registerRouteWithHandler(getClass().getSimpleName(), POST, "/xfers", this::handleStartTransfer);
+        registerRouteWithHandler(getClass().getSimpleName(), GET, "/xfers", this::handleListTransfers);
+    }
 
-        registerRouteWithHandler(getClass().getSimpleName(), POST, "/xfers", this::readPackInfo);
+    private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        Map<String, String> stringMap = packsByBot.entrySet()
+                .stream()
+                .collect(toMap(
+                        k -> k.getKey().getNick(),
+                        v -> v.getValue().toString()
+                ));
 
-        Pack mybotDCC = Pack.builder()
-                .channelName("#download")
-                .nickName("mybotDCC")
-                .packId(9812)
-                .packNumber(3)
-                .serverHostName("192.168.99.100")
-                .serverPort(6667)
-                .packName("exampleFile1m")
-                .build();
-//        initTx(mybotDCC);
+        jsonObjectFuture.complete(JsonObject.mapFrom(stringMap));
     }
 
     private void handleDccFinished(Message<JsonObject> message) {
@@ -84,15 +86,25 @@ public class BotVerticle extends AbstractRouteVerticle {
         });
     }
 
-    private void startBot(Message<JsonObject> objectMessage) {
-        JsonObject body = objectMessage.body();
-        String nick = body.getString("nick");
+    private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        Pack pack = readPackInfo(serializedRequest, jsonObjectFuture);
+
+        if (pack == null)
+            return;
+
+        initTx(pack);
     }
 
-    private void readPackInfo(SerializedRequest request, Future<JsonObject> future) {
-        Pack pack = Json.decodeValue(request.getBody(), Pack.class);
+    private Pack readPackInfo(SerializedRequest request, Future<JsonObject> future) {
+        String requestBody = request.getBody();
+        if (StringUtils.isEmpty(requestBody)) {
+            future.complete(new JsonObject());
+            return null;
+        }
+
+        Pack pack = Json.decodeValue(requestBody, Pack.class);
         future.complete(JsonObject.mapFrom(pack));
-        initTx(pack);
+        return pack;
     }
 
     private void initTx(Pack pack) {
@@ -106,8 +118,8 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .user("user_" + nick)
                 .realName("realname_" + nick)
                 .secure(false)
-//                .listenInput (line -> System.out.println("---> " + sdf.format(new Date()) + ' ' + "[I] " + line))
-//                .listenOutput(line -> System.out.println("---> " + sdf.format(new Date()) + ' ' + "[O] " + line))
+//                .listenInput (line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[I] " + line))
+//                .listenOutput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[O] " + line))
 //                .listenException(Throwable::printStackTrace)
                 .build();
 
@@ -126,9 +138,8 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         packsByBot.putIfAbsent(client, pack);
         Set<String> channels = new HashSet<>();
-        channels.add(pack.getChannelName());
+        channels.add(pack.getChannelName().toLowerCase());
         requiredChannelsByBot.putIfAbsent(client, channels);
-        initByBot.putIfAbsent(client, new AtomicBoolean(true));
     }
 
     private String getRandomNick() {
@@ -153,13 +164,22 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .getChannels()
                 .stream()
                 .map(Channel::getName)
+                .map(String::toLowerCase)
                 .collect(toSet());
 
         boolean isRequiredChannelsJoined = requiredChannels.stream()
                 .allMatch(c -> currentChannels.contains(c.toLowerCase()));
 
-        if (isRequiredChannelsJoined && channelName.equalsIgnoreCase(packChannelName))
-            requestPack(client);
+        if (!isRequiredChannelsJoined)
+            return;
+
+        if (!channelName.equalsIgnoreCase(packChannelName) && currentChannels.size() == 1)
+            return;
+
+        if (currentChannels.size() == 1)
+            return;
+
+        requestPack(client);
 
         LOG.info("RequestedChannelJoinComplete {} - required: {}  current: {}",
                 event.getChannel().getName(),
@@ -179,22 +199,17 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         String topic = event.getTopic().getValue().orElse("");
 
-        initByBot.get(client).set(true);
         Set<String> topicChannels = topicExtractor.getMentionedChannels(topic);
         String packChannelName = packsByBot.get(client).getChannelName();
         String channelName = event.getChannel().getName();
+
         if (!topicChannels.isEmpty() && channelName.equalsIgnoreCase(packChannelName)) {
-            Set<String> requiredChannels = requiredChannelsByBot.get(client);
+            Set<String> requiredChannels = requiredChannelsByBot.getOrDefault(client, new HashSet<>());
             requiredChannels.addAll(topicChannels);
 
             requiredChannels.stream()
                     .filter(c -> !currentChannels.contains(c.toLowerCase()))
-                    .peek(msg -> initByBot.get(client).set(false))
                     .forEach(client::addChannel);
-        }
-
-        if (initByBot.get(client).get()) {
-//            requestPack(client);
         }
 
         LOG.debug("ChannelTopic: '{}'", event.getTopic().getValue().orElse("<NO TOPIC>"));
@@ -202,6 +217,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private void requestPack(Client client) {
         Pack pack = packsByBot.get(client);
+        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
@@ -209,7 +225,16 @@ public class BotVerticle extends AbstractRouteVerticle {
     public void onPrivateNotice(PrivateNoticeEvent event) {
         Pack pack = packsByBot.get(event.getClient());
 
-        LOG.info("PrivateNotice from '{}': '{}'", event.getActor().getNick(), event.getMessage());
+        String remoteNick = event.getActor().getNick();
+
+        if (remoteNick.toLowerCase().startsWith("ls"))
+            return;
+
+        String packNickName = pack.getNickName();
+        if (remoteNick.equalsIgnoreCase(packNickName))
+            LOG.info("PrivateNotice from '{}': '{}'", remoteNick, packNickName, event.getMessage());
+        else
+            LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, event.getMessage());
 
         eventBus.publish("bot.notice", new JsonObject()
                 .put("message", event.getMessage())
@@ -232,58 +257,39 @@ public class BotVerticle extends AbstractRouteVerticle {
             return;
         }
 
-        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) ([\\w.-]+) (\\d+) (\\d+) (\\d+)( \\d+)?");
-        Matcher matcher = pattern.matcher(message);
+        JsonObject ctcpQuery = getPrivateCtcpQueryParts(message);
 
-        if (!matcher.find()) {
+        if (ctcpQuery.size() == 0) {
             return;
         }
 
-        String subType = matcher.group(1);
-        String fname = matcher.group(2);
-        long parsedIp = Long.parseLong(matcher.group(3));
-        String ip = transformLongToIpString(parsedIp);
-        int port = Integer.parseInt(matcher.group(4));
-        long size = Long.parseLong(matcher.group(5));
-        String tokenMatch = matcher.group(6);
-        String activePassiveAddress;
-        int token = 0;
+        LOG.info("Receive {} filetransfer for '{}'", ctcpQuery.getString("transfer_type"), ctcpQuery.getString("filename"));
 
-        if (port == 0) {
-            token = tokenMatch != null ? Integer.parseInt(tokenMatch.trim()) : 0;
-            activePassiveAddress = "passive";
-        } else {
-            activePassiveAddress = "active";
-        }
-        final int tokenFinal = token;
-
-        LOG.info("Receive {} filetransfer for '{}'", activePassiveAddress, fname);
-
-        eventBus.rxSend(FilenameResolverVerticle.address, new JsonObject().put("filename", fname))
+        eventBus.rxSend(FilenameResolverVerticle.address, new JsonObject().put("filename", ctcpQuery.getString("filename")))
+                .map(objectMessage -> (JsonObject) objectMessage.body())
                 .subscribe(filenameAnswer -> {
-                            String filename = ((JsonObject) filenameAnswer.body()).getString("filename");
                             Client ircClient = event.getClient();
                             Pack pack = packsByBot.get(ircClient);
 
                             JsonObject botInitMessage = new JsonObject()
                                     .put("event", event.getClass().getSimpleName())
                                     .put("message", message)
-                                    .put("ip", ip)
-                                    .put("port", port)
-                                    .put("size", size)
-                                    .put("filename", filename)
-                                    .put("token", tokenFinal)
+                                    .put("ip", ctcpQuery.getString("ip"))
+                                    .put("port", ctcpQuery.getInteger("port"))
+                                    .put("size", ctcpQuery.getLong("size"))
+                                    .put("filename", filenameAnswer.getString("filename"))
+                                    .put("token", ctcpQuery.getInteger("token"))
                                     .put("pack", JsonObject.mapFrom(pack))
                                     .put("bot", ircClient.getNick());
 
-                            LOG.info("saving {} -> {}", fname, filename);
+                            LOG.debug("saving {} -> {}", ctcpQuery.getString("filename"), filenameAnswer.getString("filename"));
 
                             Single<Message<JsonObject>> singleResponse = eventBus.rxSend(
-                                    "bot.dcc.init." + activePassiveAddress,
+                                    "bot.dcc.init." + ctcpQuery.getString("transfer_type"),
                                     botInitMessage
                             );
 
-                            if ("active".equals(activePassiveAddress)) {
+                            if ("active".equals(ctcpQuery.getString("transfer_type"))) {
                                 singleResponse.subscribe().unsubscribe();
                                 return;
                             }
@@ -292,11 +298,11 @@ public class BotVerticle extends AbstractRouteVerticle {
                                             ircClient.getUser().ifPresent(user -> {
                                                 String host = user.getHost();
                                                 String botReply = format("DCC SEND %s %d %d %d %d",
-                                                        fname,
+                                                        ctcpQuery.getString("filename"),
                                                         transformToIpLong(host),
                                                         verticleReplyHandler.body().getInteger("port"),
-                                                        size,
-                                                        tokenFinal
+                                                        (long) ctcpQuery.getLong("size"),
+                                                        ctcpQuery.getInteger("token")
                                                 );
 
                                                 ircClient.sendCTCPMessage(pack.getNickName(), botReply);
@@ -313,6 +319,33 @@ public class BotVerticle extends AbstractRouteVerticle {
                         )
                 );
 
+    }
+
+    private JsonObject getPrivateCtcpQueryParts(String message) {
+        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) ([\\w.-]+) (\\d+) (\\d+) (\\d+)( \\d+)?");
+        Matcher matcher = pattern.matcher(message);
+
+        if (!matcher.find()) {
+            return new JsonObject();
+        }
+
+        int port = Integer.parseInt(matcher.group(4));
+
+        JsonObject entries = new JsonObject()
+                .put("filename", matcher.group(2))
+                .put("parsed_ip", Long.parseLong(matcher.group(3)))
+                .put("ip", transformLongToIpString(Long.parseLong(matcher.group(3))))
+                .put("port", port)
+                .put("size", Long.parseLong(matcher.group(5)))
+                .put("transfer_type", "active")
+                .put("token", 0);
+
+        if (port == 0) {
+            entries.put("token", matcher.group(6) != null ? Integer.parseInt(matcher.group(6).trim()) : 0);
+            entries.put("transfer_type", "passive");
+        }
+
+        return entries;
     }
 
     private String transformLongToIpString(long ip) {

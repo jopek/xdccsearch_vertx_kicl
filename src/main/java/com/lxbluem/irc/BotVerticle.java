@@ -14,25 +14,32 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
-import org.kitteh.irc.client.library.element.User;
+import org.kitteh.irc.client.library.event.abstractbase.ActorChannelEventBase;
+import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
+import org.kitteh.irc.client.library.event.helper.ChannelEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
+import org.kitteh.irc.client.library.exception.KittehConnectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Observable;
 import rx.Single;
+import rx.subjects.AsyncSubject;
+import rx.subjects.PublishSubject;
+import rx.subjects.Subject;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
+import static io.vertx.core.http.HttpMethod.PUT;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -42,10 +49,14 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private EventBus eventBus;
 
-    private TopicExtractor topicExtractor = new TopicExtractor();
+    private ChannelExtractor channelExtractor = new ChannelExtractor();
 
     private Map<Client, Pack> packsByBot = new HashMap<>();
     private Map<Client, Set<String>> requiredChannelsByBot = new HashMap<>();
+    private Map<Client, Boolean> botJoinedCurrentRequired = new HashMap<>();
+    private final PublishSubject<RequestedChannelJoinCompleteEvent> joinCompleteEventAsyncSubject = PublishSubject.create();
+    private final PublishSubject<ChannelTopicEvent> topicEventAsyncSubject = PublishSubject.create();
+    private final PublishSubject<ChannelUsersUpdatedEvent> usersUpdatedEventAsyncSubject = PublishSubject.create();
 
     @Override
     public void start() {
@@ -55,6 +66,13 @@ public class BotVerticle extends AbstractRouteVerticle {
         eventBus.consumer("bot.dcc.fail", this::handleDccFinished);
         registerRouteWithHandler(getClass().getSimpleName(), POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(getClass().getSimpleName(), GET, "/xfers", this::handleListTransfers);
+
+        joinCompleteEventAsyncSubject
+                .asObservable()
+                .map(ActorChannelEventBase::getChannel)
+                .subscribe(
+                        channel -> System.out.println(">>> rx joined channel: " + channel.getName())
+                );
     }
 
     private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -119,17 +137,18 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .secure(false)
                 .listenInput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[I] " + line))
                 .listenOutput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[O] " + line))
-//                .listenException(Throwable::printStackTrace)
                 .build();
 
         client.setExceptionListener(e -> {
-            LOG.error("connection cannot be established: {}->{}({}:{}) {}",
-                    nick,
-                    pack.getNetworkName(),
-                    pack.getServerHostName(),
-                    pack.getServerPort(),
-                    e.getMessage());
-            LOG.error("exception", e);
+            if (e instanceof KittehConnectionException) {
+                LOG.error("connection cannot be established: {}->{}({}:{}) {}",
+                        nick,
+                        pack.getNetworkName(),
+                        pack.getServerHostName(),
+                        pack.getServerPort(),
+                        e.getMessage());
+                client.shutdown();
+            }
         });
 
         client.getEventManager().registerEventListener(this);
@@ -161,7 +180,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     public void onJoin(RequestedChannelJoinCompleteEvent event) {
         Client client = event.getClient();
 
-        Channel eventChannel = event.getChannel();
+        String eventChannelName = event.getChannel().getName();
         Pack pack = packsByBot.get(client);
         String packChannelName = pack.getChannelName().toLowerCase();
         Set<String> requiredChannels = requiredChannelsByBot.get(client);
@@ -172,39 +191,84 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .map(String::toLowerCase)
                 .collect(toSet());
 
-        boolean isRequiredChannelsJoined = requiredChannels.stream()
-                .allMatch(currentChannels::contains);
+        boolean isRequiredChannelsJoined = isRequiredChannelsJoined(event);
 
-        LOG.info("joined channel {} - required: {}  current: {}",
-                eventChannel.getName(),
+        LOG.info("joined channel {} - required: {}  current: {} - all required joined? {}",
+                eventChannelName,
                 requiredChannels,
-                currentChannels
+                currentChannels,
+                isRequiredChannelsJoined
         );
 
-        if (!isRequiredChannelsJoined)
-            return;
+//        if (!isRequiredChannelsJoined)
+//            return;
 
-        if (!eventChannel.getName().equalsIgnoreCase(packChannelName) && currentChannels.size() == 1)
-            return;
+        botJoinedCurrentRequired.put(client, isRequiredChannelsJoined);
+        joinCompleteEventAsyncSubject.onNext(event);
+//        if (!eventChannelName.equalsIgnoreCase(packChannelName) && currentChannels.size() == 1)
+//            return;
+//
+//        if (currentChannels.size() == 1)
+//            return;
 
-        if (currentChannels.size() == 1)
-            return;
-
-        requestPackViaBot(client);
+//        requestPackViaBot(client);
     }
 
-    private void requestPackViaBot(Client client) {
-        Pack pack = packsByBot.get(client);
-        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
-        client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+    private boolean isRequiredChannelsJoined(ChannelEvent event) {
+        Client client = event.getClient();
+        Set<String> currentChannels = client
+                .getChannels()
+                .stream()
+                .map(Channel::getName)
+                .map(String::toLowerCase)
+                .collect(toSet());
+
+        return requiredChannelsByBot.get(client).stream()
+                .allMatch(currentChannels::contains);
+    }
+
+    @Handler
+    public void onChannelTopic(ChannelTopicEvent event) {
+
+        topicEventAsyncSubject.onNext(event);
+
+        Client client = event.getClient();
+
+        String topic = event
+                .getTopic()
+                .getValue()
+                .orElse("");
+
+
+        String packChannelName = packsByBot.get(client).getChannelName();
+        String channelName = event.getChannel().getName();
+
+        LOG.info("topic for channel {} : {}",
+                event.getChannel().getName(),
+                topic
+        );
+
+        LOG.info("topic : current required channels {}",
+                requiredChannelsByBot.get(client)
+        );
+
+        if (channelName.equalsIgnoreCase(packChannelName))
+            joinMentionedChannelNames(client, topic);
+
+        LOG.info("topic : new current required channels {}",
+                requiredChannelsByBot.get(client)
+        );
     }
 
     @Handler
     public void onChannelUsersUpdatedEvent(ChannelUsersUpdatedEvent event) {
+        usersUpdatedEventAsyncSubject.onNext(event);
         Client client = event.getClient();
         Pack pack = packsByBot.get(client);
         String nickName = pack.getNickName();
         Channel channel = event.getChannel();
+
+        LOG.info("user list for {} updated", channel.getName());
 
         if (!channel.getName().equalsIgnoreCase(pack.getChannelName()))
             return;
@@ -216,21 +280,15 @@ public class BotVerticle extends AbstractRouteVerticle {
             return;
         }
 
+        if (isRequiredChannelsJoined(event)) {
+            requestPackViaBot(client);
+        }
     }
 
-    @Handler
-    public void onChannelTopic(ChannelTopicEvent event) {
-        Client client = event.getClient();
-
-        String topic = event
-                .getTopic()
-                .getValue()
-                .orElse("");
-
-        String packChannelName = packsByBot.get(client).getChannelName();
-        String channelName = event.getChannel().getName();
-        if (channelName.equalsIgnoreCase(packChannelName) && false)
-            joinMentionedChannelNames(client, topic);
+    private void requestPackViaBot(Client client) {
+        Pack pack = packsByBot.get(client);
+        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
+        client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
     private void joinMentionedChannelNames(Client client, String text) {
@@ -240,14 +298,19 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .map(Channel::getName)
                 .collect(toSet());
 
-        Set<String> mentionedChannels = topicExtractor.getMentionedChannels(text);
+        Set<String> mentionedChannels = channelExtractor.getMentionedChannels(text);
         Set<String> requiredChannels = requiredChannelsByBot.getOrDefault(client, new HashSet<>());
         requiredChannels.addAll(mentionedChannels);
 
         requiredChannels.stream()
                 .map(String::toLowerCase)
                 .filter(c -> !currentChannels.contains(c))
+                .peek(channel -> LOG.info("joining {}", channel))
                 .forEach(client::addChannel);
+
+        if (mentionedChannels.size() > currentChannels.size()) {
+            botJoinedCurrentRequired.put(client, false);
+        }
     }
 
     private void shutdown(Client client) {
@@ -268,7 +331,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         String packNickName = pack.getNickName();
         if (remoteNick.equalsIgnoreCase(packNickName))
-            LOG.info("PrivateNotice from '{}': '{}'", remoteNick, packNickName, event.getMessage());
+            LOG.info("PrivateNotice from '{}': '{}'", remoteNick, event.getMessage());
         else
             LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, event.getMessage());
 

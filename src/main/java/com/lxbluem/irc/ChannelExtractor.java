@@ -3,7 +3,7 @@ package com.lxbluem.irc;
 import java.util.HashSet;
 import java.util.Set;
 
-class TopicExtractor {
+class ChannelExtractor {
 
     Set<String> getMentionedChannels(String topic) {
         Set<String> channels = new HashSet<>();

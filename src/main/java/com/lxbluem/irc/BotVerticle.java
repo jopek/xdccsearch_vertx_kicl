@@ -356,7 +356,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     private void requestPackViaBot(Client client) {
         Pack pack = packsByBot.get(client);
         LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
-        //client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+        client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
     private void shutdown(Client client, String message) {

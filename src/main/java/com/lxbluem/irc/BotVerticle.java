@@ -53,7 +53,9 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private Map<Client, Pack> packsByBot = new HashMap<>();
     private Map<Client, Set<String>> requiredChannelsByBot = new HashMap<>();
-    private Map<Client, Boolean> botJoinedCurrentRequired = new HashMap<>();
+    private Map<Client, Boolean> botRequestingPack = new HashMap<>();
+    private Map<Client, Boolean> botHasSeenPackUser = new HashMap<>();
+
     private final PublishSubject<RequestedChannelJoinCompleteEvent> joinCompleteEventAsyncSubject = PublishSubject.create();
     private final PublishSubject<ChannelTopicEvent> topicEventAsyncSubject = PublishSubject.create();
     private final PublishSubject<ChannelUsersUpdatedEvent> usersUpdatedEventAsyncSubject = PublishSubject.create();
@@ -200,18 +202,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 isRequiredChannelsJoined
         );
 
-//        if (!isRequiredChannelsJoined)
-//            return;
-
-        botJoinedCurrentRequired.put(client, isRequiredChannelsJoined);
         joinCompleteEventAsyncSubject.onNext(event);
-//        if (!eventChannelName.equalsIgnoreCase(packChannelName) && currentChannels.size() == 1)
-//            return;
-//
-//        if (currentChannels.size() == 1)
-//            return;
-
-//        requestPackViaBot(client);
     }
 
     private boolean isRequiredChannelsJoined(ChannelEvent event) {
@@ -260,37 +251,6 @@ public class BotVerticle extends AbstractRouteVerticle {
         );
     }
 
-    @Handler
-    public void onChannelUsersUpdatedEvent(ChannelUsersUpdatedEvent event) {
-        usersUpdatedEventAsyncSubject.onNext(event);
-        Client client = event.getClient();
-        Pack pack = packsByBot.get(client);
-        String nickName = pack.getNickName();
-        Channel channel = event.getChannel();
-
-        LOG.info("user list for {} updated", channel.getName());
-
-        if (!channel.getName().equalsIgnoreCase(pack.getChannelName()))
-            return;
-
-        if (!channel.getNicknames().contains(nickName)) {
-            LOG.info("bot {} not in channel {}", pack.getNickName(), pack.getChannelName());
-            shutdown(client);
-            client.setInputListener(null);
-            return;
-        }
-
-        if (isRequiredChannelsJoined(event)) {
-            requestPackViaBot(client);
-        }
-    }
-
-    private void requestPackViaBot(Client client) {
-        Pack pack = packsByBot.get(client);
-        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
-        client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
-    }
-
     private void joinMentionedChannelNames(Client client, String text) {
         Set<String> currentChannels = client
                 .getChannels()
@@ -307,14 +267,53 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .filter(c -> !currentChannels.contains(c))
                 .peek(channel -> LOG.info("joining {}", channel))
                 .forEach(client::addChannel);
+    }
 
-        if (mentionedChannels.size() > currentChannels.size()) {
-            botJoinedCurrentRequired.put(client, false);
+    @Handler
+    public void onChannelUsersUpdatedEvent(ChannelUsersUpdatedEvent event) {
+        usersUpdatedEventAsyncSubject.onNext(event);
+        Client client = event.getClient();
+        Boolean userSeen = botHasSeenPackUser.getOrDefault(client, false);
+        boolean requestingPack = botRequestingPack.getOrDefault(client, false);
+        Pack pack = packsByBot.get(client);
+        String nickName = pack.getNickName();
+        Channel channel = event.getChannel();
+
+        boolean requiredChannelsJoined = isRequiredChannelsJoined(event);
+        LOG.info("user list for {} updated -- required joined: {} - user seen: {} - requesting: {}", channel.getName(), requiredChannelsJoined, userSeen, requestingPack);
+
+        if (requiredChannelsJoined && userSeen && !requestingPack) {
+            botRequestingPack.put(client, true);
+            requestPackViaBot(client);
+            return;
         }
+
+        if (!channel.getName().equalsIgnoreCase(pack.getChannelName())) {
+            LOG.info("{} != {} - returning", channel.getName(), pack.getChannelName());
+            return;
+        }
+
+        if (!channel.getNicknames().contains(nickName)) {
+            LOG.info("bot {} not in channel {}", pack.getNickName(), pack.getChannelName());
+            shutdown(client);
+            client.setInputListener(null);
+            return;
+        }
+
+        botHasSeenPackUser.put(client, true);
+    }
+
+    private void requestPackViaBot(Client client) {
+        Pack pack = packsByBot.get(client);
+        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
+        //client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
+    }
+
+    private void shutdown(Client client, String message) {
+        LOG.info("bot {} exiting because: {}", client.getNick(), message);
     }
 
     private void shutdown(Client client) {
-        LOG.info("bot {} exiting", client.getNick());
         client.shutdown("bye!");
         packsByBot.remove(client);
         requiredChannelsByBot.remove(client);

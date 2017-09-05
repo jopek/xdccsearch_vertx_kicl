@@ -4,6 +4,9 @@ import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
+import io.vertx.config.ConfigRetriever;
+import io.vertx.config.ConfigRetrieverOptions;
+import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -24,13 +27,11 @@ import org.kitteh.irc.client.library.event.helper.ChannelEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.kitteh.irc.client.library.exception.KittehConnectionException;
+import org.kitteh.irc.client.library.feature.auth.NickServ;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
 import rx.Single;
-import rx.subjects.AsyncSubject;
 import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -48,6 +49,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
 
     private EventBus eventBus;
+    private JsonObject configuration;
 
     private ChannelExtractor channelExtractor = new ChannelExtractor();
 
@@ -69,12 +71,36 @@ public class BotVerticle extends AbstractRouteVerticle {
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
 
+        readConfiguration();
+
         joinCompleteEventAsyncSubject
                 .asObservable()
                 .map(ActorChannelEventBase::getChannel)
                 .subscribe(
                         channel -> System.out.println(">>> rx joined channel: " + channel.getName())
                 );
+    }
+
+    private void readConfiguration() {
+        ConfigStoreOptions store = new ConfigStoreOptions()
+                .setType("file")
+                .setFormat("yaml")
+                .setConfig(new JsonObject()
+                        .put("path", "networks.yaml")
+                        .put("cache", "false")
+                );
+
+        ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions().addStore(store);
+        ConfigRetriever retriever = ConfigRetriever.create(vertx.getDelegate(), retrieverOptions);
+
+        retriever.getConfig(ar -> {
+            if (ar.succeeded()) {
+                configuration = ar.result();
+                LOG.info("using config {}", configuration.encode());
+            } else {
+                LOG.warn("failed reading config {}", ar.cause().getMessage());
+            }
+        });
     }
 
     private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -127,19 +153,8 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private void initTx(Pack pack) {
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
         String nick = getRandomNick();
-        Client client = Client.builder()
-                .serverHost(pack.getServerHostName())
-                .serverPort(pack.getServerPort())
-                .nick("nick_" + nick)
-                .name("name_" + nick)
-                .user("user_" + nick)
-                .realName("realname_" + nick)
-                .secure(false)
-                .listenInput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[I] " + line))
-                .listenOutput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[O] " + line))
-                .build();
+        Client client = getClient(pack, nick);
 
         client.setExceptionListener(e -> {
             if (e instanceof KittehConnectionException) {
@@ -160,6 +175,43 @@ public class BotVerticle extends AbstractRouteVerticle {
         Set<String> channels = new HashSet<>();
         channels.add(pack.getChannelName().toLowerCase());
         requiredChannelsByBot.putIfAbsent(client, channels);
+    }
+
+    private Client getClient(Pack pack, String nick) {
+        JsonObject networkOptions = configuration.getJsonObject(pack.getNetworkName().toLowerCase(), new JsonObject());
+
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        Client client = Client.builder()
+                .serverHost(pack.getServerHostName())
+                .serverPort(pack.getServerPort())
+                .nick(networkOptions.getString("nick", "nick_" + nick))
+                .name(networkOptions.getString("name", "name_" + nick))
+                .user(networkOptions.getString("user", "user_" + nick))
+                .realName(networkOptions.getString("realname", "realname_" + nick))
+                .secure(false)
+//                .listenInput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[I] " + line))
+//                .listenOutput(line -> System.out.println("   --> " + sdf.format(new Date()) + ' ' + "[O] " + line))
+                .build();
+
+        if (!networkOptions.isEmpty() && configContainsKeys(networkOptions, "nick", "password")) {
+            NickServ protocol = new NickServ(
+                    client,
+                    networkOptions.getString("nick"),
+                    networkOptions.getString("password")
+            );
+            client.getAuthManager().addProtocol(protocol);
+        }
+
+        return client;
+    }
+
+    private boolean configContainsKeys(JsonObject networkOptions, String... keys) {
+        for (String key : keys) {
+            if (networkOptions.getValue(key) == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String getRandomNick() {

@@ -422,10 +422,11 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private JsonObject getPrivateCtcpQueryParts(String message) {
-        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) ([\\w.-]+) (\\d+) (\\d+) (\\d+)( \\d+)?");
+        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) (\\S+) (\\d+) (\\d+) (\\d+)( \\d+)?");
         Matcher matcher = pattern.matcher(message);
 
         if (!matcher.find()) {
+            LOG.debug("failed parsing {}", message);
             return new JsonObject();
         }
 

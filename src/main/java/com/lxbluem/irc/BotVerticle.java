@@ -64,8 +64,8 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         eventBus.consumer("bot.dcc.finish", this::handleDccFinished);
         eventBus.consumer("bot.dcc.fail", this::handleDccFinished);
-        registerRouteWithHandler(getClass().getSimpleName(), POST, "/xfers", this::handleStartTransfer);
-        registerRouteWithHandler(getClass().getSimpleName(), GET, "/xfers", this::handleListTransfers);
+        registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
+        registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
 
         joinCompleteEventAsyncSubject
                 .asObservable()

@@ -19,7 +19,7 @@ public class SearchVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() {
-        registerRouteWithHandler(getClass().getSimpleName(), GET, "/search", this::handleSearchRequest);
+        registerRouteWithHandler(GET, "/search", this::handleSearchRequest);
     }
 
 

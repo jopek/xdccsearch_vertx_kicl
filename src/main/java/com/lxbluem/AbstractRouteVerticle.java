@@ -12,24 +12,26 @@ import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
 
+import static java.lang.String.format;
+
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
     protected void registerRouteWithHandler(
-            String address,
             HttpMethod httpMethod,
             String route,
             BiConsumer<SerializedRequest, Future<JsonObject>> requestHandler) {
 
+        String target = format("%s:%s:%s", getClass().getSimpleName(), httpMethod, route);
         RouterRegistryMessage routerRegistryMessage = RouterRegistryMessage.builder()
                 .method(httpMethod.name())
                 .path(route)
-                .target(getClass().getSimpleName())
+                .target(target)
                 .build();
 
         vertx.eventBus().publish("route", JsonObject.mapFrom(routerRegistryMessage));
 
-        vertx.eventBus().consumer(address, message -> {
+        vertx.eventBus().consumer(target, message -> {
             SerializedRequest request = Json.decodeValue(message.body().toString(), SerializedRequest.class);
 
             Future<JsonObject> future = Future.future();

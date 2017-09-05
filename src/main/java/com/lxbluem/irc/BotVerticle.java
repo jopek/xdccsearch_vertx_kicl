@@ -17,8 +17,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
+import org.kitteh.irc.client.library.element.ServerMessage;
 import org.kitteh.irc.client.library.event.abstractbase.ActorChannelEventBase;
-import org.kitteh.irc.client.library.event.channel.ChannelJoinEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
@@ -40,10 +40,8 @@ import java.util.regex.Pattern;
 
 import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
-import static io.vertx.core.http.HttpMethod.PUT;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 public class BotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
@@ -394,10 +392,22 @@ public class BotVerticle extends AbstractRouteVerticle {
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
         Client client = event.getClient();
-        shutdown(client);
+        String newNick = event.getNewNick();
+
+        String serverMessages = event
+                .getOriginalMessages()
+                .stream()
+                .map(ServerMessage::getMessage)
+                .collect(joining("; "));
+
+//        shutdown(client, format("would have retried with %s  (%s)", newNick, serverMessages));
+        event.setNewNick(newNick);
         Pack pack = packsByBot.get(client);
+
+        LOG.info("nick {} rejected, retrying with {}", event.getAttemptedNick(), newNick);
+
         eventBus.publish("bot", new JsonObject()
-                .put("message", event.getAttemptedNick())
+                .put("message", serverMessages)
                 .put("pack", JsonObject.mapFrom(pack)));
     }
 

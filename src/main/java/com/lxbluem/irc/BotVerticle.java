@@ -396,7 +396,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                             singleResponse.subscribe(verticleReplyHandler ->
                                             ircClient.getUser().ifPresent(user -> {
                                                 String host = user.getHost();
-                                                String botReply = format("DCC SEND %s %d %d %d %d",
+                                                String botReply = format("DCC SEND %s %s %d %d %d",
                                                         ctcpQuery.getString("filename"),
                                                         transformToIpLong(host),
                                                         verticleReplyHandler.body().getInteger("port"),
@@ -456,12 +456,16 @@ public class BotVerticle extends AbstractRouteVerticle {
         return joiner.toString();
     }
 
-    private long transformToIpLong(String ipString) {
+    private String transformToIpLong(String ipString) {
         String[] ipParts = ipString.trim().split("\\.");
         long ipLong = 0;
+        try {
         for (int i = 0; i <= 3; i++) {
             ipLong += Long.parseLong(ipParts[i]) << 8 * (3 - i);
         }
-        return ipLong;
+            return String.valueOf(ipLong);
+        } catch (NumberFormatException e) {
+            return ipString;
+        }
     }
 }

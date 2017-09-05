@@ -8,8 +8,6 @@ import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.helpers.BasicMarker;
-import org.slf4j.helpers.BasicMarkerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +54,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         netSocket -> {
-                            eventBus.publish("bot.dcc.start", new JsonObject()
+                            eventBus.publish("bot.dcc.start.connect", new JsonObject()
                                     .put("pack", pack)
                                     .put("timestamp", Instant.now().toEpochMilli())
                             );
@@ -91,7 +89,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                 );
                                             },
                                             error -> {
-                                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                                eventBus.publish("bot.dcc.fail.socket", new JsonObject()
                                                         .put("message", error.getMessage())
                                                         .put("pack", pack)
                                                         .put("timestamp", Instant.now().toEpochMilli())
@@ -116,7 +114,7 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                     );
                         },
                         error -> {
-                            eventBus.publish("bot.dcc.fail", new JsonObject()
+                            eventBus.publish("bot.dcc.fail.connect", new JsonObject()
                                     .put("message", error.getMessage())
                                     .put("pack", pack)
                             );

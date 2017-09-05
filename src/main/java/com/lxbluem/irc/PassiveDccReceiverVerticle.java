@@ -51,7 +51,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
         NetServer netServer = vertx.createNetServer(netServerOptions);
 
         netServer.connectHandler(socket -> {
-            eventBus.publish("bot.dcc.start", new JsonObject()
+            eventBus.publish("bot.dcc.start.connect", new JsonObject()
                     .put("pack", pack)
             );
             LOG.info("starting transfer of {}", filename);
@@ -85,7 +85,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                 );
                             },
                             error -> {
-                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                eventBus.publish("bot.dcc.fail.socket", new JsonObject()
                                         .put("message", error.getMessage())
                                         .put("pack", pack)
                                 );
@@ -112,7 +112,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         server -> {
-                            eventBus.publish("bot.dcc.start", new JsonObject()
+                            eventBus.publish("bot.dcc.start.listen", new JsonObject()
                                     .put("pack", pack)
                             );
 
@@ -122,7 +122,7 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                         },
 
                         error ->
-                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                eventBus.publish("bot.dcc.fail.listen", new JsonObject()
                                         .put("message", error.getMessage())
                                         .put("pack", pack)
                                 )

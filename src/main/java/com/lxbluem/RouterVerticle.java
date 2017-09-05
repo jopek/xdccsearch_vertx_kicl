@@ -98,7 +98,7 @@ public class RouterVerticle extends AbstractVerticle {
                                         LOG.warn("could not serve route {} -> {}", path, target, throwable.getCause());
                                         rc.response()
                                                 .setStatusCode(400)
-                                                .setStatusMessage("somehow not successful")
+                                                .setStatusMessage(String.format("unsuccessful: %s", throwable.getMessage()))
                                                 .end();
                                     }
                             );

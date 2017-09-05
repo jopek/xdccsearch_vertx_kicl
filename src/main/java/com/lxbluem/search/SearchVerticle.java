@@ -50,7 +50,10 @@ public class SearchVerticle extends AbstractRouteVerticle {
                 .rxSend()
                 .subscribe(
                         httpResponse -> responseHandler.complete(httpResponse.body()),
-                        throwable -> LOG.error("could not complete request: {}", throwable)
+                        throwable -> {
+                            LOG.error("could not complete request: {}", throwable.getMessage());
+                            responseHandler.fail(throwable);
+                        }
                 );
     }
 }

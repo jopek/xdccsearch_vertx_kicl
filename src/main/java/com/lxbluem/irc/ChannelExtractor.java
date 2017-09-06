@@ -19,6 +19,10 @@ class ChannelExtractor {
                 continue;
             }
 
+            if (token.length() == 1) {
+                continue;
+            }
+
             if (token.contains("help")) {
                 continue;
             }

@@ -183,7 +183,6 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     @Handler
     public void onJoin(RequestedChannelJoinCompleteEvent event) {
-        event.getChannel().sendMessage("/ignore *!*@* CHAN");
         joinCompleteEventAsyncSubject.onNext(event);
 
         String eventChannelName = event.getChannel().getName();

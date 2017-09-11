@@ -4,6 +4,9 @@ import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.handler.sockjs.BridgeEventType;
+import io.vertx.ext.web.handler.sockjs.BridgeOptions;
+import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -11,6 +14,8 @@ import io.vertx.rxjava.core.http.HttpServerRequest;
 import io.vertx.rxjava.core.http.HttpServerResponse;
 import io.vertx.rxjava.ext.web.Router;
 import io.vertx.rxjava.ext.web.handler.BodyHandler;
+import io.vertx.rxjava.ext.web.handler.StaticHandler;
+import io.vertx.rxjava.ext.web.handler.sockjs.SockJSHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +32,8 @@ public class RouterVerticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) {
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
+        router.route("/eventbus/*").handler(eventBusHandler());
+        router.route().handler(StaticHandler.create());
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)
@@ -46,12 +53,21 @@ public class RouterVerticle extends AbstractVerticle {
     private void unroute(Router router, Message<Object> message) {
         String target = ((JsonObject) message.body()).getString("target");
         verticleCounter.get(target).decrementAndGet();
-        publishVerticleRouteStats();
     }
 
-    private void publishVerticleRouteStats() {
-        vertx.eventBus().publish("router.stats", new JsonObject().put("verticles", verticleCounter));
+    private SockJSHandler eventBusHandler() {
+        PermittedOptions permitted = new PermittedOptions().setAddressRegex(".*");
+        BridgeOptions options = new BridgeOptions().addOutboundPermitted(permitted);
+        return SockJSHandler
+                .create(vertx)
+                .bridge(options, event -> {
+                    if (event.type() == BridgeEventType.SOCKET_CREATED) {
+                        LOG.info("A socket was created");
+                    }
+                    event.complete(true);
+                });
     }
+
 
     private void setupRouter(Router router, Message<Object> newRouteRequestMessage) {
         JsonObject newRouteRequestMessageBody = (JsonObject) newRouteRequestMessage.body();
@@ -63,7 +79,6 @@ public class RouterVerticle extends AbstractVerticle {
 
         verticleCounter.putIfAbsent(target, new AtomicInteger(0));
         verticleCounter.get(target).incrementAndGet();
-        publishVerticleRouteStats();
 
         router.route(httpMethod, path)
                 .produces("application/json")

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>The best realtime auctions!</title>
+
+    <script src="//cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js"></script>
+    <script src="js/vertx-eventbus.js"></script>
+</head>
+
+<body onload="init();">
+<div>
+    events:
+    <div id="feed"></div>
+</div>
+
+<script>
+    function init() {
+        var eventBus = new EventBus('/eventbus');
+        eventBus.onopen = function () {
+            var registry = function (error, message) {
+                document.getElementById('feed').value += JSON.parse(message.body) + '\n';
+            };
+            eventBus.registerHandler('bot.dcc.fail', registry);
+            eventBus.registerHandler('bot.dcc.finish', registry);
+            eventBus.registerHandler('bot.notice', registry);
+            eventBus.registerHandler('bot.exit', registry);
+            eventBus.registerHandler('bot', registry);
+        }
+    }
+
+</script>
+
+
+</body>
+
+</html>

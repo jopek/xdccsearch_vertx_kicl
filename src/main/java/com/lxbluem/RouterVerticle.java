@@ -31,9 +31,9 @@ public class RouterVerticle extends AbstractVerticle {
     @Override
     public void start(Future<Void> startFuture) {
         Router router = Router.router(vertx);
-        router.route().handler(BodyHandler.create());
         router.route("/eventbus/*").handler(eventBusHandler());
         router.route().handler(StaticHandler.create());
+        router.route().handler(BodyHandler.create());
 
         vertx.createHttpServer()
                 .requestHandler(router::accept)

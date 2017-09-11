@@ -60,8 +60,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         eventBus = vertx.eventBus();
 
         eventBus.consumer("bot.dcc.finish", this::handleDccFinished);
-        eventBus.consumer("bot.dcc.fail.socket", this::handleDccFinished);
-        eventBus.consumer("bot.dcc.fail.connect", this::handleDccFinished);
+        eventBus.consumer("bot.dcc.fail", this::handleDccFinished);
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
     }
@@ -174,10 +173,12 @@ public class BotVerticle extends AbstractRouteVerticle {
     @Handler
     public void onMotd(ClientReceiveMOTDEvent event) {
         LOG.info("received message of the day MOTD - registering this nick");
-        Client client = event.getClient();
         vertx.setTimer(30_500, timerEvent -> {
+            Client client = event.getClient();
             client.sendMessage("Nickserv", "register hotA1 email@address.com");
-            joinRequiredChannels(client, requiredChannelsByBot.get(client));
+
+            Set<String> requiredChannels = requiredChannelsByBot.getOrDefault(client, new HashSet<>());
+            joinRequiredChannels(client, requiredChannels);
         });
     }
 
@@ -307,13 +308,25 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private void shutdown(Client client, String message) {
-        LOG.info("bot {} exiting because: {}", client.getNick(), message);
+        Pack pack = packsByBot.get(client);
+        String msg = String.format("bot %s exiting because: %s", client.getNick(), message);
+        LOG.info(msg);
+
+        packsByBot.remove(client);
+        requiredChannelsByBot.remove(client);
+        botHasSeenPackUser.remove(client);
+
+        vertx.setPeriodic(5_000, event -> {
+            LOG.debug("SERVER INFO: {}", client.getServerInfo());
+        });
+
+        eventBus.publish("bot.exit", new JsonObject()
+                .put("message", msg)
+                .put("pack", JsonObject.mapFrom(pack)));
     }
 
     private void shutdown(Client client) {
-        client.shutdown("bye!");
-        packsByBot.remove(client);
-        requiredChannelsByBot.remove(client);
+        shutdown(client, "bye!");
     }
 
     @Handler

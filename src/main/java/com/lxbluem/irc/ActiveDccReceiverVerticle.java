@@ -54,7 +54,8 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         netSocket -> {
-                            eventBus.publish("bot.dcc.start.connect", new JsonObject()
+                            eventBus.publish("bot.dcc.start", new JsonObject()
+                                    .put("source", "connect")
                                     .put("pack", pack)
                                     .put("timestamp", Instant.now().toEpochMilli())
                             );
@@ -89,12 +90,13 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                                 );
                                             },
                                             error -> {
-                                                eventBus.publish("bot.dcc.fail.socket", new JsonObject()
+                                                eventBus.publish("bot.dcc.fail", new JsonObject()
                                                         .put("message", error.getMessage())
+                                                        .put("source", "socket")
                                                         .put("pack", pack)
                                                         .put("timestamp", Instant.now().toEpochMilli())
                                                 );
-                                                LOG.error("transfer of {} failed {}", filename, error);
+                                                LOG.error("transfer of {} failed {}", filename, error.getMessage());
                                             },
                                             () -> {
                                                 eventBus.publish("bot.dcc.finish", new JsonObject()
@@ -114,11 +116,12 @@ public class ActiveDccReceiverVerticle extends AbstractVerticle {
                                     );
                         },
                         error -> {
-                            eventBus.publish("bot.dcc.fail.connect", new JsonObject()
+                            eventBus.publish("bot.dcc.fail", new JsonObject()
                                     .put("message", error.getMessage())
+                                    .put("source", "connect")
                                     .put("pack", pack)
                             );
-                            LOG.error("transfer of {} failed {}", filename, error);
+                            LOG.error("transfer of {} failed {}", filename, error.getMessage());
                         }
                 );
     }

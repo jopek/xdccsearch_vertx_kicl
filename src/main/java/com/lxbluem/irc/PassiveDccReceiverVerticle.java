@@ -51,7 +51,8 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
         NetServer netServer = vertx.createNetServer(netServerOptions);
 
         netServer.connectHandler(socket -> {
-            eventBus.publish("bot.dcc.start.connect", new JsonObject()
+            eventBus.publish("bot.dcc.start", new JsonObject()
+                    .put("source", "connect")
                     .put("pack", pack)
             );
             LOG.info("starting transfer of {}", filename);
@@ -85,7 +86,8 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                                 );
                             },
                             error -> {
-                                eventBus.publish("bot.dcc.fail.socket", new JsonObject()
+                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                        .put("source", "socket")
                                         .put("message", error.getMessage())
                                         .put("pack", pack)
                                 );
@@ -112,7 +114,8 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         server -> {
-                            eventBus.publish("bot.dcc.start.listen", new JsonObject()
+                            eventBus.publish("bot.dcc.start", new JsonObject()
+                                    .put("source", "listen")
                                     .put("pack", pack)
                             );
 
@@ -122,7 +125,8 @@ public class PassiveDccReceiverVerticle extends AbstractVerticle {
                         },
 
                         error ->
-                                eventBus.publish("bot.dcc.fail.listen", new JsonObject()
+                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                        .put("source", "listen")
                                         .put("message", error.getMessage())
                                         .put("pack", pack)
                                 )

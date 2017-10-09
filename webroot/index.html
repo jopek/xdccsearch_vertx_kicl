@@ -11,7 +11,7 @@
 <body onload="init();">
 <div>
     events:
-    <div id="feed"></div>
+    <pre id="feed"></pre>
 </div>
 
 <script>
@@ -19,13 +19,16 @@
         var eventBus = new EventBus('/eventbus');
         eventBus.onopen = function () {
             var registry = function (error, message) {
-                document.getElementById('feed').value += JSON.parse(message.body) + '\n';
+                var msg = JSON.stringify(message.body);
+                document.getElementById('feed').innerHTML += msg + '\n';
             };
-            eventBus.registerHandler('bot.dcc.fail', registry);
             eventBus.registerHandler('bot.dcc.finish', registry);
+            eventBus.registerHandler('bot.dcc.fail', registry);
+            eventBus.registerHandler('bot.init', registry);
             eventBus.registerHandler('bot.notice', registry);
+            eventBus.registerHandler('bot.fail', registry);
             eventBus.registerHandler('bot.exit', registry);
-            eventBus.registerHandler('bot', registry);
+            eventBus.registerHandler('stats', registry);
         }
     }
 

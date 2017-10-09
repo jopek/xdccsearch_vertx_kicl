@@ -127,6 +127,10 @@ public class BotVerticle extends AbstractRouteVerticle {
                         pack.getServerPort(),
                         e.getMessage());
                 client.shutdown();
+
+                eventBus.publish("bot.fail", new JsonObject()
+                        .put("message", e.getMessage())
+                        .put("pack", JsonObject.mapFrom(pack)));
             }
         });
 
@@ -137,6 +141,10 @@ public class BotVerticle extends AbstractRouteVerticle {
         Set<String> channels = new HashSet<>();
         channels.add(pack.getChannelName().toLowerCase());
         requiredChannelsByBot.put(client, channels);
+
+        eventBus.publish("bot.init", new JsonObject()
+                .put("pack", JsonObject.mapFrom(pack)));
+
     }
 
     private Client getClient(Pack pack, String nick) {

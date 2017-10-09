@@ -32,8 +32,10 @@ public class SearchVerticle extends AbstractRouteVerticle {
         }
 
         String query = params.get("q");
-        if (StringUtils.isEmpty(query))
+        if (StringUtils.isEmpty(query)) {
             responseHandler.fail("query is empty");
+            return;
+        }
 
         doSearch(query, pageNum, responseHandler);
     }

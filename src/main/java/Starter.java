@@ -2,12 +2,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
-import com.lxbluem.notification.ExternalNotificationVerticle;
-import com.lxbluem.stats.StatsVerticle;
-import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.ActiveDccReceiverVerticle;
+import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.PassiveDccReceiverVerticle;
+import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.search.SearchVerticle;
+import com.lxbluem.stats.StatsVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -24,7 +24,7 @@ public class Starter {
 
         Vertx vertx = Vertx.vertx();
         deploy(vertx, EventLogger.class.getName());
-//    deploy(vertx, StatsVerticle.class.getName());
+//        deploy(vertx, StatsVerticle.class.getName());
         deploy(vertx, ActiveDccReceiverVerticle.class.getName());
         deploy(vertx, PassiveDccReceiverVerticle.class.getName());
         deploy(vertx, ExternalNotificationVerticle.class.getName());
@@ -46,6 +46,6 @@ public class Starter {
     }
 
     private static void logDeployment(String name, AsyncResult<String> event) {
-        LOG.info("deployed {} with id {}", name, event.result());
+        LOG.info("deployed {} with id {} {}", name, event.result(), event.succeeded() ? "" : " - FAILED! : " + event.cause().getMessage());
     }
 }

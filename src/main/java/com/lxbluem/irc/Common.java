@@ -7,7 +7,6 @@ import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.net.NetSocket;
 import org.slf4j.Logger;
 import rx.Observable;
-import rx.Subscription;
 import rx.functions.Action0;
 import rx.functions.Action1;
 
@@ -25,7 +24,7 @@ class Common {
         LOG = logger;
     }
 
-    Subscription subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) throws IOException {
+    void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) throws IOException {
         String filename = message.getString("filename");
 
         File file = new File(filename);
@@ -34,7 +33,7 @@ class Common {
 
         JsonObject pack = (JsonObject) message.getValue("pack");
 
-        return socketObservable.subscribe(
+        socketObservable.subscribe(
                 socket -> {
                     eventBus.publish("bot.dcc.start", new JsonObject()
                             .put("source", "connect")
@@ -44,11 +43,12 @@ class Common {
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
-                    final long[] bytesTransferedValue = {0};
+                    final long[] bytesTransferredValue = {0};
+                    final long[] lastProgressAt = {0};
 
                     socket.toObservable()
                             .subscribe(
-                                    bufferReceivedAction(fileOutput, pack, socket, outBuffer, bytesTransferedValue),
+                                    bufferReceivedAction(fileOutput, pack, socket, outBuffer, bytesTransferredValue, lastProgressAt),
                                     errorAction(filename, pack),
                                     completedAction(filename, file, fileOutput, pack)
                             );
@@ -64,7 +64,7 @@ class Common {
         );
     }
 
-    private Action1<Buffer> bufferReceivedAction(RandomAccessFile file, JsonObject pack, NetSocket netSocket, byte[] outBuffer, long[] bytesTransferedValue) {
+    private Action1<Buffer> bufferReceivedAction(RandomAccessFile file, JsonObject pack, NetSocket netSocket, byte[] outBuffer, long[] bytesTransferedValue, long[] lastProgressAt) {
         return buffer -> {
             long bytesTransfered = bytesTransferedValue[0];
             bytesTransfered += buffer.length();
@@ -81,10 +81,15 @@ class Common {
                 e.printStackTrace();
             }
 
+            long nowInMillis = Instant.now().toEpochMilli();
+            long lastProgress = lastProgressAt[0];
+            if (nowInMillis <= lastProgress + 1000)
+                return;
+
+            lastProgressAt[0] = nowInMillis;
             eventBus.publish("bot.dcc.progress", new JsonObject()
                     .put("bytes", bytesTransfered)
-                    .put("bufferBytes", buffer.length())
-                    .put("timestamp", Instant.now().toEpochMilli())
+                    .put("timestamp", nowInMillis)
                     .put("pack", pack)
             );
         };

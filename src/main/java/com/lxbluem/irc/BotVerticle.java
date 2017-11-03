@@ -80,7 +80,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     private Pack readPackInfo(SerializedRequest request, Future<JsonObject> future) {
         String requestBody = request.getBody();
         if (StringUtils.isEmpty(requestBody)) {
-            future.complete(new JsonObject());
+            future.fail(new RuntimeException("pack empty"));
             return null;
         }
 

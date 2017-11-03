@@ -1,14 +1,15 @@
 {
+  "uname": "mybotDCC",
+  "nport": 6667,
+
   "pid": 382111132,
   "name": "lala",
   "nid": 3,
   "nname": "Criten",
   "naddr": "192.168.99.100",
-  "nport": 6667,
   "cid": 275,
   "cname": "#download",
   "uid": 892447522,
-  "uname": "mybotDCC",
   "n": 3,
   "gets": 3,
   "sz": 347078656,

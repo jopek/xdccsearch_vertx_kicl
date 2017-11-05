@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -104,6 +105,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 client.shutdown();
 
                 eventBus.publish("bot.fail", new JsonObject()
+                        .put("timestamp", Instant.now().toEpochMilli())
                         .put("message", e.getMessage())
                         .put("pack", JsonObject.mapFrom(pack)));
             }
@@ -116,6 +118,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         packsByBot.put(client, pack);
 
         eventBus.publish("bot.init", new JsonObject()
+                .put("timestamp", Instant.now().toEpochMilli())
                 .put("pack", JsonObject.mapFrom(pack)));
 
     }

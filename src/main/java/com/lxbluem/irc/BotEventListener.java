@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Single;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -185,6 +186,7 @@ public class BotEventListener {
         });
 
         vertx.eventBus().publish("bot.exit", new JsonObject()
+                .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", msg)
                 .put("pack", JsonObject.mapFrom(pack)));
     }
@@ -207,6 +209,7 @@ public class BotEventListener {
             LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, event.getMessage());
 
         vertx.eventBus().publish("bot.notice", new JsonObject()
+                .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", event.getMessage())
                 .put("pack", JsonObject.mapFrom(pack)));
     }
@@ -227,6 +230,7 @@ public class BotEventListener {
         LOG.warn("nick {} rejected, retrying with {}", event.getAttemptedNick(), newNick);
 
         vertx.eventBus().publish("bot", new JsonObject()
+                .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", serverMessages)
                 .put("pack", JsonObject.mapFrom(pack)));
     }
@@ -298,6 +302,7 @@ public class BotEventListener {
 
                         },
                         throwable -> vertx.eventBus().publish("bot.fail", new JsonObject()
+                                .put("timestamp", Instant.now().toEpochMilli())
                                 .put("error", throwable.getMessage())
                         )
                 );

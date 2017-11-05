@@ -56,6 +56,7 @@ class Common {
                 error -> {
                     eventBus.publish("bot.dcc.fail", new JsonObject()
                             .put("message", error.getMessage())
+                            .put("timestamp", Instant.now().toEpochMilli())
                             .put("source", "connect")
                             .put("pack", pack)
                     );

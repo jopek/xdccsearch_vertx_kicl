@@ -10,7 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class StatsVerticleState {
+class State {
     private MovingAverage movingAverage;
     private List<DccState> dccStates;
     private List<String> notices;

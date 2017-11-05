@@ -18,7 +18,7 @@ import static com.lxbluem.stats.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
 
 public class StatsVerticle extends AbstractRouteVerticle {
-    private Map<JsonObject, StatsVerticleState> stateMap = new HashMap<>();
+    private Map<JsonObject, State> stateMap = new HashMap<>();
 
     private static final int AVG_SIZE_SEC = 5;
 
@@ -52,8 +52,8 @@ public class StatsVerticle extends AbstractRouteVerticle {
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        StatsVerticleState verticleState = updateVerticleState(pack, timestamp);
-        addBotState(verticleState, INIT, timestamp);
+        State state = updateVerticleState(pack, timestamp);
+        addBotState(state, INIT, timestamp);
     }
 
     private void dccStart(Message<JsonObject> eventMessage) {
@@ -61,8 +61,8 @@ public class StatsVerticle extends AbstractRouteVerticle {
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        StatsVerticleState verticleState = updateVerticleState(pack, timestamp);
-        addBotState(verticleState, START, timestamp);
+        State state = updateVerticleState(pack, timestamp);
+        addBotState(state, START, timestamp);
     }
 
     private void dccProgress(Message<JsonObject> eventMessage) {
@@ -71,20 +71,20 @@ public class StatsVerticle extends AbstractRouteVerticle {
         long timestamp = body.getLong("timestamp", 1L);
         JsonObject pack = body.getJsonObject("pack");
 
-        StatsVerticleState verticleState = updateVerticleState(pack, timestamp);
+        State state = updateVerticleState(pack, timestamp);
 
-        MovingAverage movingAverage = verticleState.getMovingAverage();
+        MovingAverage movingAverage = state.getMovingAverage();
         movingAverage.addValue(new Progress(bytes, timestamp));
 
-        List<DccState> dccStates = verticleState
+        List<DccState> dccStates = state
                 .getDccStates()
                 .stream()
                 .filter(bs -> !bs.equals(PROGRESS))
                 .collect(Collectors.toList());
-        DccState state = PROGRESS;
-        state.setTimestamp(timestamp);
-        dccStates.add(state);
-        verticleState.setDccStates(dccStates);
+        DccState dccState = PROGRESS;
+        dccState.setTimestamp(timestamp);
+        dccStates.add(dccState);
+        state.setDccStates(dccStates);
     }
 
     private void dccFinish(Message<JsonObject> eventMessage) {
@@ -92,8 +92,8 @@ public class StatsVerticle extends AbstractRouteVerticle {
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        StatsVerticleState verticleState = updateVerticleState(pack, timestamp);
-        addBotState(verticleState, FINISH, timestamp);
+        State state = updateVerticleState(pack, timestamp);
+        addBotState(state, FINISH, timestamp);
     }
 
     private void notice(Message<JsonObject> eventMessage) {
@@ -102,28 +102,28 @@ public class StatsVerticle extends AbstractRouteVerticle {
         String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
 
-        StatsVerticleState verticleState = updateVerticleState(pack, timestamp);
+        State state = updateVerticleState(pack, timestamp);
 
-        List<String> messageList = verticleState.getNotices();
+        List<String> messageList = state.getNotices();
         messageList.add(message);
     }
 
-    private StatsVerticleState updateVerticleState(JsonObject pack, long timestamp) {
-        stateMap.putIfAbsent(pack, StatsVerticleState.builder()
+    private State updateVerticleState(JsonObject pack, long timestamp) {
+        stateMap.putIfAbsent(pack, State.builder()
                 .movingAverage(new MovingAverage(AVG_SIZE_SEC))
                 .dccStates(new ArrayList<>())
                 .notices(new ArrayList<>())
                 .build());
-        StatsVerticleState state = stateMap.get(pack);
+        State state = stateMap.get(pack);
         state.setStarted(timestamp);
         return state;
     }
 
-    private void addBotState(StatsVerticleState statsVerticleState, DccState dccState, Long timestamp) {
+    private void addBotState(State state, DccState dccState, Long timestamp) {
         dccState.setTimestamp(timestamp);
 
-        List<DccState> dccStateList = statsVerticleState.getDccStates();
-        dccStateList.add(dccState);
+        List<DccState> dccStates = state.getDccStates();
+        dccStates.add(dccState);
     }
 
     private void setupStatsInterval() {

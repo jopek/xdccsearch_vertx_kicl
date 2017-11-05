@@ -15,8 +15,6 @@ import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.functions.Action1;
 
-import java.io.IOException;
-
 import static com.lxbluem.Addresses.*;
 
 public class DccReceiverVerticle extends AbstractVerticle {
@@ -37,26 +35,21 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     private Action1<Message<JsonObject>> handleMessage() {
         return event -> {
-            String transfer_type = event.body().getString("transfer_type");
-            LOG.info("type of transfer: {}", transfer_type);
-            boolean active = transfer_type.equalsIgnoreCase("active");
-            try {
-                transferFile(event.body(), event::reply, active);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Boolean passive = event.body().getBoolean("passive", false);
+            LOG.info("type of transfer: {}", passive ? "passive" : "active");
+            transferFile(event.body(), event::reply, passive);
         };
     }
 
-    private void transferFile(JsonObject message, Handler<JsonObject> replyHandler, boolean active) throws IOException {
-        if (active)
+    private void transferFile(JsonObject message, Handler<JsonObject> replyHandler, boolean passive) {
+        if (!passive)
             transferFileActive(message);
         else
             transferFilePassive(message, replyHandler);
     }
 
-    private void transferFilePassive(JsonObject message, Handler<JsonObject> replyHandler) throws IOException {
-        JsonObject pack = (JsonObject) message.getValue("pack");
+    private void transferFilePassive(JsonObject message, Handler<JsonObject> replyHandler) {
+        JsonObject pack = message.getJsonObject("pack");
 
         NetServerOptions netServerOptions = new NetServerOptions().setReceiveBufferSize(1 << 18);
         NetServer netServer = vertx.createNetServer(netServerOptions);
@@ -66,7 +59,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         listenToIncomingDccRequests(replyHandler, pack, netServer);
     }
 
-    private void transferFileActive(JsonObject message) throws IOException {
+    private void transferFileActive(JsonObject message) {
         String host = message.getString("ip");
         Integer port = message.getInteger("port");
 

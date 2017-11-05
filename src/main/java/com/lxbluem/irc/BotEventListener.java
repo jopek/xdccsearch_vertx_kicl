@@ -265,7 +265,7 @@ public class BotEventListener {
                     JsonObject botInitMessage = new JsonObject()
                             .put("event", event.getClass().getSimpleName())
                             .put("message", message)
-                            .put("transfer_type", ctcpQuery.getString("transfer_type"))
+                            .put("passive", ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive"))
                             .put("ip", ctcpQuery.getString("ip"))
                             .put("port", ctcpQuery.getInteger("port"))
                             .put("size", ctcpQuery.getLong("size"))

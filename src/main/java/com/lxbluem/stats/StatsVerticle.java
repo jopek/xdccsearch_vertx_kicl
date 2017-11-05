@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.lxbluem.Addresses.*;
 import static com.lxbluem.stats.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
 
@@ -27,11 +28,11 @@ public class StatsVerticle extends AbstractRouteVerticle {
     public void start() throws Exception {
         registerRouteWithHandler(GET, "/stats", this::getStats);
 
-        handle("bot.init", this::init);
-        handle("bot.dcc.start", this::dccStart);
-        handle("bot.dcc.progress", this::dccProgress);
-        handle("bot.dcc.finish", this::dccFinish);
-        handle("bot.notice", this::notice);
+        handle(BOT_INIT, this::init);
+        handle(BOT_DCC_START, this::dccStart);
+        handle(BOT_DCC_PROGRESS, this::dccProgress);
+        handle(BOT_DCC_FINISH, this::dccFinish);
+        handle(BOT_NOTICE, this::notice);
 
         setupStatsInterval();
     }

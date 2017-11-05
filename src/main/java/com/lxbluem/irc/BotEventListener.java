@@ -1,6 +1,5 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.model.Pack;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
@@ -266,6 +265,7 @@ public class BotEventListener {
                     JsonObject botInitMessage = new JsonObject()
                             .put("event", event.getClass().getSimpleName())
                             .put("message", message)
+                            .put("transfer_type", ctcpQuery.getString("transfer_type"))
                             .put("ip", ctcpQuery.getString("ip"))
                             .put("port", ctcpQuery.getInteger("port"))
                             .put("size", ctcpQuery.getLong("size"))

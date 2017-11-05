@@ -2,9 +2,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
-import com.lxbluem.irc.ActiveDccReceiverVerticle;
 import com.lxbluem.irc.BotVerticle;
-import com.lxbluem.irc.PassiveDccReceiverVerticle;
+import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.stats.StatsVerticle;
@@ -23,14 +22,14 @@ public class Starter {
         Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         Vertx vertx = Vertx.vertx();
-        deploy(vertx, EventLogger.class.getName());
-//        deploy(vertx, StatsVerticle.class.getName());
+//        deploy(vertx, EventLogger.class.getName());
         deploy(vertx, DccReceiverVerticle.class.getName());
-        deploy(vertx, ExternalNotificationVerticle.class.getName());
+//        deploy(vertx, ExternalNotificationVerticle.class.getName());
         deploy(vertx, FilenameResolverVerticle.class.getName());
 
         deploy(vertx, RouterVerticle.class.getName(), event -> {
             logDeployment(RouterVerticle.class.getName(), event);
+//            deploy(vertx, StatsVerticle.class.getName());
             deploy(vertx, SearchVerticle.class.getName());
             deploy(vertx, BotVerticle.class.getName());
         });

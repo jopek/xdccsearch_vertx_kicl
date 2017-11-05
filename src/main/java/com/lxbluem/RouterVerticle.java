@@ -106,9 +106,8 @@ public class RouterVerticle extends AbstractVerticle {
                             .build();
 
                     vertx.eventBus()
-                            .rxSend(target, JsonObject.mapFrom(serializedRequest))
-                            .map(objectMessage -> (JsonObject) objectMessage.body())
-                            .doOnEach(System.out::println)
+                            .<JsonObject>rxSend(target, JsonObject.mapFrom(serializedRequest))
+                            .map(Message::body)
                             .subscribe(
                                     messageBody -> sendHttpResponse(rc.response(), messageBody),
                                     throwable -> {

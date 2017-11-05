@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.functions.Action1;
 
+import java.time.Instant;
+
 import static com.lxbluem.Addresses.*;
 
 public class DccReceiverVerticle extends AbstractVerticle {
@@ -77,6 +79,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 .subscribe(
                         server -> {
                             eventBus.publish(BOT_DCC_START, new JsonObject()
+                                    .put("timestamp", Instant.now().toEpochMilli())
                                     .put("source", "listen")
                                     .put("pack", pack)
                             );

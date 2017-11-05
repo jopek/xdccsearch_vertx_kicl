@@ -182,9 +182,7 @@ public class BotEventListener {
         String msg = String.format("bot %s exiting because: %s", client.getNick(), message);
         LOG.info(msg);
 
-        vertx.setPeriodic(5_000, event -> {
-            LOG.debug("SERVER INFO: {}", client.getServerInfo());
-        });
+        vertx.setPeriodic(5_000, event -> LOG.debug("SERVER INFO: {}", client.getServerInfo()));
 
         vertx.eventBus().publish(BOT_EXIT, new JsonObject()
                 .put("timestamp", Instant.now().toEpochMilli())

@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.lxbluem.Addresses.*;
 
@@ -26,14 +27,25 @@ class Common {
         LOG = logger;
     }
 
-    void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) throws IOException {
+    void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
         String filename = message.getString("filename");
-
-        File file = new File(filename);
-        RandomAccessFile fileOutput = new RandomAccessFile(file.getCanonicalPath(), "rw");
-        fileOutput.seek(0);
-
         JsonObject pack = message.getJsonObject("pack");
+
+        AtomicReference<File> file = new AtomicReference<>(new File(filename));
+        AtomicReference<RandomAccessFile> fileOutput = new AtomicReference<>(null);
+        try {
+            fileOutput.set(new RandomAccessFile(file.get().getCanonicalPath(), "rw"));
+            fileOutput.get().seek(0);
+        } catch (IOException error) {
+            LOG.error("error opening file before transfer", error);
+            eventBus.publish(BOT_DCC_FAIL, new JsonObject()
+                    .put("message", error.getMessage())
+                    .put("timestamp", Instant.now().toEpochMilli())
+                    .put("source", "connect")
+                    .put("pack", pack)
+            );
+            return;
+        }
 
         socketObservable.subscribe(
                 socket -> {
@@ -50,9 +62,9 @@ class Common {
 
                     socket.toObservable()
                             .subscribe(
-                                    bufferReceivedAction(fileOutput, pack, socket, outBuffer, bytesTransferredValue, lastProgressAt),
+                                    bufferReceivedAction(fileOutput.get(), pack, socket, outBuffer, bytesTransferredValue, lastProgressAt),
                                     errorAction(filename, pack),
-                                    completedAction(filename, file, fileOutput, pack)
+                                    completedAction(filename, file.get(), fileOutput.get(), pack)
                             );
                 },
                 error -> {

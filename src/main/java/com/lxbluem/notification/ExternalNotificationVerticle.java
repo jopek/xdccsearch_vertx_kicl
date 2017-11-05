@@ -10,6 +10,7 @@ import io.vertx.ext.web.client.WebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.lxbluem.Addresses.BOT_DCC_FINISH;
 import static java.lang.String.format;
 
 public class ExternalNotificationVerticle extends AbstractVerticle {
@@ -28,7 +29,7 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
 
         readConfiguration();
 
-        vertx.eventBus().consumer("bot.dcc.finish", handler -> {
+        vertx.eventBus().consumer(BOT_DCC_FINISH, handler -> {
             JsonObject body = (JsonObject) handler.body();
             JsonObject pack = body.getJsonObject("pack");
 

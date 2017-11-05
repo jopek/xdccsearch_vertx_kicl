@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
 
+import static com.lxbluem.Addresses.*;
 import static java.lang.String.format;
 
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
@@ -29,7 +30,7 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
                 .target(target)
                 .build();
 
-        vertx.eventBus().publish("route", JsonObject.mapFrom(routerRegistryMessage));
+        vertx.eventBus().publish(ROUTE_ADD, JsonObject.mapFrom(routerRegistryMessage));
 
         vertx.eventBus().consumer(target, message -> {
             SerializedRequest request = Json.decodeValue(message.body().toString(), SerializedRequest.class);
@@ -48,6 +49,6 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
         String verticleName = getClass().getSimpleName();
         JsonObject message = new JsonObject().put("target", verticleName);
 
-        vertx.eventBus().publish("unroute", message);
+        vertx.eventBus().publish(ROUTE_REMOVE, message);
     }
 }

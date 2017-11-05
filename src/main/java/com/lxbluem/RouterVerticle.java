@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.lxbluem.Addresses.ROUTE_ADD;
+
 public class RouterVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(RouterVerticle.class);
 
@@ -47,7 +49,7 @@ public class RouterVerticle extends AbstractVerticle {
                 });
 
         vertx.eventBus()
-                .consumer("route", message -> setupRouter(router, message));
+                .consumer(ROUTE_ADD, message -> setupRouter(router, message));
     }
 
     private void unroute(Router router, Message<Object> message) {

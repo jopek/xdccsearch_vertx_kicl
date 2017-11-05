@@ -28,7 +28,7 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.filesystem.FilenameResolverVerticle.ADDRESS;
+import static com.lxbluem.Addresses.*;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -186,7 +186,7 @@ public class BotEventListener {
             LOG.debug("SERVER INFO: {}", client.getServerInfo());
         });
 
-        vertx.eventBus().publish("bot.exit", new JsonObject()
+        vertx.eventBus().publish(BOT_EXIT, new JsonObject()
                 .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", msg)
                 .put("pack", JsonObject.mapFrom(pack)));
@@ -209,7 +209,7 @@ public class BotEventListener {
         else
             LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, event.getMessage());
 
-        vertx.eventBus().publish("bot.notice", new JsonObject()
+        vertx.eventBus().publish(BOT_NOTICE, new JsonObject()
                 .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", event.getMessage())
                 .put("pack", JsonObject.mapFrom(pack)));
@@ -255,7 +255,7 @@ public class BotEventListener {
 
         JsonObject filenameResolveMessage = new JsonObject().put("filename", ctcpQuery.getString("filename"));
         vertx.eventBus()
-                .<JsonObject>rxSend(ADDRESS, filenameResolveMessage)
+                .<JsonObject>rxSend(FILENAME_RESOLVE, filenameResolveMessage)
                 .map(Message::body)
                 .flatMap(filenameAnswer -> {
                     Client ircClient = event.getClient();
@@ -274,7 +274,7 @@ public class BotEventListener {
                             .put("pack", JsonObject.mapFrom(pack))
                             .put("bot", ircClient.getNick());
 
-                    return vertx.eventBus().<JsonObject>rxSend(DccReceiverVerticle.ADDRESS, botInitMessage);
+                    return vertx.eventBus().<JsonObject>rxSend(BOT_DCC_INIT, botInitMessage);
                 })
                 .subscribe(verticleReplyHandler -> {
                             Client client = event.getClient();
@@ -292,7 +292,7 @@ public class BotEventListener {
                                 client.sendCTCPMessage(pack.getNickName(), botReply);
                             });
                         },
-                        throwable -> vertx.eventBus().publish("bot.fail", new JsonObject()
+                        throwable -> vertx.eventBus().publish(BOT_FAIL, new JsonObject()
                                 .put("timestamp", Instant.now().toEpochMilli())
                                 .put("error", throwable.getMessage())
                         )

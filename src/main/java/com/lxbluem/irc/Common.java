@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.time.Instant;
 
+import static com.lxbluem.Addresses.*;
+
 class Common {
     private final EventBus eventBus;
     private final Logger LOG;
@@ -31,11 +33,11 @@ class Common {
         RandomAccessFile fileOutput = new RandomAccessFile(file.getCanonicalPath(), "rw");
         fileOutput.seek(0);
 
-        JsonObject pack = (JsonObject) message.getValue("pack");
+        JsonObject pack = message.getJsonObject("pack");
 
         socketObservable.subscribe(
                 socket -> {
-                    eventBus.publish("bot.dcc.start", new JsonObject()
+                    eventBus.publish(BOT_DCC_START, new JsonObject()
                             .put("source", "connect")
                             .put("pack", pack)
                             .put("timestamp", Instant.now().toEpochMilli())
@@ -54,7 +56,7 @@ class Common {
                             );
                 },
                 error -> {
-                    eventBus.publish("bot.dcc.fail", new JsonObject()
+                    eventBus.publish(BOT_DCC_FAIL, new JsonObject()
                             .put("message", error.getMessage())
                             .put("timestamp", Instant.now().toEpochMilli())
                             .put("source", "connect")
@@ -65,7 +67,14 @@ class Common {
         );
     }
 
-    private Action1<Buffer> bufferReceivedAction(RandomAccessFile file, JsonObject pack, NetSocket netSocket, byte[] outBuffer, long[] bytesTransferedValue, long[] lastProgressAt) {
+    private Action1<Buffer> bufferReceivedAction(
+            RandomAccessFile file,
+            JsonObject pack,
+            NetSocket netSocket,
+            byte[] outBuffer,
+            long[] bytesTransferedValue,
+            long[] lastProgressAt
+    ) {
         return buffer -> {
             long bytesTransfered = bytesTransferedValue[0];
             bytesTransfered += buffer.length();
@@ -88,7 +97,7 @@ class Common {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            eventBus.publish("bot.dcc.progress", new JsonObject()
+            eventBus.publish(BOT_DCC_PROGRESS, new JsonObject()
                     .put("bytes", bytesTransfered)
                     .put("timestamp", nowInMillis)
                     .put("pack", pack)
@@ -98,7 +107,7 @@ class Common {
 
     private Action1<Throwable> errorAction(String filename, JsonObject pack) {
         return error -> {
-            eventBus.publish("bot.dcc.fail", new JsonObject()
+            eventBus.publish(BOT_DCC_FAIL, new JsonObject()
                     .put("message", error.getMessage())
                     .put("source", "socket")
                     .put("pack", pack)
@@ -110,7 +119,7 @@ class Common {
 
     private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, JsonObject pack) {
         return () -> {
-            eventBus.publish("bot.dcc.finish", new JsonObject()
+            eventBus.publish(BOT_DCC_FINISH, new JsonObject()
                     .put("pack", pack)
                     .put("timestamp", Instant.now().toEpochMilli())
             );

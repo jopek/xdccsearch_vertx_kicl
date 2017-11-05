@@ -17,8 +17,9 @@ import rx.functions.Action1;
 
 import java.io.IOException;
 
+import static com.lxbluem.Addresses.*;
+
 public class DccReceiverVerticle extends AbstractVerticle {
-    public static final String ADDRESS = "bot.dcc.init";
     private static Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
 
     private EventBus eventBus;
@@ -29,7 +30,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         eventBus = vertx.eventBus();
         common = new Common(vertx, LOG);
 
-        eventBus.<JsonObject>consumer(ADDRESS)
+        eventBus.<JsonObject>consumer(BOT_DCC_INIT)
                 .toObservable()
                 .subscribe(handleMessage());
     }
@@ -82,7 +83,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         server -> {
-                            eventBus.publish("bot.dcc.start", new JsonObject()
+                            eventBus.publish(BOT_DCC_START, new JsonObject()
                                     .put("source", "listen")
                                     .put("pack", pack)
                             );
@@ -93,7 +94,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                         },
 
                         error ->
-                                eventBus.publish("bot.dcc.fail", new JsonObject()
+                                eventBus.publish(BOT_DCC_FAIL, new JsonObject()
                                         .put("source", "listen")
                                         .put("message", error.getMessage())
                                         .put("pack", pack)

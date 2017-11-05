@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import static com.lxbluem.Addresses.*;
 import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
 import static java.util.stream.Collectors.toMap;
@@ -35,8 +36,8 @@ public class BotVerticle extends AbstractRouteVerticle {
     public void start() {
         eventBus = vertx.eventBus();
 
-        eventBus.consumer("bot.dcc.finish", this::handleDccFinished);
-        eventBus.consumer("bot.dcc.fail", this::handleDccFinished);
+        eventBus.consumer(BOT_DCC_FINISH, this::handleDccFinished);
+        eventBus.consumer(BOT_DCC_FAIL, this::handleDccFinished);
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
     }
@@ -104,7 +105,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                         e.getMessage());
                 client.shutdown();
 
-                eventBus.publish("bot.fail", new JsonObject()
+                eventBus.publish(BOT_FAIL, new JsonObject()
                         .put("timestamp", Instant.now().toEpochMilli())
                         .put("message", e.getMessage())
                         .put("pack", JsonObject.mapFrom(pack)));
@@ -117,7 +118,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         packsByBot.put(client, pack);
 
-        eventBus.publish("bot.init", new JsonObject()
+        eventBus.publish(BOT_INIT, new JsonObject()
                 .put("timestamp", Instant.now().toEpochMilli())
                 .put("pack", JsonObject.mapFrom(pack)));
 

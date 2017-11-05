@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.jayway.awaitility.Awaitility.await;
+import static com.lxbluem.Addresses.FILENAME_RESOLVE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -37,7 +38,7 @@ public class FilenameResolverVerticleTest {
     @Test
     public void name() throws Exception {
         JsonObject message = new JsonObject().put("filename", "file1a");
-        vertx.eventBus().send(FilenameResolverVerticle.ADDRESS, message, replyHandler -> {
+        vertx.eventBus().send(FILENAME_RESOLVE, message, replyHandler -> {
             assertTrue(replyHandler.succeeded());
             JsonObject body = (JsonObject) replyHandler.result().body();
             assertEquals(FilenameResolverVerticle.PATH + "/" + "file1a.part", body.getString("filename"));

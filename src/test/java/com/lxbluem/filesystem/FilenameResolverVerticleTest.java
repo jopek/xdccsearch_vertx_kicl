@@ -37,7 +37,7 @@ public class FilenameResolverVerticleTest {
     @Test
     public void name() throws Exception {
         JsonObject message = new JsonObject().put("filename", "file1a");
-        vertx.eventBus().send(FilenameResolverVerticle.address, message, replyHandler -> {
+        vertx.eventBus().send(FilenameResolverVerticle.ADDRESS, message, replyHandler -> {
             assertTrue(replyHandler.succeeded());
             JsonObject body = (JsonObject) replyHandler.result().body();
             assertEquals(FilenameResolverVerticle.PATH + "/" + "file1a.part", body.getString("filename"));

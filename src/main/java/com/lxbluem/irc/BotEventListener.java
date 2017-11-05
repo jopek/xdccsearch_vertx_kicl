@@ -9,6 +9,7 @@ import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.ServerMessage;
+import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
@@ -19,15 +20,16 @@ import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Single;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.lxbluem.filesystem.FilenameResolverVerticle.ADDRESS;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -250,63 +252,51 @@ public class BotEventListener {
             return;
         }
 
-        LOG.info("Receive {} filetransfer for '{}'", ctcpQuery.getString("transfer_type"), ctcpQuery.getString("filename"));
         LOG.debug("Receive PrivateCTCPQuery {}", ctcpQuery.encode());
 
-        vertx.eventBus().rxSend(FilenameResolverVerticle.address, new JsonObject().put("filename", ctcpQuery.getString("filename")))
-                .map(objectMessage -> (JsonObject) objectMessage.body())
-                .subscribe(filenameAnswer -> {
-                            Client ircClient = event.getClient();
+        JsonObject filenameResolveMessage = new JsonObject().put("filename", ctcpQuery.getString("filename"));
+        vertx.eventBus()
+                .<JsonObject>rxSend(ADDRESS, filenameResolveMessage)
+                .map(Message::body)
+                .flatMap(filenameAnswer -> {
+                    Client ircClient = event.getClient();
 
-                            JsonObject botInitMessage = new JsonObject()
-                                    .put("event", event.getClass().getSimpleName())
-                                    .put("message", message)
-                                    .put("ip", ctcpQuery.getString("ip"))
-                                    .put("port", ctcpQuery.getInteger("port"))
-                                    .put("size", ctcpQuery.getLong("size"))
-                                    .put("filename", filenameAnswer.getString("filename"))
-                                    .put("token", ctcpQuery.getInteger("token"))
-                                    .put("pack", JsonObject.mapFrom(pack))
-                                    .put("bot", ircClient.getNick());
+                    LOG.debug("saving {} -> {}", ctcpQuery.getString("filename"), filenameAnswer.getString("filename"));
 
-                            LOG.debug("saving {} -> {}", ctcpQuery.getString("filename"), filenameAnswer.getString("filename"));
+                    JsonObject botInitMessage = new JsonObject()
+                            .put("event", event.getClass().getSimpleName())
+                            .put("message", message)
+                            .put("ip", ctcpQuery.getString("ip"))
+                            .put("port", ctcpQuery.getInteger("port"))
+                            .put("size", ctcpQuery.getLong("size"))
+                            .put("filename", filenameAnswer.getString("filename"))
+                            .put("token", ctcpQuery.getInteger("token"))
+                            .put("pack", JsonObject.mapFrom(pack))
+                            .put("bot", ircClient.getNick());
 
-                            Single<Message<JsonObject>> singleResponse = vertx.eventBus().rxSend(
-                                    "bot.dcc.init." + ctcpQuery.getString("transfer_type"),
-                                    botInitMessage
-                            );
+                    return vertx.eventBus().<JsonObject>rxSend(DccReceiverVerticle.ADDRESS, botInitMessage);
+                })
+                .subscribe(verticleReplyHandler -> {
+                            Client client = event.getClient();
+                            Optional<User> userOptional = client.getUser();
+                            userOptional.ifPresent(user -> {
+                                String host = user.getHost();
+                                String botReply = format("DCC SEND %s %s %d %d %d",
+                                        ctcpQuery.getString("filename"),
+                                        transformToIpLong(host),
+                                        verticleReplyHandler.body().getInteger("port"),
+                                        ctcpQuery.getLong("size"),
+                                        ctcpQuery.getInteger("token")
+                                );
 
-                            if ("active".equals(ctcpQuery.getString("transfer_type"))) {
-                                singleResponse.subscribe().unsubscribe();
-                                return;
-                            }
-
-                            singleResponse.subscribe(verticleReplyHandler ->
-                                            ircClient.getUser().ifPresent(user -> {
-                                                String host = user.getHost();
-                                                String botReply = format("DCC SEND %s %s %d %d %d",
-                                                        ctcpQuery.getString("filename"),
-                                                        transformToIpLong(host),
-                                                        verticleReplyHandler.body().getInteger("port"),
-                                                        (long) ctcpQuery.getLong("size"),
-                                                        ctcpQuery.getInteger("token")
-                                                );
-
-                                                ircClient.sendCTCPMessage(pack.getNickName(), botReply);
-                                            }),
-
-                                    throwable -> vertx.eventBus().publish("bot.fail", new JsonObject()
-                                            .put("error", throwable.getMessage())
-                                    )
-                            );
-
+                                client.sendCTCPMessage(pack.getNickName(), botReply);
+                            });
                         },
                         throwable -> vertx.eventBus().publish("bot.fail", new JsonObject()
                                 .put("timestamp", Instant.now().toEpochMilli())
                                 .put("error", throwable.getMessage())
                         )
                 );
-
     }
 
     private JsonObject getPrivateCtcpQueryParts(String message) {

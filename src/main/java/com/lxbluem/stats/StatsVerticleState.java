@@ -12,7 +12,7 @@ import java.util.List;
 @ToString
 public class StatsVerticleState {
     private MovingAverage movingAverage;
-    private List<BotState> botstates;
+    private List<DccState> dccStates;
     private List<String> notices;
     private long started;
     private long ended;

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.lxbluem.stats.BotState.*;
+import static com.lxbluem.stats.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
 
 public class StatsVerticle extends AbstractRouteVerticle {
@@ -76,15 +76,15 @@ public class StatsVerticle extends AbstractRouteVerticle {
         MovingAverage movingAverage = verticleState.getMovingAverage();
         movingAverage.addValue(new Progress(bytes, timestamp));
 
-        List<BotState> list = verticleState
-                .getBotstates()
+        List<DccState> dccStates = verticleState
+                .getDccStates()
                 .stream()
                 .filter(bs -> !bs.equals(PROGRESS))
                 .collect(Collectors.toList());
-        BotState state = PROGRESS;
+        DccState state = PROGRESS;
         state.setTimestamp(timestamp);
-        list.add(state);
-        verticleState.setBotstates(list);
+        dccStates.add(state);
+        verticleState.setDccStates(dccStates);
     }
 
     private void dccFinish(Message<JsonObject> eventMessage) {
@@ -111,7 +111,7 @@ public class StatsVerticle extends AbstractRouteVerticle {
     private StatsVerticleState updateVerticleState(JsonObject pack, long timestamp) {
         stateMap.putIfAbsent(pack, StatsVerticleState.builder()
                 .movingAverage(new MovingAverage(AVG_SIZE_SEC))
-                .botstates(new ArrayList<>())
+                .dccStates(new ArrayList<>())
                 .notices(new ArrayList<>())
                 .build());
         StatsVerticleState state = stateMap.get(pack);
@@ -119,11 +119,11 @@ public class StatsVerticle extends AbstractRouteVerticle {
         return state;
     }
 
-    private void addBotState(StatsVerticleState statsVerticleState, BotState botState, Long timestamp) {
-        botState.setTimestamp(timestamp);
+    private void addBotState(StatsVerticleState statsVerticleState, DccState dccState, Long timestamp) {
+        dccState.setTimestamp(timestamp);
 
-        List<BotState> botStateList = statsVerticleState.getBotstates();
-        botStateList.add(botState);
+        List<DccState> dccStateList = statsVerticleState.getDccStates();
+        dccStateList.add(dccState);
     }
 
     private void setupStatsInterval() {
@@ -138,19 +138,19 @@ public class StatsVerticle extends AbstractRouteVerticle {
         JsonArray bots = new JsonArray();
 
         stateMap.forEach((pack, state) -> {
-            List<BotState> botstates = state.getBotstates();
-            int botStatesSize = botstates.size();
+            List<DccState> dccStates = state.getDccStates();
+            int botStatesSize = dccStates.size();
             if (botStatesSize == 0)
                 return;
 
-            BotState latestBotState = botstates.get(botStatesSize - 1);
+            DccState latestDccState = dccStates.get(botStatesSize - 1);
 
             JsonObject bot = new JsonObject()
                     .put("pack", pack)
                     .put("started", state.getStarted())
-                    .put("duration", latestBotState.getTimestamp() - state.getStarted())
+                    .put("duration", latestDccState.getTimestamp() - state.getStarted())
                     .put("speed", state.getMovingAverage().average())
-                    .put("state", latestBotState)
+                    .put("state", latestDccState)
                     .put("notices", state.getNotices());
             bots.add(bot);
         });

@@ -2,7 +2,7 @@ package com.lxbluem.stats;
 
 import java.util.Date;
 
-public enum BotState {
+public enum DccState {
     INIT, START, PROGRESS, FINISH, FAIL;
 
     private long timestamp;

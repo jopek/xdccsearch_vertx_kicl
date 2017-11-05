@@ -18,7 +18,13 @@ public class MovingAverage {
     }
 
     public double average() {
-        Progress lastElement = q.get(q.size() - 1);
+        int index;
+        if (q.size() > 0)
+            index = q.size() - 1;
+        else
+            return 0;
+
+        Progress lastElement = q.get(index);
 
         Progress reference = q.stream()
                 .filter(p -> p.time + secondsToSave * 1000 < lastElement.time)
@@ -35,4 +41,8 @@ public class MovingAverage {
         q.add(val);
     }
 
+    @Override
+    public String toString() {
+        return String.format("%.3f", average());
+    }
 }

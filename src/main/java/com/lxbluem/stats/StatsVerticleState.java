@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class StatsVerticleState {
     private MovingAverage movingAverage;
     private List<BotState> botstates;

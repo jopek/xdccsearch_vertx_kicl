@@ -18,7 +18,7 @@ import static com.lxbluem.Addresses.*;
 import static com.lxbluem.stats.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
 
-public class StatsVerticle extends AbstractRouteVerticle {
+public class StateVerticle extends AbstractRouteVerticle {
     private Map<JsonObject, State> stateMap = new HashMap<>();
 
     private static final int AVG_SIZE_SEC = 5;
@@ -26,7 +26,7 @@ public class StatsVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() throws Exception {
-        registerRouteWithHandler(GET, "/stats", this::getStats);
+        registerRouteWithHandler(GET, "/state", this::getState);
 
         handle(BOT_INIT, this::init);
         handle(BOT_DCC_START, this::dccStart);
@@ -34,11 +34,11 @@ public class StatsVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_FINISH, this::dccFinish);
         handle(BOT_NOTICE, this::notice);
 
-        setupStatsInterval();
+//        setupStatePublishInterval();
     }
 
-    private void getStats(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        jsonObjectFuture.complete(getEntries());
+    private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        jsonObjectFuture.complete(new JsonObject().put("state", getStateEntries()));
     }
 
     private void handle(String address, Action1<Message<JsonObject>> method) {
@@ -127,15 +127,14 @@ public class StatsVerticle extends AbstractRouteVerticle {
         dccStates.add(dccState);
     }
 
-    private void setupStatsInterval() {
+    private void setupStatePublishInterval() {
         vertx.periodicStream(5000)
                 .handler(h -> {
-                    JsonObject message = getEntries();
-                    vertx.eventBus().publish("stats", message);
+                    vertx.eventBus().publish("stats", getStateEntries());
                 });
     }
 
-    private JsonObject getEntries() {
+    private JsonArray getStateEntries() {
         JsonArray bots = new JsonArray();
 
         stateMap.forEach((pack, state) -> {
@@ -156,7 +155,7 @@ public class StatsVerticle extends AbstractRouteVerticle {
             bots.add(bot);
         });
 
-        return new JsonObject().put("bots", bots);
+        return bots;
     }
 
 }

@@ -80,23 +80,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(
                         server -> {
-                            eventBus.publish(BOT_DCC_START, new JsonObject()
-                                    .put("timestamp", Instant.now().toEpochMilli())
-                                    .put("source", "listen")
-                                    .put("pack", pack)
-                            );
-
+                            publishDccStart("passiveServerListen", pack);
                             replyHandler.handle(new JsonObject()
                                     .put("port", server.actualPort())
                             );
                         },
 
-                        error ->
-                                eventBus.publish(BOT_DCC_FAIL, new JsonObject()
-                                        .put("source", "listen")
-                                        .put("message", error.getMessage())
-                                        .put("pack", pack)
-                                )
+                        error -> publishDccFail(error, "listen", pack)
                 );
     }
 
@@ -111,22 +101,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
             fileOutput.get().seek(0);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
-            eventBus.publish(BOT_DCC_FAIL, new JsonObject()
-                    .put("message", error.getMessage())
-                    .put("timestamp", Instant.now().toEpochMilli())
-                    .put("source", "connect")
-                    .put("pack", pack)
-            );
+            publishDccFail(error, "fileCreation", pack);
             return;
         }
 
         socketObservable.subscribe(
                 socket -> {
-                    eventBus.publish(BOT_DCC_START, new JsonObject()
-                            .put("source", "connect")
-                            .put("pack", pack)
-                            .put("timestamp", Instant.now().toEpochMilli())
-                    );
+                    publishDccStart("connect", pack);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -141,12 +122,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                             );
                 },
                 error -> {
-                    eventBus.publish(BOT_DCC_FAIL, new JsonObject()
-                            .put("message", error.getMessage())
-                            .put("timestamp", Instant.now().toEpochMilli())
-                            .put("source", "connect")
-                            .put("pack", pack)
-                    );
+                    publishDccFail(error, "connect", pack);
                     LOG.error("transfer of {} failed {}", filename, error.getMessage());
                 }
         );
@@ -182,32 +158,20 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            eventBus.publish(BOT_DCC_PROGRESS, new JsonObject()
-                    .put("bytes", bytesTransfered)
-                    .put("timestamp", nowInMillis)
-                    .put("pack", pack)
-            );
+            publishDccProgress(bytesTransfered, pack);
         };
     }
 
     private Action1<Throwable> errorAction(String filename, JsonObject pack) {
         return error -> {
-            eventBus.publish(BOT_DCC_FAIL, new JsonObject()
-                    .put("message", error.getMessage())
-                    .put("source", "socket")
-                    .put("pack", pack)
-                    .put("timestamp", Instant.now().toEpochMilli())
-            );
+            publishDccFail(error, "socket", pack);
             LOG.error("transfer of {} failed {}", filename, error.getMessage());
         };
     }
 
     private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, JsonObject pack) {
         return () -> {
-            eventBus.publish(BOT_DCC_FINISH, new JsonObject()
-                    .put("pack", pack)
-                    .put("timestamp", Instant.now().toEpochMilli())
-            );
+            publishDccFinish(pack);
             LOG.info("transfer of {} finished", filename);
 
             try {
@@ -218,6 +182,34 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
             removePartExtension(file);
         };
+    }
+
+    private void publishDccFail(Throwable error, String source, JsonObject pack) {
+        publish(BOT_DCC_FAIL, source, new JsonObject()
+                .put("message", error.getMessage())
+                .put("pack", pack));
+    }
+
+    private void publishDccStart(String source, JsonObject pack) {
+        publish(BOT_DCC_START, source, new JsonObject().put("pack", pack));
+    }
+
+    private void publishDccProgress(long bytesTransfered, JsonObject pack) {
+        publish(BOT_DCC_PROGRESS, "", new JsonObject()
+                .put("bytes", bytesTransfered)
+                .put("pack", pack));
+    }
+
+    private void publishDccFinish(JsonObject pack) {
+        publish(BOT_DCC_PROGRESS, "", new JsonObject()
+                .put("pack", pack));
+    }
+
+    private void publish(String topic, String source, JsonObject extra) {
+        JsonObject message = new JsonObject()
+                .put("source", source)
+                .put("timestamp", Instant.now().toEpochMilli());
+        eventBus.publish(topic, message.mergeIn(extra));
     }
 
     private void removePartExtension(File file) {

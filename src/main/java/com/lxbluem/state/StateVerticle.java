@@ -8,10 +8,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.Message;
 import rx.functions.Action1;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.lxbluem.Addresses.*;
@@ -27,6 +24,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     @Override
     public void start() throws Exception {
         registerRouteWithHandler(GET, "/state", this::getState);
+        registerRouteWithHandler(GET, "/state/:packid", this::getStateByPackId);
 
         handle(BOT_INIT, this::init);
         handle(BOT_DCC_START, this::dccStart);
@@ -35,6 +33,31 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_NOTICE, this::notice);
 
 //        setupStatePublishInterval();
+    }
+
+    private void getStateByPackId(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        String pidPathParam = serializedRequest.getParams().get("packid");
+        if (pidPathParam == null || pidPathParam.isEmpty()) {
+            jsonObjectFuture.fail("pack id format");
+            return;
+        }
+        long pid = Long.parseLong(pidPathParam);
+
+        JsonArray stateEntries = getStateEntries();
+        Optional<Object> entry = stateEntries
+                .stream()
+                .filter(o -> {
+                    JsonObject jsonObject = (JsonObject) o;
+                    JsonObject pack = jsonObject.getJsonObject("pack");
+
+                    return pack.getLong("pid") == pid;
+                })
+                .findFirst();
+
+        if (entry.isPresent())
+            jsonObjectFuture.complete((JsonObject) entry.get());
+        else
+            jsonObjectFuture.fail("not found");
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {

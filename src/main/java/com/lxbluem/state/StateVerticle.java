@@ -1,4 +1,4 @@
-package com.lxbluem.stats;
+package com.lxbluem.state;
 
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.lxbluem.Addresses.*;
-import static com.lxbluem.stats.DccState.*;
+import static com.lxbluem.state.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
 
 public class StateVerticle extends AbstractRouteVerticle {

@@ -1,4 +1,4 @@
-package com.lxbluem.stats;
+package com.lxbluem.state;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

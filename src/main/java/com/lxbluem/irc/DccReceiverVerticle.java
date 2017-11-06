@@ -36,15 +36,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
         eventBus.<JsonObject>consumer(BOT_DCC_INIT)
                 .toObservable()
-                .subscribe(handleMessage());
+                .subscribe(this::handleMessage);
     }
 
-    private Action1<Message<JsonObject>> handleMessage() {
-        return event -> {
-            Boolean passive = event.body().getBoolean("passive", false);
-            LOG.info("type of transfer: {}", passive ? "passive" : "active");
-            transferFile(event.body(), event::reply, passive);
-        };
+    private void handleMessage(Message<JsonObject> event) {
+        Boolean passive = event.body().getBoolean("passive", false);
+        LOG.info("type of transfer: {}", passive ? "passive" : "active");
+        transferFile(event.body(), event::reply, passive);
     }
 
     private void transferFile(JsonObject message, Handler<JsonObject> replyHandler, boolean passive) {

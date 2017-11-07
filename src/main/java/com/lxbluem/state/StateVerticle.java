@@ -27,12 +27,32 @@ public class StateVerticle extends AbstractRouteVerticle {
         registerRouteWithHandler(GET, "/state/:packid", this::getStateByPackId);
 
         handle(BOT_INIT, this::init);
+        handle(BOT_NOTICE, this::notice);
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
-        handle(BOT_NOTICE, this::notice);
+
+        handle(BOT_INIT, this::wrapMessage);
+        handle(BOT_NOTICE, this::wrapMessage);
+        handle(BOT_EXIT, this::wrapMessage);
+        handle(BOT_DCC_START, this::wrapMessage);
+        handle(BOT_DCC_PROGRESS, this::wrapMessage);
+        handle(BOT_DCC_FINISH, this::wrapMessage);
 
 //        setupStatePublishInterval();
+    }
+
+    private void wrapMessage(Message<JsonObject> event) {
+        long pid = event.body()
+                .getJsonObject("pack")
+                .getLong("pid");
+
+        Optional<Object> state = getStateByPackId(pid);
+
+        JsonObject toBePublished = new JsonObject().put("topic", event.address());
+
+        state.map(stateJsonObject -> (JsonObject)stateJsonObject)
+                .ifPresent(o -> vertx.eventBus().publish(STATE, toBePublished.mergeIn(o)));
     }
 
     private void getStateByPackId(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -43,8 +63,17 @@ public class StateVerticle extends AbstractRouteVerticle {
         }
         long pid = Long.parseLong(pidPathParam);
 
+        Optional<Object> entry = getStateByPackId(pid);
+
+        if (entry.isPresent())
+            jsonObjectFuture.complete((JsonObject) entry.get());
+        else
+            jsonObjectFuture.fail("not found");
+    }
+
+    private Optional<Object> getStateByPackId(long pid) {
         JsonArray stateEntries = getStateEntries();
-        Optional<Object> entry = stateEntries
+        return stateEntries
                 .stream()
                 .filter(o -> {
                     JsonObject jsonObject = (JsonObject) o;
@@ -53,11 +82,6 @@ public class StateVerticle extends AbstractRouteVerticle {
                     return pack.getLong("pid") == pid;
                 })
                 .findFirst();
-
-        if (entry.isPresent())
-            jsonObjectFuture.complete((JsonObject) entry.get());
-        else
-            jsonObjectFuture.fail("not found");
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -173,7 +197,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("started", state.getStarted())
                     .put("duration", latestDccState.getTimestamp() - state.getStarted())
                     .put("speed", state.getMovingAverage().average())
-                    .put("state", latestDccState)
+                    .put("dccstate", latestDccState)
                     .put("notices", state.getNotices());
             bots.add(bot);
         });

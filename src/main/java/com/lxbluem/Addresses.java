@@ -13,4 +13,5 @@ public class Addresses {
     public static final String BOT_NOTICE = "bot.notice";
     public static final String BOT_EXIT = "bot.exit";
     public static final String BOT_DCC_PROGRESS = "bot.dcc.progress";
+    public static final String STATE = "state";
 }

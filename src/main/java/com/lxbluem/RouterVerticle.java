@@ -124,7 +124,7 @@ public class RouterVerticle extends AbstractVerticle {
 
     private void sendHttpResponse(HttpServerResponse response, JsonObject replyMessage) {
         Buffer buffer = Buffer.buffer(replyMessage.encode());
-        response.end(buffer);
+        response.putHeader("content-type", "application/json").end(buffer);
     }
 
 }

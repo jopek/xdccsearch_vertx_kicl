@@ -215,7 +215,6 @@ public class BotEventListener {
 
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
-        Client client = event.getClient();
         String newNick = event.getNewNick();
 
         String serverMessages = event

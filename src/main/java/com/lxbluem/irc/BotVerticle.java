@@ -55,19 +55,29 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private void handleDccFinished(Message<JsonObject> message) {
         JsonObject body = message.body();
+        final JsonObject pack = body.getJsonObject("pack");
         MutableObject<Client> mutableClientObject = new MutableObject<>();
 
-        packsByBot.forEach((ircClient, pack) -> {
-            long packId = pack.getPackId();
-            long mappedPackId = body.getJsonObject("pack").getLong("pid");
-            if (packId == mappedPackId) {
-                vertx.setTimer(5000, event -> {
-                    ircClient.shutdown();
-                    packsByBot.remove(mutableClientObject.getValue());
+        packsByBot.entrySet()
+                .stream()
+                .filter(clientPackEntry -> {
+                    long packId = clientPackEntry.getValue().getPackId();
+                    long mappedPackId = pack.getLong("pid");
+                    return packId == mappedPackId;
+                })
+                .map(Map.Entry::getKey)
+                .forEach(ircClient -> {
+                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), "DCC finished");
+                    vertx.setTimer(5000, event -> {
+                        vertx.eventBus().publish(BOT_EXIT, new JsonObject()
+                                .put("timestamp", Instant.now().toEpochMilli())
+                                .put("message", msg)
+                                .put("pack", JsonObject.mapFrom(pack)));
+                        ircClient.shutdown();
+                        packsByBot.remove(mutableClientObject.getValue());
+                    });
+                    mutableClientObject.setValue(ircClient);
                 });
-                mutableClientObject.setValue(ircClient);
-            }
-        });
     }
 
     private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {

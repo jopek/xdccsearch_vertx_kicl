@@ -201,7 +201,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
     }
 
     private void publishDccFinish(JsonObject pack) {
-        publish(BOT_DCC_PROGRESS, "", new JsonObject()
+        publish(BOT_DCC_FINISH, "", new JsonObject()
                 .put("pack", pack));
     }
 

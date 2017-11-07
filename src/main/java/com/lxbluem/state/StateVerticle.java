@@ -176,9 +176,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void setupStatePublishInterval() {
         vertx.periodicStream(5000)
-                .handler(h -> {
-                    vertx.eventBus().publish("stats", getStateEntries());
-                });
+                .handler(h -> vertx.eventBus().publish("stats", getStateEntries()));
     }
 
     private JsonArray getStateEntries() {

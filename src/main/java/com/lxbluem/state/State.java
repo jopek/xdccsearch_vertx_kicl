@@ -14,6 +14,7 @@ class State {
     private MovingAverage movingAverage;
     private List<DccState> dccStates;
     private List<String> notices;
+    private List<String> messages;
+    private long timestamp;
     private long started;
-    private long ended;
 }

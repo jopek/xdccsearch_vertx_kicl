@@ -1,0 +1,17 @@
+{
+  "uname": "mybotDCCp",
+  "nport": 6668,
+
+  "pid": 4,
+  "name": "test3-1m.bin",
+  "nid": 0,
+  "nname": "iroffer",
+  "naddr": "192.168.99.100",
+  "cid": 123,
+  "cname": "#download",
+  "uid": 1,
+  "n": 3,
+  "gets": 3,
+  "sz": 347078656,
+  "szf": "1 MB"
+}

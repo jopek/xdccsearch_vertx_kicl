@@ -178,20 +178,16 @@ public class BotEventListener {
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
-    private void shutdown(Client client, String message) {
-        String msg = String.format("bot %s exiting because: %s", client.getNick(), message);
+    private void shutdown(Client client, String reason) {
+        String msg = String.format("bot %s exiting because: %s", client.getNick(), reason);
         LOG.info(msg);
 
-        vertx.setPeriodic(5_000, event -> LOG.debug("SERVER INFO: {}", client.getServerInfo()));
+        client.shutdown();
 
         vertx.eventBus().publish(BOT_EXIT, new JsonObject()
                 .put("timestamp", Instant.now().toEpochMilli())
                 .put("message", msg)
                 .put("pack", JsonObject.mapFrom(pack)));
-    }
-
-    private void shutdown(Client client) {
-        shutdown(client, "bye!");
     }
 
     @Handler

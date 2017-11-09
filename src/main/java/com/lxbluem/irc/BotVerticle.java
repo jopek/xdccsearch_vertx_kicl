@@ -67,7 +67,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 })
                 .map(Map.Entry::getKey)
                 .forEach(ircClient -> {
-                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), "DCC finished");
+                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message"));
                     vertx.setTimer(5000, event -> {
                         vertx.eventBus().publish(BOT_EXIT, new JsonObject()
                                 .put("timestamp", Instant.now().toEpochMilli())

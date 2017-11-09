@@ -287,7 +287,7 @@ public class BotEventListener {
                         },
                         throwable -> vertx.eventBus().publish(BOT_FAIL, new JsonObject()
                                 .put("timestamp", Instant.now().toEpochMilli())
-                                .put("error", throwable.getMessage())
+                                .put("message", throwable.getMessage())
                         )
                 );
     }

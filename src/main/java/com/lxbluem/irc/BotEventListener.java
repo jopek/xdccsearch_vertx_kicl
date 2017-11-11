@@ -251,8 +251,6 @@ public class BotEventListener {
                 .flatMap(filenameAnswer -> {
                     Client ircClient = event.getClient();
 
-                    LOG.debug("saving {} -> {}", ctcpQuery.getString("filename"), filenameAnswer.getString("filename"));
-
                     final boolean isPassive = ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive");
                     JsonObject botInitMessage = new JsonObject()
                             .put("event", event.getClass().getSimpleName())

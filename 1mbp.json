@@ -1,6 +1,6 @@
 {
-  "uname": "mybotDCC",
-  "nport": 6667,
+  "uname": "mybotDCCp",
+  "nport": 6668,
 
   "pid": 4,
   "name": "test3-1m.bin",

@@ -1,6 +1,7 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.AbstractRouteVerticle;
+import com.lxbluem.Messaging;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
@@ -16,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -29,17 +29,19 @@ import static java.util.stream.Collectors.toMap;
 public class BotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
 
-    private EventBus eventBus;
+    private Messaging messaging;
     private Map<Client, Pack> packsByBot = new HashMap<>();
 
     @Override
     public void start() {
-        eventBus = vertx.eventBus();
+        EventBus eventBus = vertx.eventBus();
 
         eventBus.consumer(BOT_DCC_FINISH, this::handleDccFinished);
-        eventBus.consumer(BOT_DCC_FAIL, this::handleDccFinished);
+        eventBus.consumer(BOT_FAIL, this::handleDccFinished);
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
+
+        messaging = new Messaging(eventBus);
     }
 
     private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -69,10 +71,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .forEach(ircClient -> {
                     String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message"));
                     vertx.setTimer(5000, event -> {
-                        vertx.eventBus().publish(BOT_EXIT, new JsonObject()
-                                .put("timestamp", Instant.now().toEpochMilli())
-                                .put("message", msg)
-                                .put("pack", JsonObject.mapFrom(pack)));
+                        messaging.publishPack(BOT_EXIT, JsonObject.mapFrom(pack), msg);
                         ircClient.shutdown();
                         packsByBot.remove(mutableClientObject.getValue());
                     });
@@ -105,20 +104,15 @@ public class BotVerticle extends AbstractRouteVerticle {
         String nick = getRandomNick();
         Client client = getClient(pack, nick);
 
-        client.setExceptionListener(e -> {
-            if (e instanceof KittehConnectionException) {
+        client.setExceptionListener(exception -> {
+            if (exception instanceof KittehConnectionException) {
                 LOG.error("connection cannot be established: {}->{}({}:{}) {}",
                         nick,
                         pack.getNetworkName(),
                         pack.getServerHostName(),
                         pack.getServerPort(),
-                        e.getMessage());
-                client.shutdown();
-
-                eventBus.publish(BOT_FAIL, new JsonObject()
-                        .put("timestamp", Instant.now().toEpochMilli())
-                        .put("message", e.getMessage())
-                        .put("pack", JsonObject.mapFrom(pack)));
+                        exception.getMessage());
+                messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), exception);
             }
         });
 
@@ -127,11 +121,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         client.addChannel(pack.getChannelName());
 
         packsByBot.put(client, pack);
-
-        eventBus.publish(BOT_INIT, new JsonObject()
-                .put("timestamp", Instant.now().toEpochMilli())
-                .put("pack", JsonObject.mapFrom(pack)));
-
+        messaging.publishPack(BOT_INIT, JsonObject.mapFrom(pack));
     }
 
     private Client getClient(Pack pack, String nick) {

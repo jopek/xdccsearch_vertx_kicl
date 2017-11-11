@@ -1,5 +1,6 @@
 package com.lxbluem.irc;
 
+import com.lxbluem.Messaging;
 import com.lxbluem.model.Pack;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
@@ -20,7 +21,6 @@ import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -40,7 +40,8 @@ public class BotEventListener {
     private boolean hasSeenPackUser;
     private Set<String> requiredChannels = new HashSet<>();
 
-    private ChannelExtractor channelExtractor = new ChannelExtractor();
+    private final ChannelExtractor channelExtractor = new ChannelExtractor();
+    private final Messaging messaging;
 
     private final Vertx vertx;
     private final Pack pack;
@@ -48,6 +49,7 @@ public class BotEventListener {
     BotEventListener(Vertx vertx, Pack pack) {
         this.vertx = vertx;
         this.pack = pack;
+        messaging = new Messaging(vertx.eventBus());
         requiredChannels.add(pack.getChannelName().toLowerCase());
     }
 
@@ -154,8 +156,8 @@ public class BotEventListener {
         }
 
         if (!channel.getNicknames().contains(nickName)) {
-            shutdown(client, format("bot %s not in channel %s", pack.getNickName(), pack.getChannelName()));
-            client.setInputListener(null);
+            final String message = format("bot %s not in channel %s", pack.getNickName(), pack.getChannelName());
+            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), message);
             return;
         }
 
@@ -178,18 +180,6 @@ public class BotEventListener {
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
-    private void shutdown(Client client, String reason) {
-        String msg = String.format("bot %s exiting because: %s", client.getNick(), reason);
-        LOG.info(msg);
-
-        client.shutdown();
-
-        vertx.eventBus().publish(BOT_EXIT, new JsonObject()
-                .put("timestamp", Instant.now().toEpochMilli())
-                .put("message", msg)
-                .put("pack", JsonObject.mapFrom(pack)));
-    }
-
     @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {
         String remoteNick = event.getActor().getNick();
@@ -198,15 +188,26 @@ public class BotEventListener {
             return;
 
         String packNickName = pack.getNickName();
+        final String noticeMessage = event.getMessage();
         if (remoteNick.equalsIgnoreCase(packNickName))
-            LOG.info("PrivateNotice from '{}': '{}'", remoteNick, event.getMessage());
+            LOG.info("PrivateNotice from '{}': '{}'", remoteNick, noticeMessage);
         else
-            LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, event.getMessage());
+            LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, noticeMessage);
 
-        vertx.eventBus().publish(BOT_NOTICE, new JsonObject()
-                .put("timestamp", Instant.now().toEpochMilli())
-                .put("message", event.getMessage())
-                .put("pack", JsonObject.mapFrom(pack)));
+        if (noticeMessage.contains("queue for pack") || noticeMessage.contains("you already have that item queued")) {
+            messaging.publishPack(BOT_DCC_QUEUE, JsonObject.mapFrom(pack), noticeMessage);
+            return;
+        }
+
+        if (noticeMessage.contains("you already requested")
+                || noticeMessage.contains("download connection failed")
+                || noticeMessage.contains("connection refused")
+                ) {
+            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), noticeMessage);
+            return;
+        }
+
+        messaging.publishPack(BOT_NOTICE, JsonObject.mapFrom(pack), noticeMessage);
     }
 
     @Handler
@@ -223,10 +224,7 @@ public class BotEventListener {
 
         LOG.warn("nick {} rejected, retrying with {}", event.getAttemptedNick(), newNick);
 
-        vertx.eventBus().publish("bot", new JsonObject()
-                .put("timestamp", Instant.now().toEpochMilli())
-                .put("message", serverMessages)
-                .put("pack", JsonObject.mapFrom(pack)));
+        messaging.publishPack(BOT_NOTICE, JsonObject.mapFrom(pack), serverMessages);
     }
 
     @Handler
@@ -255,10 +253,11 @@ public class BotEventListener {
 
                     LOG.debug("saving {} -> {}", ctcpQuery.getString("filename"), filenameAnswer.getString("filename"));
 
+                    final boolean isPassive = ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive");
                     JsonObject botInitMessage = new JsonObject()
                             .put("event", event.getClass().getSimpleName())
                             .put("message", message)
-                            .put("passive", ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive"))
+                            .put("passive", isPassive)
                             .put("ip", ctcpQuery.getString("ip"))
                             .put("port", ctcpQuery.getInteger("port"))
                             .put("size", ctcpQuery.getLong("size"))
@@ -269,7 +268,12 @@ public class BotEventListener {
 
                     return vertx.eventBus().<JsonObject>rxSend(BOT_DCC_INIT, botInitMessage);
                 })
-                .subscribe(verticleReplyHandler -> {
+                .map(Message::body)
+                .subscribe(reply -> {
+                            if (reply.isEmpty()) {
+                                return;
+                            }
+
                             Client client = event.getClient();
                             Optional<User> userOptional = client.getUser();
                             userOptional.ifPresent(user -> {
@@ -277,7 +281,7 @@ public class BotEventListener {
                                 String botReply = format("DCC SEND %s %s %d %d %d",
                                         ctcpQuery.getString("filename"),
                                         transformToIpLong(host),
-                                        verticleReplyHandler.body().getInteger("port"),
+                                        reply.getInteger("port"),
                                         ctcpQuery.getLong("size"),
                                         ctcpQuery.getInteger("token")
                                 );
@@ -285,10 +289,10 @@ public class BotEventListener {
                                 client.sendCTCPMessage(pack.getNickName(), botReply);
                             });
                         },
-                        throwable -> vertx.eventBus().publish(BOT_FAIL, new JsonObject()
-                                .put("timestamp", Instant.now().toEpochMilli())
-                                .put("message", throwable.getMessage())
-                        )
+                        throwable -> {
+                            LOG.error("subscribe to verticle reply failed: {}", throwable.getMessage());
+                            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), throwable);
+                        }
                 );
     }
 

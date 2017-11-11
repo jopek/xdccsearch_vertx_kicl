@@ -8,8 +8,8 @@ public class Addresses {
     public static final String BOT_DCC_INIT = "bot.dcc.init";
     public static final String BOT_DCC_START = "bot.dcc.start";
     public static final String BOT_DCC_PROGRESS = "bot.dcc.progress";
+    public static final String BOT_DCC_QUEUE = "bot.dcc.queue";
     public static final String BOT_DCC_FINISH = "bot.dcc.finish";
-    public static final String BOT_DCC_FAIL = "bot.dcc.fail";
     public static final String FILENAME_RESOLVE = "filename.resolve";
     public static final String BOT_NOTICE = "bot.notice";
     public static final String BOT_EXIT = "bot.exit";

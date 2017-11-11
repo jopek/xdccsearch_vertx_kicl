@@ -1,5 +1,6 @@
 package com.lxbluem.irc;
 
+import com.lxbluem.Messaging;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClientOptions;
@@ -28,11 +29,12 @@ import static com.lxbluem.Addresses.*;
 public class DccReceiverVerticle extends AbstractVerticle {
     private static Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
 
-    private EventBus eventBus;
+    private Messaging messaging;
 
     @Override
     public void start() throws Exception {
-        eventBus = vertx.eventBus();
+        EventBus eventBus = vertx.eventBus();
+        messaging = new Messaging(eventBus);
 
         eventBus.<JsonObject>consumer(BOT_DCC_INIT)
                 .toObservable()
@@ -47,9 +49,21 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     private void transferFile(JsonObject message, Handler<JsonObject> replyHandler, boolean passive) {
         if (!passive)
-            transferFileActive(message);
+            transferFileActive(message, replyHandler);
         else
             transferFilePassive(message, replyHandler);
+    }
+
+    private void transferFileActive(JsonObject message, Handler<JsonObject> replyHandler) {
+        String host = message.getString("ip");
+        Integer port = message.getInteger("port");
+
+        NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(1 << 18);
+        NetClient netClient = vertx.createNetClient(netClientOptions);
+        Observable<NetSocket> socketObservable = netClient.rxConnect(port, host).toObservable();
+
+        subscribeTo(message, socketObservable);
+        replyHandler.handle(new JsonObject());
     }
 
     private void transferFilePassive(JsonObject message, Handler<JsonObject> replyHandler) {
@@ -63,35 +77,23 @@ public class DccReceiverVerticle extends AbstractVerticle {
         listenToIncomingDccRequests(replyHandler, pack, netServer);
     }
 
-    private void transferFileActive(JsonObject message) {
-        String host = message.getString("ip");
-        Integer port = message.getInteger("port");
-
-        NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(1 << 18);
-        NetClient netClient = vertx.createNetClient(netClientOptions);
-        Observable<NetSocket> socketObservable = netClient.rxConnect(port, host).toObservable();
-
-        subscribeTo(message, socketObservable);
-    }
-
 
     private void listenToIncomingDccRequests(Handler<JsonObject> replyHandler, JsonObject pack, NetServer netServer) {
         netServer.rxListen(0)
                 .toObservable()
                 .subscribe(
-                        server -> {
-                            publishDccStart("passiveServerListen", pack);
-                            replyHandler.handle(new JsonObject()
-                                    .put("port", server.actualPort())
-                            );
+                        server -> replyHandler.handle(new JsonObject().put("port", server.actualPort())),
+                        error -> {
+                            LOG.error("listening to incoming conections {}", error);
+                            messaging.publishPack(BOT_FAIL, pack, error);
                         },
-
-                        error -> publishDccFail(error, "listen", pack)
+                        () -> LOG.info("netServer completed!")
                 );
     }
 
     private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
         String filename = message.getString("filename");
+        String botname = message.getString("bot");
         JsonObject pack = message.getJsonObject("pack");
 
         AtomicReference<File> file = new AtomicReference<>(new File(filename));
@@ -101,13 +103,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
             fileOutput.get().seek(0);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
-            publishDccFail(error, "fileCreation", pack);
+            messaging.publishPack(BOT_FAIL, pack, error);
             return;
         }
 
         socketObservable.subscribe(
                 socket -> {
-                    publishDccStart("connect", pack);
+                    messaging.publishPack(BOT_DCC_START, pack);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -122,7 +124,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                             );
                 },
                 error -> {
-                    publishDccFail(error, "connect", pack);
+                    messaging.publishPack(BOT_FAIL, pack, error);
                     LOG.error("transfer of {} failed {}", filename, error.getMessage());
                 }
         );
@@ -158,20 +160,20 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            publishDccProgress(bytesTransfered, pack);
+            messaging.publishPack(BOT_DCC_PROGRESS, pack, new JsonObject().put("bytes", bytesTransfered));
         };
     }
 
     private Action1<Throwable> errorAction(String filename, JsonObject pack) {
         return error -> {
-            publishDccFail(error, "socket", pack);
+            messaging.publishPack(BOT_FAIL, pack, error);
             LOG.error("transfer of {} failed {}", filename, error.getMessage());
         };
     }
 
     private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, JsonObject pack) {
         return () -> {
-            publishDccFinish(pack);
+            messaging.publishPack(BOT_DCC_FINISH, pack);
             LOG.info("transfer of {} finished", filename);
 
             try {
@@ -182,34 +184,6 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
             removePartExtension(file);
         };
-    }
-
-    private void publishDccFail(Throwable error, String source, JsonObject pack) {
-        publish(BOT_DCC_FAIL, source, new JsonObject()
-                .put("message", error.getMessage())
-                .put("pack", pack));
-    }
-
-    private void publishDccStart(String source, JsonObject pack) {
-        publish(BOT_DCC_START, source, new JsonObject().put("pack", pack));
-    }
-
-    private void publishDccProgress(long bytesTransfered, JsonObject pack) {
-        publish(BOT_DCC_PROGRESS, "", new JsonObject()
-                .put("bytes", bytesTransfered)
-                .put("pack", pack));
-    }
-
-    private void publishDccFinish(JsonObject pack) {
-        publish(BOT_DCC_FINISH, "", new JsonObject()
-                .put("pack", pack));
-    }
-
-    private void publish(String topic, String source, JsonObject extra) {
-        JsonObject message = new JsonObject()
-                .put("source", source)
-                .put("timestamp", Instant.now().toEpochMilli());
-        eventBus.publish(topic, message.mergeIn(extra));
     }
 
     private void removePartExtension(File file) {

@@ -37,7 +37,6 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
-        handle(BOT_DCC_FAIL, this::fail);
 
         handle(BOT_INIT, this::wrapMessage);
         handle(BOT_NOTICE, this::wrapMessage);
@@ -46,7 +45,6 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_START, this::wrapMessage);
         handle(BOT_DCC_PROGRESS, this::wrapMessage);
         handle(BOT_DCC_FINISH, this::wrapMessage);
-        handle(BOT_DCC_FAIL, this::wrapMessage);
 
 //        setupStatePublishInterval();
     }
@@ -178,7 +176,6 @@ public class StateVerticle extends AbstractRouteVerticle {
         State state = updateVerticleState(pack, timestamp);
         state.getDccStates().add(FAIL);
         state.getMessages().add(body.getString("message"));
-        LOG.info(">>>>>> FAIL: {}   pack: {}", state.toString(), pack);
     }
 
     private State updateVerticleState(JsonObject pack, long timestamp) {
@@ -210,7 +207,6 @@ public class StateVerticle extends AbstractRouteVerticle {
                 return;
 
             DccState latestDccState = dccStates.get(botStatesSize - 1);
-            LOG.info(">> latestDccState {}", latestDccState);
 
             JsonObject bot = new JsonObject()
                     .put("started", state.getStarted())

@@ -48,8 +48,7 @@ public class RouterVerticle extends AbstractVerticle {
                     }
                 });
 
-        vertx.eventBus()
-                .consumer(ROUTE_ADD, message -> setupRouter(router, message));
+        vertx.eventBus().consumer(ROUTE_ADD, message -> setupRouter(router, message));
     }
 
     private void unroute(Router router, Message<Object> message) {

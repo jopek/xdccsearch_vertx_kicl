@@ -5,6 +5,7 @@ import com.lxbluem.Messaging;
 import com.lxbluem.model.Pack;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.EventBus;
@@ -76,24 +77,28 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        Pack pack = readPackInfo(serializedRequest, jsonObjectFuture);
-
-        if (pack == null)
+        Pack pack;
+        try {
+            pack = readPackInfo(serializedRequest.getBody());
+        } catch (DecodeException e) {
+            final String errorMessage = e.getMessage().split("\n")[0];
+            jsonObjectFuture.fail(errorMessage);
             return;
+        }
+
+        if (pack == null) {
+            jsonObjectFuture.fail(new RuntimeException("pack empty"));
+            return;
+        }
 
         initTx(pack);
     }
 
-    private Pack readPackInfo(SerializedRequest request, Future<JsonObject> future) {
-        String requestBody = request.getBody();
+    private Pack readPackInfo(String requestBody) {
         if (StringUtils.isEmpty(requestBody)) {
-            future.fail(new RuntimeException("pack empty"));
             return null;
         }
-
-        Pack pack = Json.decodeValue(requestBody, Pack.class);
-        future.complete(JsonObject.mapFrom(pack));
-        return pack;
+        return Json.decodeValue(requestBody, Pack.class);
     }
 
     private void initTx(Pack pack) {

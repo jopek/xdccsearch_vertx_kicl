@@ -13,6 +13,7 @@ public class Pack {
     @JsonProperty(value = "pid")
     private long packId;
 
+    @NonNull
     @JsonProperty(value = "cname")
     private String channelName;
 
@@ -26,12 +27,15 @@ public class Pack {
     @JsonProperty(value = "gets")
     private int packGets;
 
+    @NonNull
     @JsonProperty(value = "nname")
     private String networkName;
 
+    @NonNull
     @JsonProperty(value = "naddr")
     private String serverHostName;
 
+    @NonNull
     @JsonProperty(value = "nport")
     private int serverPort;
 

@@ -91,7 +91,7 @@ public class BotVerticle extends AbstractRouteVerticle {
             return;
         }
 
-        initTx(pack);
+        initializeTransfer(pack, jsonObjectFuture);
     }
 
     private Pack readPackInfo(String requestBody) {
@@ -101,8 +101,8 @@ public class BotVerticle extends AbstractRouteVerticle {
         return Json.decodeValue(requestBody, Pack.class);
     }
 
-    private void initTx(Pack pack) {
-        String nick = getRandomNick();
+    private void initializeTransfer(Pack pack, Future<JsonObject> jsonObjectFuture) {
+        String nick = NameGenerator.getRandomNick();
         Client client = getClient(pack, nick);
 
         final String botName = client.getNick();
@@ -124,7 +124,10 @@ public class BotVerticle extends AbstractRouteVerticle {
         client.addChannel(pack.getChannelName());
 
         packsByBot.put(client, pack);
-        messaging.notify(BOT_INIT, botName, new JsonObject().put("pack", JsonObject.mapFrom(pack)));
+        final JsonObject extra = new JsonObject().put("pack", JsonObject.mapFrom(pack));
+        messaging.notify(BOT_INIT, botName, extra);
+
+        jsonObjectFuture.complete(extra.put("bot", botName));
     }
 
     private Client getClient(Pack pack, String nick) {
@@ -132,7 +135,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         return Client.builder()
                 .serverHost(pack.getServerHostName())
                 .serverPort(pack.getServerPort())
-                .nick("nick_" + nick)
+                .nick(nick)
                 .name("name_" + nick)
                 .user("user_" + nick)
                 .realName("realname_" + nick)
@@ -142,20 +145,5 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .build();
     }
 
-    private String getRandomNick() {
-        StringBuilder stringBuilder = new StringBuilder();
-        Random random = new Random();
-        String dictionary = "abcdefghijklmnopqrstuvwxyz0123456789";
-        for (int i = 0; i < 4; i++) {
-            stringBuilder.append(
-                    dictionary.charAt(
-                            random.nextInt(
-                                    dictionary.length()
-                            )
-                    )
-            );
-        }
-        return stringBuilder.toString();
-    }
 
 }

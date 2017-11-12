@@ -213,19 +213,21 @@ public class BotEventListener {
 
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
-        String newNick = event.getNewNick();
-
         String serverMessages = event
                 .getOriginalMessages()
                 .stream()
                 .map(ServerMessage::getMessage)
                 .collect(joining("; "));
+        String attemptedNick = event.getAttemptedNick();
+        String newNick = NameGenerator.getRandomNick();
 
         event.setNewNick(newNick);
 
-        LOG.warn("nick {} rejected, retrying with {}", event.getAttemptedNick(), newNick);
-
-        messaging.notify(BOT_NOTICE, event.getAttemptedNick(), serverMessages);
+        LOG.warn("nick {} rejected, retrying with {}", attemptedNick, newNick);
+        final JsonObject extra = new JsonObject()
+                .put("message", serverMessages)
+                .put("renameto", newNick);
+        messaging.notify(BOT_UPDATE_NICK, attemptedNick, extra);
     }
 
     @Handler

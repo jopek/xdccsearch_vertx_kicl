@@ -23,6 +23,7 @@ import static io.vertx.core.http.HttpMethod.GET;
 public class StateVerticle extends AbstractRouteVerticle {
     private static Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
     private Map<String, State> stateMap = new HashMap<>();
+    private Map<String, String> aliasMap = new HashMap<>();
 
     private static final int AVG_SIZE_SEC = 5;
 
@@ -34,6 +35,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         handle(BOT_INIT, this::init);
         handle(BOT_NOTICE, this::notice);
+        handle(BOT_UPDATE_NICK, this::renameBot);
         handle(BOT_EXIT, this::exit);
         handle(BOT_FAIL, this::fail);
         handle(BOT_DCC_START, this::dccStart);
@@ -65,11 +67,20 @@ public class StateVerticle extends AbstractRouteVerticle {
             jsonObjectFuture.fail("not found");
     }
 
-    private JsonObject getStateByBotName(String botname) {
-        final JsonObject object = getStateEntries().getJsonObject(botname);
-        return object == null
-                ? new JsonObject()
-                : object;
+    private JsonObject getStateByBotName(String requestedBotname) {
+        final String aliasBotName = aliasMap.get(requestedBotname);
+
+        final JsonObject stateEntries = getStateEntries();
+
+        JsonObject stateJsonObject = stateEntries.getJsonObject(requestedBotname);
+
+        if (stateJsonObject == null && aliasBotName != null)
+            stateJsonObject = stateEntries.getJsonObject(aliasBotName);
+
+        if (stateJsonObject == null)
+            return new JsonObject();
+
+        return stateJsonObject;
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -112,6 +123,21 @@ public class StateVerticle extends AbstractRouteVerticle {
         State state = updateState(bot, timestamp);
 
         state.getNotices().add(message);
+    }
+
+    private void renameBot(Message<JsonObject> eventMessage) {
+        JsonObject body = eventMessage.body();
+        String bot = body.getString("bot");
+        String newBot = body.getString("renameto");
+        String message = body.getString("message");
+        long timestamp = body.getLong("timestamp");
+
+        State state = stateMap.remove(bot);
+        stateMap.put(newBot, state);
+        aliasMap.put(bot, newBot);
+
+        state.setTimestamp(timestamp);
+        state.getMessages().add(message);
     }
 
     private void exit(Message<JsonObject> eventMessage) {

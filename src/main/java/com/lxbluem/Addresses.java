@@ -12,6 +12,7 @@ public class Addresses {
     public static final String BOT_DCC_FINISH = "bot.dcc.finish";
     public static final String FILENAME_RESOLVE = "filename.resolve";
     public static final String BOT_NOTICE = "bot.notice";
+    public static final String BOT_UPDATE_NICK = "bot.nick";
     public static final String BOT_EXIT = "bot.exit";
     public static final String STATE = "state";
 }

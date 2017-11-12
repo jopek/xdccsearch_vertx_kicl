@@ -1,7 +1,7 @@
 <configuration scan="true">
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender" level="TRACE">
         <encoder>
-            <pattern>%d %7([%level]) %logger{15} - %msg%n</pattern>
+            <pattern>%d %7([%level]) %15(%logger{15}) - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -13,9 +13,8 @@
 
     <logger name="io.vertx.ext.web" level="TRACE"/>
 
-    <logger name="com.lxbluem.EventLogger" level="TRACE"/>
+    <logger name="com.lxbluem.EventLogger" level="off"/>
 
-    <logger name="com.lxbluem.stats" level="off"/>
     <!--<logger name="com.lxbluem" level="DEBUG"/>-->
 
     <root level="INFO">

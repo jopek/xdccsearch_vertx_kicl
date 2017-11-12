@@ -67,25 +67,25 @@ public class DccReceiverVerticle extends AbstractVerticle {
     }
 
     private void transferFilePassive(JsonObject message, Handler<JsonObject> replyHandler) {
-        JsonObject pack = message.getJsonObject("pack");
+        String bot = message.getString("bot");
 
         NetServerOptions netServerOptions = new NetServerOptions().setReceiveBufferSize(1 << 18);
         NetServer netServer = vertx.createNetServer(netServerOptions);
         Observable<NetSocket> socketObservable = netServer.connectStream().toObservable();
 
         subscribeTo(message, socketObservable);
-        listenToIncomingDccRequests(replyHandler, pack, netServer);
+        listenToIncomingDccRequests(replyHandler, bot, netServer);
     }
 
 
-    private void listenToIncomingDccRequests(Handler<JsonObject> replyHandler, JsonObject pack, NetServer netServer) {
+    private void listenToIncomingDccRequests(Handler<JsonObject> replyHandler, String botname, NetServer netServer) {
         netServer.rxListen(0)
                 .toObservable()
                 .subscribe(
                         server -> replyHandler.handle(new JsonObject().put("port", server.actualPort())),
                         error -> {
                             LOG.error("listening to incoming conections {}", error);
-                            messaging.publishPack(BOT_FAIL, pack, error);
+                            messaging.notify(BOT_FAIL, botname, error);
                         },
                         () -> LOG.info("netServer completed!")
                 );
@@ -94,7 +94,6 @@ public class DccReceiverVerticle extends AbstractVerticle {
     private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
         String filename = message.getString("filename");
         String botname = message.getString("bot");
-        JsonObject pack = message.getJsonObject("pack");
 
         AtomicReference<File> file = new AtomicReference<>(new File(filename));
         AtomicReference<RandomAccessFile> fileOutput = new AtomicReference<>(null);
@@ -103,13 +102,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
             fileOutput.get().seek(0);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
-            messaging.publishPack(BOT_FAIL, pack, error);
+            messaging.notify(BOT_FAIL, botname, error);
             return;
         }
 
         socketObservable.subscribe(
                 socket -> {
-                    messaging.publishPack(BOT_DCC_START, pack);
+                    messaging.notify(BOT_DCC_START, botname);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -118,13 +117,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
                     socket.toObservable()
                             .subscribe(
-                                    bufferReceivedAction(fileOutput.get(), pack, socket, outBuffer, bytesTransferredValue, lastProgressAt),
-                                    errorAction(filename, pack),
-                                    completedAction(filename, file.get(), fileOutput.get(), pack)
+                                    bufferReceivedAction(fileOutput.get(), botname, socket, outBuffer, bytesTransferredValue, lastProgressAt),
+                                    errorAction(filename, botname),
+                                    completedAction(filename, file.get(), fileOutput.get(), botname)
                             );
                 },
                 error -> {
-                    messaging.publishPack(BOT_FAIL, pack, error);
+                    messaging.notify(BOT_FAIL, botname, error);
                     LOG.error("transfer of {} failed {}", filename, error.getMessage());
                 }
         );
@@ -132,7 +131,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     private Action1<Buffer> bufferReceivedAction(
             RandomAccessFile file,
-            JsonObject pack,
+            String botname,
             NetSocket netSocket,
             byte[] outBuffer,
             long[] bytesTransferedValue,
@@ -160,20 +159,20 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            messaging.publishPack(BOT_DCC_PROGRESS, pack, new JsonObject().put("bytes", bytesTransfered));
+            messaging.notify(BOT_DCC_PROGRESS, botname, new JsonObject().put("bytes", bytesTransfered));
         };
     }
 
-    private Action1<Throwable> errorAction(String filename, JsonObject pack) {
+    private Action1<Throwable> errorAction(String filename, String botname) {
         return error -> {
-            messaging.publishPack(BOT_FAIL, pack, error);
+            messaging.notify(BOT_FAIL, botname, error);
             LOG.error("transfer of {} failed {}", filename, error.getMessage());
         };
     }
 
-    private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, JsonObject pack) {
+    private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, String botname) {
         return () -> {
-            messaging.publishPack(BOT_DCC_FINISH, pack);
+            messaging.notify(BOT_DCC_FINISH, botname);
             LOG.info("transfer of {} finished", filename);
 
             try {

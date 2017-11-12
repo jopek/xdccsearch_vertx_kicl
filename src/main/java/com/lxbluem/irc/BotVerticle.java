@@ -57,21 +57,17 @@ public class BotVerticle extends AbstractRouteVerticle {
 
     private void handleDccFinished(Message<JsonObject> message) {
         JsonObject body = message.body();
-        final JsonObject pack = body.getJsonObject("pack");
+        final String bot = body.getString("bot");
         MutableObject<Client> mutableClientObject = new MutableObject<>();
 
         packsByBot.entrySet()
                 .stream()
-                .filter(clientPackEntry -> {
-                    long packId = clientPackEntry.getValue().getPackId();
-                    long mappedPackId = pack.getLong("pid");
-                    return packId == mappedPackId;
-                })
+                .filter(clientPackEntry -> clientPackEntry.getKey().getNick().equalsIgnoreCase(bot))
                 .map(Map.Entry::getKey)
                 .forEach(ircClient -> {
                     String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message"));
                     vertx.setTimer(5000, event -> {
-                        messaging.publishPack(BOT_EXIT, JsonObject.mapFrom(pack), msg);
+                        messaging.notify(BOT_EXIT, bot, msg);
                         ircClient.shutdown();
                         packsByBot.remove(mutableClientObject.getValue());
                     });
@@ -104,6 +100,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         String nick = getRandomNick();
         Client client = getClient(pack, nick);
 
+        final String botName = client.getNick();
         client.setExceptionListener(exception -> {
             if (exception instanceof KittehConnectionException) {
                 LOG.error("connection cannot be established: {}->{}({}:{}) {}",
@@ -112,7 +109,8 @@ public class BotVerticle extends AbstractRouteVerticle {
                         pack.getServerHostName(),
                         pack.getServerPort(),
                         exception.getMessage());
-                messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), exception);
+                final JsonObject extra = JsonObject.mapFrom(pack).put("message", exception.getMessage());
+                messaging.notify(BOT_FAIL, botName, extra);
             }
         });
 
@@ -121,7 +119,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         client.addChannel(pack.getChannelName());
 
         packsByBot.put(client, pack);
-        messaging.publishPack(BOT_INIT, JsonObject.mapFrom(pack));
+        messaging.notify(BOT_INIT, botName, new JsonObject().put("pack", JsonObject.mapFrom(pack)));
     }
 
     private Client getClient(Pack pack, String nick) {

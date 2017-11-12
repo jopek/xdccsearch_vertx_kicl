@@ -3,7 +3,6 @@ package com.lxbluem.state;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.Message;
 import org.slf4j.Logger;
@@ -11,7 +10,10 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.lxbluem.Addresses.*;
@@ -20,7 +22,7 @@ import static io.vertx.core.http.HttpMethod.GET;
 
 public class StateVerticle extends AbstractRouteVerticle {
     private static Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
-    private Map<JsonObject, State> stateMap = new HashMap<>();
+    private Map<String, State> stateMap = new HashMap<>();
 
     private static final int AVG_SIZE_SEC = 5;
 
@@ -28,7 +30,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     @Override
     public void start() throws Exception {
         registerRouteWithHandler(GET, "/state", this::getState);
-        registerRouteWithHandler(GET, "/state/:packid", this::getStateByPackId);
+        registerRouteWithHandler(GET, "/state/:botname", this::getStateByBotName);
 
         handle(BOT_INIT, this::init);
         handle(BOT_NOTICE, this::notice);
@@ -37,61 +39,41 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
-
-        handle(BOT_INIT, this::wrapMessage);
-        handle(BOT_NOTICE, this::wrapMessage);
-        handle(BOT_EXIT, this::wrapMessage);
-        handle(BOT_FAIL, this::wrapMessage);
-        handle(BOT_DCC_START, this::wrapMessage);
-        handle(BOT_DCC_PROGRESS, this::wrapMessage);
-        handle(BOT_DCC_FINISH, this::wrapMessage);
-
-//        setupStatePublishInterval();
     }
 
     private void wrapMessage(Message<JsonObject> event) {
         final JsonObject pack = event.body().getJsonObject("pack");
-        long pid = pack.getLong("pid");
-
-        Optional<Object> state = getStateByPackId(pid);
-
+        String botname = pack.getString("botname");
+        JsonObject state = getStateByBotName(botname);
         JsonObject toBePublished = new JsonObject().put("topic", event.address());
 
-        state.map(stateJsonObject -> (JsonObject) stateJsonObject)
-                .ifPresent(o -> vertx.eventBus().publish(STATE, toBePublished.mergeIn(o)));
+        vertx.eventBus().publish(STATE, toBePublished.mergeIn(state));
     }
 
-    private void getStateByPackId(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        String pidPathParam = serializedRequest.getParams().get("packid");
-        if (pidPathParam == null || pidPathParam.isEmpty()) {
+    private void getStateByBotName(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        String botnamePathParam = serializedRequest.getParams().get("botname");
+        if (botnamePathParam == null || botnamePathParam.isEmpty()) {
             jsonObjectFuture.fail("pack id format");
             return;
         }
-        long pid = Long.parseLong(pidPathParam);
 
-        Optional<Object> entry = getStateByPackId(pid);
+        JsonObject entry = getStateByBotName(botnamePathParam);
 
-        if (entry.isPresent())
-            jsonObjectFuture.complete((JsonObject) entry.get());
+        if (!entry.isEmpty())
+            jsonObjectFuture.complete(entry);
         else
             jsonObjectFuture.fail("not found");
     }
 
-    private Optional<Object> getStateByPackId(long pid) {
-        JsonArray stateEntries = getStateEntries();
-        return stateEntries
-                .stream()
-                .filter(o -> {
-                    JsonObject jsonObject = (JsonObject) o;
-                    JsonObject pack = jsonObject.getJsonObject("pack");
-
-                    return pack.getLong("pid") == pid;
-                })
-                .findFirst();
+    private JsonObject getStateByBotName(String botname) {
+        final JsonObject object = getStateEntries().getJsonObject(botname);
+        return object == null
+                ? new JsonObject()
+                : object;
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        jsonObjectFuture.complete(new JsonObject().put("state", getStateEntries()));
+        jsonObjectFuture.complete(getStateEntries());
     }
 
     private void handle(String address, Action1<Message<JsonObject>> method) {
@@ -103,49 +85,61 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void init(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
+        String bot = body.getString("bot");
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
+        stateMap.putIfAbsent(bot, State.builder()
+                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
+                .dccStates(new ArrayList<>())
+                .notices(new ArrayList<>())
+                .messages(new ArrayList<>())
+                .started(Instant.now().toEpochMilli())
+                .pack(pack)
+                .build());
+
+        final State state = stateMap.get(bot);
+        state.setTimestamp(timestamp);
         state.getDccStates().add(INIT);
     }
 
     private void notice(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        JsonObject pack = body.getJsonObject("pack");
+        String bot = body.getString("bot");
         String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
+        State state = updateState(bot, timestamp);
 
         state.getNotices().add(message);
     }
 
     private void exit(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        JsonObject pack = body.getJsonObject("pack");
+        String bot = body.getString("bot");
+        String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
-        state.getMessages().add(body.getString("message"));
+        State state = updateState(bot, timestamp);
+        state.getMessages().add(message);
     }
 
     private void dccStart(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        JsonObject pack = body.getJsonObject("pack");
+        String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
+        State state = updateState(bot, timestamp);
         state.getDccStates().add(START);
     }
 
     private void dccProgress(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         long bytes = body.getLong("bytes", 0L);
+        String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp", 1L);
-        JsonObject pack = body.getJsonObject("pack");
 
-        State state = updateVerticleState(pack, timestamp);
+        State state = updateState(bot, timestamp);
 
         MovingAverage movingAverage = state.getMovingAverage();
         movingAverage.addValue(new Progress(bytes, timestamp));
@@ -161,33 +155,26 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void dccFinish(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        JsonObject pack = body.getJsonObject("pack");
+        String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
+        State state = updateState(bot, timestamp);
         state.getDccStates().add(FINISH);
     }
 
     private void fail(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         JsonObject pack = body.getJsonObject("pack");
+        String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
 
-        State state = updateVerticleState(pack, timestamp);
+        State state = updateState(bot, timestamp);
         state.getDccStates().add(FAIL);
         state.getMessages().add(body.getString("message"));
     }
 
-    private State updateVerticleState(JsonObject pack, long timestamp) {
-        stateMap.putIfAbsent(pack, State.builder()
-                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
-                .dccStates(new ArrayList<>())
-                .notices(new ArrayList<>())
-                .messages(new ArrayList<>())
-                .started(Instant.now().toEpochMilli())
-                .build());
-
-        final State state = stateMap.get(pack);
+    private State updateState(String botname, long timestamp) {
+        final State state = stateMap.get(botname);
         state.setTimestamp(timestamp);
         return state;
     }
@@ -197,10 +184,10 @@ public class StateVerticle extends AbstractRouteVerticle {
                 .handler(h -> vertx.eventBus().publish("stats", getStateEntries()));
     }
 
-    private JsonArray getStateEntries() {
-        JsonArray bots = new JsonArray();
+    private JsonObject getStateEntries() {
+        JsonObject bots = new JsonObject();
 
-        stateMap.forEach((pack, state) -> {
+        stateMap.forEach((botname, state) -> {
             List<DccState> dccStates = state.getDccStates();
             int botStatesSize = dccStates.size();
             if (botStatesSize == 0)
@@ -208,7 +195,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
             DccState latestDccState = dccStates.get(botStatesSize - 1);
 
-            JsonObject bot = new JsonObject()
+            bots.put(botname, new JsonObject()
                     .put("started", state.getStarted())
                     .put("duration", state.getTimestamp() - state.getStarted())
                     .put("timestamp", state.getTimestamp())
@@ -216,8 +203,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("dccstate", latestDccState)
                     .put("messages", state.getMessages())
                     .put("notices", state.getNotices())
-                    .put("pack", pack);
-            bots.add(bot);
+                    .put("pack", state.getPack()));
         });
 
         return bots;

@@ -12,7 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Addresses.ROUTE_ADD;
+import static com.lxbluem.Addresses.ROUTE_REMOVE;
 import static java.lang.String.format;
 
 public abstract class AbstractRouteVerticle extends AbstractVerticle {

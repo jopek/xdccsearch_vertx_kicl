@@ -1,5 +1,6 @@
 package com.lxbluem.state;
 
+import io.vertx.core.json.JsonObject;
 import lombok.*;
 
 import java.util.List;
@@ -17,4 +18,5 @@ class State {
     private List<String> messages;
     private long timestamp;
     private long started;
+    private JsonObject pack;
 }

@@ -157,7 +157,7 @@ public class BotEventListener {
 
         if (!channel.getNicknames().contains(nickName)) {
             final String message = format("bot %s not in channel %s", pack.getNickName(), pack.getChannelName());
-            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), message);
+            messaging.notify(BOT_FAIL, client.getNick(), message);
             return;
         }
 
@@ -182,7 +182,8 @@ public class BotEventListener {
 
     @Handler
     public void onPrivateNotice(PrivateNoticeEvent event) {
-        String remoteNick = event.getActor().getNick();
+        final String remoteNick = event.getActor().getNick();
+        final String botName = event.getClient().getNick();
 
         if (remoteNick.toLowerCase().startsWith("ls"))
             return;
@@ -195,7 +196,7 @@ public class BotEventListener {
             LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, noticeMessage);
 
         if (noticeMessage.contains("queue for pack") || noticeMessage.contains("you already have that item queued")) {
-            messaging.publishPack(BOT_DCC_QUEUE, JsonObject.mapFrom(pack), noticeMessage);
+            messaging.notify(BOT_DCC_QUEUE, botName, noticeMessage);
             return;
         }
 
@@ -203,11 +204,11 @@ public class BotEventListener {
                 || noticeMessage.contains("download connection failed")
                 || noticeMessage.contains("connection refused")
                 ) {
-            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), noticeMessage);
+            messaging.notify(BOT_FAIL, botName, noticeMessage);
             return;
         }
 
-        messaging.publishPack(BOT_NOTICE, JsonObject.mapFrom(pack), noticeMessage);
+        messaging.notify(BOT_NOTICE, botName, noticeMessage);
     }
 
     @Handler
@@ -224,7 +225,7 @@ public class BotEventListener {
 
         LOG.warn("nick {} rejected, retrying with {}", event.getAttemptedNick(), newNick);
 
-        messaging.publishPack(BOT_NOTICE, JsonObject.mapFrom(pack), serverMessages);
+        messaging.notify(BOT_NOTICE, event.getAttemptedNick(), serverMessages);
     }
 
     @Handler
@@ -245,12 +246,12 @@ public class BotEventListener {
         LOG.debug("Receive PrivateCTCPQuery {}", ctcpQuery.encode());
 
         JsonObject filenameResolveMessage = new JsonObject().put("filename", ctcpQuery.getString("filename"));
+        final String botName = event.getClient().getNick();
+
         vertx.eventBus()
                 .<JsonObject>rxSend(FILENAME_RESOLVE, filenameResolveMessage)
                 .map(Message::body)
                 .flatMap(filenameAnswer -> {
-                    Client ircClient = event.getClient();
-
                     final boolean isPassive = ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive");
                     JsonObject botInitMessage = new JsonObject()
                             .put("event", event.getClass().getSimpleName())
@@ -262,7 +263,7 @@ public class BotEventListener {
                             .put("filename", filenameAnswer.getString("filename"))
                             .put("token", ctcpQuery.getInteger("token"))
                             .put("pack", JsonObject.mapFrom(pack))
-                            .put("bot", ircClient.getNick());
+                            .put("bot", botName);
 
                     return vertx.eventBus().<JsonObject>rxSend(BOT_DCC_INIT, botInitMessage);
                 })
@@ -289,7 +290,7 @@ public class BotEventListener {
                         },
                         throwable -> {
                             LOG.error("subscribe to verticle reply failed: {}", throwable.getMessage());
-                            messaging.publishPack(BOT_FAIL, JsonObject.mapFrom(pack), throwable);
+                            messaging.notify(BOT_FAIL, botName, throwable);
                         }
                 );
     }

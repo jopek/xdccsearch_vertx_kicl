@@ -37,6 +37,9 @@ public class RouterVerticle extends AbstractVerticle {
         router.route("/eventbus/*").handler(eventBusHandler());
         router.route().last().handler(StaticHandler.create());
 
+        Router api = Router.router(vertx);
+        router.mountSubRouter("/api", api);
+
         vertx.createHttpServer()
                 .requestHandler(router::accept)
                 .listen(8080, event -> {
@@ -48,7 +51,7 @@ public class RouterVerticle extends AbstractVerticle {
                     }
                 });
 
-        vertx.eventBus().consumer(ROUTE_ADD, message -> setupRouter(router, message));
+        vertx.eventBus().consumer(ROUTE_ADD, message -> setupRouter(api, message));
     }
 
     private void unroute(Router router, Message<Object> message) {
@@ -123,7 +126,9 @@ public class RouterVerticle extends AbstractVerticle {
 
     private void sendHttpResponse(HttpServerResponse response, JsonObject replyMessage) {
         Buffer buffer = Buffer.buffer(replyMessage.encode());
-        response.putHeader("content-type", "application/json").end(buffer);
+        response.putHeader("content-type", "application/json")
+                .putHeader("x-by", "xdcc")
+                .end(buffer);
     }
 
 }

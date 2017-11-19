@@ -195,14 +195,15 @@ public class BotEventListener {
         else
             LOG.debug("PrivateNotice from '{}' (pack nick '{}'): '{}'", remoteNick, packNickName, noticeMessage);
 
-        if (noticeMessage.contains("queue for pack") || noticeMessage.contains("you already have that item queued")) {
+        final String noticeMessageLowerCase = noticeMessage.toLowerCase();
+        if (noticeMessageLowerCase.contains("queue for pack") || noticeMessageLowerCase.contains("you already have that item queued")) {
             messaging.notify(BOT_DCC_QUEUE, botName, noticeMessage);
             return;
         }
 
-        if (noticeMessage.contains("you already requested")
-                || noticeMessage.contains("download connection failed")
-                || noticeMessage.contains("connection refused")
+        if (noticeMessageLowerCase.contains("you already requested")
+                || noticeMessageLowerCase.contains("download connection failed")
+                || noticeMessageLowerCase.contains("connection refused")
                 ) {
             messaging.notify(BOT_FAIL, botName, noticeMessage);
             return;

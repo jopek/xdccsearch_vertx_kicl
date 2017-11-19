@@ -66,8 +66,8 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .filter(clientPackEntry -> clientPackEntry.getKey().getNick().equalsIgnoreCase(bot))
                 .map(Map.Entry::getKey)
                 .forEach(ircClient -> {
-                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message"));
-                    vertx.setTimer(5000, event -> {
+                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message", "finished transfer"));
+                    vertx.setTimer(100, event -> {
                         messaging.notify(BOT_EXIT, bot, msg);
                         ircClient.shutdown();
                         packsByBot.remove(mutableClientObject.getValue());

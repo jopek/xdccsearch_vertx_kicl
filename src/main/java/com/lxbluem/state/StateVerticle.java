@@ -249,7 +249,6 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("speed", state.getMovingAverage().average())
                     .put("dccstate", latestDccState)
                     .put("messages", state.getMessages())
-                    .put("notices", state.getNotices())
                     .put("pack", state.getPack()));
         });
 

@@ -243,7 +243,7 @@ public class StateVerticle extends AbstractRouteVerticle {
             DccState latestDccState = dccStates.get(botStatesSize - 1);
 
             bots.put(botname, new JsonObject()
-                    .put("started", state.getStarted())
+                    .put("startedTimestamp", state.getStarted())
                     .put("duration", state.getTimestamp() - state.getStarted())
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())

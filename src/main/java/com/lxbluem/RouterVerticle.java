@@ -19,11 +19,13 @@ import io.vertx.rxjava.ext.web.handler.sockjs.SockJSHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.lxbluem.Addresses.ROUTE_ADD;
+import static java.time.Instant.now;
 
 public class RouterVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(RouterVerticle.class);
@@ -38,6 +40,7 @@ public class RouterVerticle extends AbstractVerticle {
         router.route().last().handler(StaticHandler.create());
 
         Router api = Router.router(vertx);
+        api.route("/time").handler(rc -> rc.response().end(String.valueOf(Instant.now().toEpochMilli())));
         router.mountSubRouter("/api", api);
 
         vertx.createHttpServer()

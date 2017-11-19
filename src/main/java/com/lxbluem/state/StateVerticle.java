@@ -125,7 +125,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         State state = updateState(bot, timestamp);
 
-        state.getNotices().add(message);
+        state.getMessages().add(message);
     }
 
     private void renameBot(Message<JsonObject> eventMessage) {

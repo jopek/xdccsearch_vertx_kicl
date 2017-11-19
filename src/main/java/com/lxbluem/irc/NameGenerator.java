@@ -2,22 +2,17 @@ package com.lxbluem.irc;
 
 import java.util.Random;
 
-class NameGenerator {
-    static String getRandomNick() {
+public class NameGenerator {
+    public static String getRandomNick() {
+        return getRandomNick(4);
+    }
+
+    public static String getRandomNick(int length) {
         StringBuilder stringBuilder = new StringBuilder();
         Random random = new Random();
-//        String dictionaryFirstPart = "abcdefghijklmnopqrstuvwxyz";
         String dictionarySecondPart = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-//        stringBuilder.append(
-//                dictionaryFirstPart.charAt(
-//                        random.nextInt(
-//                                dictionaryFirstPart.length()
-//                        )
-//                )
-//        );
-
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < length; i++) {
             stringBuilder.append(
                     dictionarySecondPart.charAt(
                             random.nextInt(

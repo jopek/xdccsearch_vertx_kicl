@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import static com.lxbluem.Addresses.*;
 import static com.lxbluem.state.DccState.*;
 import static io.vertx.core.http.HttpMethod.GET;
+import static java.util.stream.Collectors.toMap;
 
 public class StateVerticle extends AbstractRouteVerticle {
     private static Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
@@ -41,6 +42,8 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
+
+        setupStatePublishInterval();
     }
 
     private void wrapMessage(Message<JsonObject> event) {
@@ -207,7 +210,25 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void setupStatePublishInterval() {
         vertx.periodicStream(5000)
-                .handler(h -> vertx.eventBus().publish("stats", getStateEntries()));
+                .handler(h -> {
+                    final Map<String, Object> collect = getStateEntries()
+                            .getMap()
+                            .entrySet()
+                            .stream()
+                            .filter(stringObjectEntry -> ((JsonObject) stringObjectEntry.getValue())
+                                    .getString("dccstate", "")
+                                    .equalsIgnoreCase("PROGRESS")
+                            )
+                            .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+                    if (collect.size() == 0)
+                        return;
+
+                    final JsonObject stateEntriesFiltered = new JsonObject();
+                    stateEntriesFiltered.getMap().putAll(collect);
+
+                    vertx.eventBus().publish("stats", stateEntriesFiltered);
+                });
     }
 
     private JsonObject getStateEntries() {

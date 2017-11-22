@@ -19,4 +19,7 @@ class State {
     private long timestamp;
     private long started;
     private JsonObject pack;
+    private String filenameOnDisk;
+    private long bytesTotal;
+    private long bytes;
 }

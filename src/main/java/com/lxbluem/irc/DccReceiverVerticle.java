@@ -94,6 +94,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
     private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
         String filename = message.getString("filename");
         String botname = message.getString("bot");
+        long filesize = message.getLong("size", 0L);
 
         AtomicReference<File> file = new AtomicReference<>(new File(filename));
         AtomicReference<RandomAccessFile> fileOutput = new AtomicReference<>(null);
@@ -108,7 +109,10 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
         socketObservable.subscribe(
                 socket -> {
-                    messaging.notify(BOT_DCC_START, botname);
+                    final JsonObject extra = new JsonObject()
+                            .put("filenameOnDisk", filename)
+                            .put("bytesTotal", filesize);
+                    messaging.notify(BOT_DCC_START, botname, extra);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -135,8 +139,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
             NetSocket netSocket,
             byte[] outBuffer,
             long[] bytesTransferedValue,
-            long[] lastProgressAt
-    ) {
+            long[] lastProgressAt) {
         return buffer -> {
             long bytesTransfered = bytesTransferedValue[0];
             bytesTransfered += buffer.length();

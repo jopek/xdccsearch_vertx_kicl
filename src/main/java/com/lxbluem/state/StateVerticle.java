@@ -156,10 +156,14 @@ public class StateVerticle extends AbstractRouteVerticle {
     private void dccStart(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         String bot = body.getString("bot");
+        String filenameOnDisk = body.getString("filenameOnDisk");
         long timestamp = body.getLong("timestamp");
+        long bytesTotal = body.getLong("bytesTotal");
 
         State state = updateState(bot, timestamp);
         state.getDccStates().add(START);
+        state.setBytesTotal(bytesTotal);
+        state.setFilenameOnDisk(filenameOnDisk);
     }
 
     private void dccProgress(Message<JsonObject> eventMessage) {
@@ -180,6 +184,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                 .collect(Collectors.toList());
         dccStates.add(PROGRESS);
         state.setDccStates(dccStates);
+        state.setBytes(bytes);
     }
 
     private void dccFinish(Message<JsonObject> eventMessage) {
@@ -193,7 +198,6 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void fail(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        JsonObject pack = body.getJsonObject("pack");
         String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
 
@@ -235,6 +239,10 @@ public class StateVerticle extends AbstractRouteVerticle {
         JsonObject bots = new JsonObject();
 
         stateMap.forEach((botname, state) -> {
+            if (state == null) {
+                LOG.info("stateMap {}", stateMap);
+                return;
+            }
             List<DccState> dccStates = state.getDccStates();
             int botStatesSize = dccStates.size();
             if (botStatesSize == 0)
@@ -249,6 +257,11 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("speed", state.getMovingAverage().average())
                     .put("dccstate", latestDccState)
                     .put("messages", state.getMessages())
+                    .put("bot", botname)
+                    .put("filenameOnDisk", state.getFilenameOnDisk())
+                    .put("bytesTotal", state.getBytesTotal())
+                    .put("bytes", state.getBytes())
+                    .put("bot", botname)
                     .put("pack", state.getPack()));
         });
 

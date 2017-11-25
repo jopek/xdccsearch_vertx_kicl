@@ -128,7 +128,11 @@ public class RouterVerticle extends AbstractVerticle {
     }
 
     private void sendHttpResponse(HttpServerResponse response, JsonObject replyMessage) {
-        Buffer buffer = Buffer.buffer(replyMessage.encode());
+        StringBuilder replyMessageEncoded = new StringBuilder();
+        if (replyMessage!=null) {
+            replyMessageEncoded.append(replyMessage.encode());
+        }
+        Buffer buffer = Buffer.buffer(replyMessageEncoded.toString());
         response.putHeader("content-type", "application/json")
                 .putHeader("x-by", "xdcc")
                 .end(buffer);

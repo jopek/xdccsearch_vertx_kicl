@@ -10,15 +10,13 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import static com.lxbluem.Addresses.*;
 import static com.lxbluem.state.DccState.*;
+import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
 public class StateVerticle extends AbstractRouteVerticle {
@@ -31,6 +29,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() throws Exception {
+        registerRouteWithHandler(DELETE, "/state", this::clearFinished);
         registerRouteWithHandler(GET, "/state", this::getState);
         registerRouteWithHandler(GET, "/state/:botname", this::getStateByBotName);
 
@@ -86,6 +85,17 @@ public class StateVerticle extends AbstractRouteVerticle {
         return stateJsonObject;
     }
 
+    private void clearFinished(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        final List<String> bots = stateMap.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() != null)
+                .filter(entry -> Arrays.asList(FINISH, FAIL).contains(entry.getValue().getDccState()))
+                .map(Map.Entry::getKey)
+                .collect(toList());
+        bots.forEach(key -> stateMap.remove(key));
+        jsonObjectFuture.complete(new JsonObject().put("removed", bots));
+    }
+
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
         jsonObjectFuture.complete(getStateEntries());
     }
@@ -103,7 +113,9 @@ public class StateVerticle extends AbstractRouteVerticle {
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        stateMap.putIfAbsent(bot, getInitialState());
+        final State initialState = getInitialState();
+        initialState.setPack(pack);
+        stateMap.putIfAbsent(bot, initialState);
 
         final State state = stateMap.get(bot);
         state.setTimestamp(timestamp);
@@ -113,7 +125,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         return State.builder()
                 .movingAverage(new MovingAverage(AVG_SIZE_SEC))
                 .dccState(INIT)
-                .notices(new ArrayList<>())
+                .oldBotNames(new ArrayList<>())
                 .messages(new ArrayList<>())
                 .started(Instant.now().toEpochMilli())
                 .build();
@@ -143,6 +155,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         stateMap.put(newBot, state);
         aliasMap.put(bot, newBot);
 
+        state.getOldBotNames().add(bot);
         state.setTimestamp(timestamp);
         state.getMessages().add(message);
     }
@@ -249,6 +262,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("speed", state.getMovingAverage().average())
                     .put("dccstate", state.getDccState())
                     .put("messages", state.getMessages())
+                    .put("OldBotNames", state.getOldBotNames())
                     .put("bot", botname)
                     .put("filenameOnDisk", state.getFilenameOnDisk())
                     .put("bytesTotal", state.getBytesTotal())

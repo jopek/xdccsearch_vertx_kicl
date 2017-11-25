@@ -6,7 +6,6 @@ import java.io.Serializable;
 import java.util.Map;
 
 @Getter
-@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor

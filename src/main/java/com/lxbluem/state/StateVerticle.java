@@ -103,18 +103,20 @@ public class StateVerticle extends AbstractRouteVerticle {
         JsonObject pack = body.getJsonObject("pack");
         long timestamp = body.getLong("timestamp");
 
-        stateMap.putIfAbsent(bot, State.builder()
-                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
-                .dccStates(new ArrayList<>())
-                .notices(new ArrayList<>())
-                .messages(new ArrayList<>())
-                .started(Instant.now().toEpochMilli())
-                .pack(pack)
-                .build());
+        stateMap.putIfAbsent(bot, getInitialState());
 
         final State state = stateMap.get(bot);
         state.setTimestamp(timestamp);
-        state.getDccStates().add(INIT);
+    }
+
+    private State getInitialState() {
+        return State.builder()
+                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
+                .dccState(INIT)
+                .notices(new ArrayList<>())
+                .messages(new ArrayList<>())
+                .started(Instant.now().toEpochMilli())
+                .build();
     }
 
     private void notice(Message<JsonObject> eventMessage) {
@@ -136,6 +138,8 @@ public class StateVerticle extends AbstractRouteVerticle {
         long timestamp = body.getLong("timestamp");
 
         State state = stateMap.remove(bot);
+        if (state == null)
+            state = getInitialState();
         stateMap.put(newBot, state);
         aliasMap.put(bot, newBot);
 
@@ -161,7 +165,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         long bytesTotal = body.getLong("bytesTotal");
 
         State state = updateState(bot, timestamp);
-        state.getDccStates().add(START);
+        state.setDccState(START);
         state.setBytesTotal(bytesTotal);
         state.setFilenameOnDisk(filenameOnDisk);
     }
@@ -177,13 +181,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         MovingAverage movingAverage = state.getMovingAverage();
         movingAverage.addValue(new Progress(bytes, timestamp));
 
-        List<DccState> dccStates = state
-                .getDccStates()
-                .stream()
-                .filter(bs -> !bs.equals(PROGRESS))
-                .collect(Collectors.toList());
-        dccStates.add(PROGRESS);
-        state.setDccStates(dccStates);
+        state.setDccState(PROGRESS);
         state.setBytes(bytes);
     }
 
@@ -193,7 +191,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         long timestamp = body.getLong("timestamp");
 
         State state = updateState(bot, timestamp);
-        state.getDccStates().add(FINISH);
+        state.setDccState(FINISH);
     }
 
     private void fail(Message<JsonObject> eventMessage) {
@@ -202,7 +200,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         long timestamp = body.getLong("timestamp");
 
         State state = updateState(bot, timestamp);
-        state.getDccStates().add(FAIL);
+        state.setDccState(FAIL);
         state.getMessages().add(body.getString("message"));
     }
 
@@ -243,19 +241,13 @@ public class StateVerticle extends AbstractRouteVerticle {
                 LOG.info("stateMap {}", stateMap);
                 return;
             }
-            List<DccState> dccStates = state.getDccStates();
-            int botStatesSize = dccStates.size();
-            if (botStatesSize == 0)
-                return;
-
-            DccState latestDccState = dccStates.get(botStatesSize - 1);
 
             bots.put(botname, new JsonObject()
                     .put("startedTimestamp", state.getStarted())
                     .put("duration", state.getTimestamp() - state.getStarted())
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())
-                    .put("dccstate", latestDccState)
+                    .put("dccstate", state.getDccState())
                     .put("messages", state.getMessages())
                     .put("bot", botname)
                     .put("filenameOnDisk", state.getFilenameOnDisk())

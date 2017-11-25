@@ -13,7 +13,7 @@ import java.util.List;
 @ToString
 class State {
     private MovingAverage movingAverage;
-    private List<DccState> dccStates;
+    private DccState dccState;
     private List<String> notices;
     private List<String> messages;
     private long timestamp;

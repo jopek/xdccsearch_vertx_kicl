@@ -10,13 +10,14 @@ public class NameGenerator {
     public static String getRandomNick(int length) {
         StringBuilder stringBuilder = new StringBuilder();
         Random random = new Random();
-        String dictionarySecondPart = "abcdefghijklmnopqrstuvwxyz0123456789";
+        String dictionary = "abcdefghijklmnopqrstuvwxyz0123456789";
 
         for (int i = 0; i < length; i++) {
+            final int dictionaryIndex = i == 0 ? dictionary.length() - 10 : dictionary.length();
             stringBuilder.append(
-                    dictionarySecondPart.charAt(
+                    dictionary.charAt(
                             random.nextInt(
-                                    dictionarySecondPart.length()
+                                    dictionaryIndex
                             )
                     )
             );

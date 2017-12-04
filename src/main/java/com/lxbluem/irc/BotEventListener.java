@@ -282,7 +282,7 @@ public class BotEventListener {
                                 String host = user.getHost();
                                 String botReply = format("DCC SEND %s %s %d %d %d",
                                         ctcpQuery.getString("filename"),
-                                        transformToIpLong(host),
+                                        transformIpToLong(host),
                                         reply.getInteger("port"),
                                         ctcpQuery.getLong("size"),
                                         ctcpQuery.getInteger("token")
@@ -334,7 +334,7 @@ public class BotEventListener {
         return joiner.toString();
     }
 
-    private String transformToIpLong(String ipString) {
+    private String transformIpToLong(String ipString) {
         String[] ipParts = ipString.trim().split("\\.");
         long ipLong = 0;
         try {

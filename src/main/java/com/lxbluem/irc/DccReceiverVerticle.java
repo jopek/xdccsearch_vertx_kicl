@@ -1,7 +1,6 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.Messaging;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -17,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.subjects.PublishSubject;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,68 +27,121 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.lxbluem.Addresses.*;
 
 public class DccReceiverVerticle extends AbstractVerticle {
+    private static final int PORT = 3400;
     private static Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
 
     private Messaging messaging;
+    private NetClient netClient;
+    private NetServer netServer;
 
     @Override
     public void start() throws Exception {
         EventBus eventBus = vertx.eventBus();
         messaging = new Messaging(eventBus);
 
+        final int bufferSize = 1 << 18;
+        netClient = vertx.createNetClient(new NetClientOptions().setReceiveBufferSize(bufferSize));
+        netServer = vertx.createNetServer(new NetServerOptions().setReceiveBufferSize(bufferSize));
+
+        PublishSubject<Message<JsonObject>> initMessageSubject = PublishSubject.create();
         eventBus.<JsonObject>consumer(BOT_DCC_INIT)
                 .toObservable()
-                .subscribe(this::handleMessage);
+                .subscribe(initMessageSubject);
+
+        PublishSubject<NetSocket> serverSocketSubject = PublishSubject.create();
+        netServer.connectStream()
+                .toObservable()
+                .doOnNext(netSocket -> {
+                    LOG.info("connect stream SOCKET: l:{}:{} r:{}:{}",
+                            netSocket.remoteAddress().host(),
+                            netSocket.remoteAddress().port(),
+                            netSocket.localAddress().host(),
+                            netSocket.localAddress().port()
+                    );
+                })
+                .subscribe(serverSocketSubject);
+
+        Observable<JsonObject> repliedInitMessage = initMessageSubject
+                .doOnNext(this::replyToSender)
+                .map(Message::body);
+
+        repliedInitMessage
+                .filter(initMessageEvent -> initMessageEvent.getBoolean("passive", false))
+                .sample(serverSocketSubject)
+                .withLatestFrom(serverSocketSubject, (initMessage, netSocket) -> {
+                    subscribeTo(initMessage, Observable.just(netSocket));
+                    return true;
+                })
+                .subscribe(bool -> LOG.info("received PASSIVE message"));
+
+        repliedInitMessage
+                .filter(initMessageEvent -> !initMessageEvent.getBoolean("passive", false))
+                .map(initMessage -> {
+                    Observable<NetSocket> netSocketObservable = transferFileActive(initMessage);
+                    subscribeTo(initMessage, netSocketObservable);
+                    return true;
+                })
+                .subscribe(bool -> LOG.info("received ACTIVE message"));
+
+
+        netServer.rxListen(PORT).subscribe(
+                listeningNetServer -> LOG.info("listening on port {}", listeningNetServer.actualPort()),
+                error -> LOG.error("{}", error.getMessage())
+        );
+
     }
 
-    private void handleMessage(Message<JsonObject> event) {
-        Boolean passive = event.body().getBoolean("passive", false);
-        LOG.info("type of transfer: {}", passive ? "passive" : "active");
-        transferFile(event.body(), event::reply, passive);
+
+    private void replyToSender(Message<JsonObject> event) {
+        Boolean isPassive = event.body().getBoolean("passive", false);
+        LOG.info("type of transfer: {}", isPassive ? "passive" : "active");
+
+        JsonObject replyMessage = new JsonObject();
+        if (isPassive)
+            replyMessage.put("port", netServer.actualPort());
+        event.reply(replyMessage);
     }
 
-    private void transferFile(JsonObject message, Handler<JsonObject> replyHandler, boolean passive) {
-        if (!passive)
-            transferFileActive(message, replyHandler);
+    private void handleMessage_old(Message<JsonObject> event) {
+        Boolean isPassive = event.body().getBoolean("passive", false);
+        LOG.info("type of transfer: {}", isPassive ? "passive" : "active");
+
+        JsonObject replyMessage = new JsonObject();
+        if (isPassive)
+            replyMessage.put("port", netServer.actualPort());
+        event.reply(replyMessage);
+
+        transferFile(event.body(), isPassive);
+    }
+
+    private Observable<NetSocket> chooseSocket(JsonObject message) {
+        Observable<NetSocket> socketObservable;
+        if (!message.getBoolean("passive"))
+            socketObservable = transferFileActive(message);
         else
-            transferFilePassive(message, replyHandler);
+            socketObservable = transferFilePassive(message);
+
+        return socketObservable;
     }
 
-    private void transferFileActive(JsonObject message, Handler<JsonObject> replyHandler) {
+    private void transferFile(JsonObject message, boolean passive) {
+        Observable<NetSocket> socketObservable;
+        if (!passive)
+            socketObservable = transferFileActive(message);
+        else
+            socketObservable = transferFilePassive(message);
+
+        subscribeTo(message, socketObservable);
+    }
+
+    private Observable<NetSocket> transferFileActive(JsonObject message) {
         String host = message.getString("ip");
         Integer port = message.getInteger("port");
-
-        NetClientOptions netClientOptions = new NetClientOptions().setReceiveBufferSize(1 << 18);
-        NetClient netClient = vertx.createNetClient(netClientOptions);
-        Observable<NetSocket> socketObservable = netClient.rxConnect(port, host).toObservable();
-
-        subscribeTo(message, socketObservable);
-        replyHandler.handle(new JsonObject());
+        return netClient.rxConnect(port, host).toObservable();
     }
 
-    private void transferFilePassive(JsonObject message, Handler<JsonObject> replyHandler) {
-        String bot = message.getString("bot");
-
-        NetServerOptions netServerOptions = new NetServerOptions().setReceiveBufferSize(1 << 18);
-        NetServer netServer = vertx.createNetServer(netServerOptions);
-        Observable<NetSocket> socketObservable = netServer.connectStream().toObservable();
-
-        subscribeTo(message, socketObservable);
-        listenToIncomingDccRequests(replyHandler, bot, netServer);
-    }
-
-
-    private void listenToIncomingDccRequests(Handler<JsonObject> replyHandler, String botname, NetServer netServer) {
-        netServer.rxListen(0)
-                .toObservable()
-                .subscribe(
-                        server -> replyHandler.handle(new JsonObject().put("port", server.actualPort())),
-                        error -> {
-                            LOG.error("listening to incoming conections {}", error);
-                            messaging.notify(BOT_FAIL, botname, error);
-                        },
-                        () -> LOG.info("netServer completed!")
-                );
+    private Observable<NetSocket> transferFilePassive(JsonObject message) {
+        return netServer.connectStream().toObservable();
     }
 
     private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
@@ -123,13 +176,10 @@ public class DccReceiverVerticle extends AbstractVerticle {
                             .subscribe(
                                     bufferReceivedAction(fileOutput.get(), botname, socket, outBuffer, bytesTransferredValue, lastProgressAt),
                                     errorAction(filename, botname),
-                                    completedAction(filename, file.get(), fileOutput.get(), botname)
+                                    completedAction(filename, file.get(), fileOutput.get(), botname, socket)
                             );
                 },
-                error -> {
-                    messaging.notify(BOT_FAIL, botname, error);
-                    LOG.error("transfer of {} failed {}", filename, error.getMessage());
-                }
+                errorAction(filename, botname)
         );
     }
 
@@ -173,13 +223,15 @@ public class DccReceiverVerticle extends AbstractVerticle {
         };
     }
 
-    private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, String botname) {
+    private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, String botname, NetSocket socket) {
         return () -> {
             messaging.notify(BOT_DCC_FINISH, botname);
             LOG.info("transfer of {} finished", filename);
 
             try {
                 fileOutput.close();
+                socket.closeHandler((aVoid) -> LOG.info("completedAction, closing socket"))
+                        .close();
             } catch (IOException e) {
                 LOG.error("error closing file after transfer", e);
             }

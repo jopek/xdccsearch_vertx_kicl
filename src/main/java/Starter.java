@@ -44,6 +44,11 @@ public class Starter {
     }
 
     private static void logDeployment(String name, AsyncResult<String> event) {
-        LOG.info("deployed {} with id {} {}", name, event.result(), event.succeeded() ? "" : " - FAILED! : " + event.cause().getMessage());
+        if (event.succeeded())
+            LOG.info("deployed {} with id {}", name, event.result());
+        else {
+            LOG.error("deployed {} with id {} {}", name, event.result(), " - FAILED! : " + event.cause().getMessage());
+            event.cause().printStackTrace();
+        }
     }
 }

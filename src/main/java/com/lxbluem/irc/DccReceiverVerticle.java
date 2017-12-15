@@ -43,57 +43,50 @@ public class DccReceiverVerticle extends AbstractVerticle {
         netClient = vertx.createNetClient(new NetClientOptions().setReceiveBufferSize(bufferSize));
         netServer = vertx.createNetServer(new NetServerOptions().setReceiveBufferSize(bufferSize));
 
-        PublishSubject<Message<JsonObject>> initMessageSubject = PublishSubject.create();
-        eventBus.<JsonObject>consumer(BOT_DCC_INIT)
-                .toObservable()
-                .subscribe(initMessageSubject);
-
         PublishSubject<NetSocket> serverSocketSubject = PublishSubject.create();
         netServer.connectStream()
                 .toObservable()
-                .doOnNext(netSocket -> {
-                    LOG.info("connect stream SOCKET: l:{}:{} r:{}:{}",
-                            netSocket.remoteAddress().host(),
-                            netSocket.remoteAddress().port(),
-                            netSocket.localAddress().host(),
-                            netSocket.localAddress().port()
-                    );
-                })
+                .doOnNext(netSocket -> LOG.info("SOCKET connect stream : l:{}:{} r:{}:{}",
+                        netSocket.remoteAddress().host(),
+                        netSocket.remoteAddress().port(),
+                        netSocket.localAddress().host(),
+                        netSocket.localAddress().port()
+                ))
                 .subscribe(serverSocketSubject);
-
-        Observable<JsonObject> repliedInitMessage = initMessageSubject
-                .doOnNext(this::replyToSender)
-                .map(Message::body);
-
-        repliedInitMessage
-                .filter(initMessageEvent -> initMessageEvent.getBoolean("passive", false))
-                .sample(serverSocketSubject)
-                .withLatestFrom(serverSocketSubject, (initMessage, netSocket) -> {
-                    subscribeTo(initMessage, Observable.just(netSocket));
-                    return true;
-                })
-                .subscribe(bool -> LOG.info("received PASSIVE message"));
-
-        repliedInitMessage
-                .filter(initMessageEvent -> !initMessageEvent.getBoolean("passive", false))
-                .map(initMessage -> {
-                    Observable<NetSocket> netSocketObservable = transferFileActive(initMessage);
-                    subscribeTo(initMessage, netSocketObservable);
-                    return true;
-                })
-                .subscribe(bool -> LOG.info("received ACTIVE message"));
-
 
         netServer.rxListen(PORT).subscribe(
                 listeningNetServer -> LOG.info("listening on port {}", listeningNetServer.actualPort()),
                 error -> LOG.error("{}", error.getMessage())
         );
 
+        PublishSubject<Message<JsonObject>> initMessageSubject = PublishSubject.create();
+        eventBus.<JsonObject>consumer(BOT_DCC_INIT)
+                .toObservable()
+                .subscribe(initMessageSubject);
+
+        initMessageSubject
+                .doOnNext(this::replyToSender)
+                .map(Message::body)
+                .groupBy(this::isPassiveTransfer)
+                .flatMap(group -> {
+                    if (group.getKey())
+                        return group.sample(serverSocketSubject)
+                                .withLatestFrom(serverSocketSubject, (initMessage, netSocket) ->
+                                        new InitMessageConnection(initMessage, Observable.just(netSocket)));
+
+                    return group.map(initMessage -> {
+                        Observable<NetSocket> netSocketObservable = getActiveTransferClient(initMessage);
+                        return new InitMessageConnection(initMessage, netSocketObservable);
+                    });
+                })
+                .subscribe(messageConnection ->
+                        subscribeTo(messageConnection.initMessage, messageConnection.netSocketObservable)
+                );
     }
 
 
     private void replyToSender(Message<JsonObject> event) {
-        Boolean isPassive = event.body().getBoolean("passive", false);
+        Boolean isPassive = isPassiveTransfer(event.body());
         LOG.info("type of transfer: {}", isPassive ? "passive" : "active");
 
         JsonObject replyMessage = new JsonObject();
@@ -102,46 +95,14 @@ public class DccReceiverVerticle extends AbstractVerticle {
         event.reply(replyMessage);
     }
 
-    private void handleMessage_old(Message<JsonObject> event) {
-        Boolean isPassive = event.body().getBoolean("passive", false);
-        LOG.info("type of transfer: {}", isPassive ? "passive" : "active");
-
-        JsonObject replyMessage = new JsonObject();
-        if (isPassive)
-            replyMessage.put("port", netServer.actualPort());
-        event.reply(replyMessage);
-
-        transferFile(event.body(), isPassive);
+    private Boolean isPassiveTransfer(JsonObject event) {
+        return event.getBoolean("passive", false);
     }
 
-    private Observable<NetSocket> chooseSocket(JsonObject message) {
-        Observable<NetSocket> socketObservable;
-        if (!message.getBoolean("passive"))
-            socketObservable = transferFileActive(message);
-        else
-            socketObservable = transferFilePassive(message);
-
-        return socketObservable;
-    }
-
-    private void transferFile(JsonObject message, boolean passive) {
-        Observable<NetSocket> socketObservable;
-        if (!passive)
-            socketObservable = transferFileActive(message);
-        else
-            socketObservable = transferFilePassive(message);
-
-        subscribeTo(message, socketObservable);
-    }
-
-    private Observable<NetSocket> transferFileActive(JsonObject message) {
+    private Observable<NetSocket> getActiveTransferClient(JsonObject message) {
         String host = message.getString("ip");
         Integer port = message.getInteger("port");
         return netClient.rxConnect(port, host).toObservable();
-    }
-
-    private Observable<NetSocket> transferFilePassive(JsonObject message) {
-        return netServer.connectStream().toObservable();
     }
 
     private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
@@ -245,4 +206,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
         boolean renameSucceeded = file.renameTo(new File(filename));
     }
 
+    private class InitMessageConnection {
+        private final JsonObject initMessage;
+        private final Observable<NetSocket> netSocketObservable;
+
+        InitMessageConnection(JsonObject initMessage, Observable<NetSocket> netSocketObservable) {
+            this.initMessage = initMessage;
+            this.netSocketObservable = netSocketObservable;
+        }
+    }
 }

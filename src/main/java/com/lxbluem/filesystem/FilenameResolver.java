@@ -146,6 +146,8 @@ public class FilenameResolver {
         if (!fileEntities.isEmpty())
             suffix++;
 
+        filesOnDisk.add(new FileEntity(requestedPackName, path, suffix, 0, 0, 0));
+
         String fsFilename = filenameMapper.getFsFilename(path + "/" + requestedPackName, suffix);
 
         return Future.succeededFuture(fsFilename);

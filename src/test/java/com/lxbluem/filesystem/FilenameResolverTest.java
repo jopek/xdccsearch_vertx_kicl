@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -19,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
+//@Ignore
 public class FilenameResolverTest {
 
     private static final String PATH = "downloads";
@@ -82,9 +84,9 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals("biene maja._3_.part", filename);
+            assertEquals(PATH + "/" + "biene maja._3_.part", filename);
 
-            verify(filenameMapper).getFsFilename(eq(requestedPackName), eq(3));
+            verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(3));
         });
     }
 
@@ -109,9 +111,9 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals("biene maja._1_.part", filename);
+            assertEquals(PATH + "/" + "biene maja._1_.part", filename);
 
-            verify(filenameMapper).getFsFilename(eq(requestedPackName), eq(1));
+            verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(1));
         });
     }
 
@@ -131,9 +133,9 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals("biene maja.part", filename);
+            assertEquals(PATH + "/" + "biene maja._0_.part", filename);
 
-            verify(filenameMapper).getFsFilename(eq(requestedPackName), eq(0));
+            verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(0));
         });
     }
 }

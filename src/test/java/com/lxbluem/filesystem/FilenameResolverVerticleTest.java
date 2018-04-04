@@ -19,7 +19,7 @@ public class FilenameResolverVerticleTest {
     private Vertx vertx;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         vertx = Vertx.vertx();
 
         AtomicBoolean completed = new AtomicBoolean();
@@ -27,21 +27,20 @@ public class FilenameResolverVerticleTest {
         await().untilAtomic(completed, is(true));
     }
 
-
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         AtomicBoolean completed = new AtomicBoolean();
         vertx.close((v) -> completed.set(true));
         await().untilAtomic(completed, is(true));
     }
 
     @Test
-    public void name() throws Exception {
+    public void name() {
         JsonObject message = new JsonObject().put("filename", "file1a");
         vertx.eventBus().send(FILENAME_RESOLVE, message, replyHandler -> {
             assertTrue(replyHandler.succeeded());
             JsonObject body = (JsonObject) replyHandler.result().body();
-            assertEquals(FilenameResolverVerticle.PATH + "/" + "file1a.part", body.getString("filename"));
+            assertEquals(FilenameResolverVerticle.PATH + "/" + "file1a._0_.part", body.getString("filename"));
         });
     }
 }

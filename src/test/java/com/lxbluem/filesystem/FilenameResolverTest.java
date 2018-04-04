@@ -5,7 +5,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;

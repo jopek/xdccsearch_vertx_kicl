@@ -174,7 +174,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <minimizeJar>true</minimizeJar>
+                            <minimizeJar>false</minimizeJar>
 
                             <!-- prevent java.lang.SecurityException: Invalid signature file digest for Manifest main attributes-->
                             <filters>

@@ -18,8 +18,8 @@
 
 <script>
     function init() {
-    $.getJSON( "/state", function( data ) {
-        var state = JSON.stringify(data, null, 2)
+    $.getJSON( "/api/state", function( data ) {
+        var state = JSON.stringify(data, null, 2);
         document.getElementById('feed').innerHTML += state + '\n';
     });
 

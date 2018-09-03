@@ -2,8 +2,11 @@ package com.lxbluem.search;
 
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.ext.web.client.WebClient;
 import io.vertx.rxjava.ext.web.codec.BodyCodec;
 import org.apache.commons.lang3.StringUtils;
@@ -16,10 +19,22 @@ import static io.vertx.core.http.HttpMethod.GET;
 
 public class SearchVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(SearchVerticle.class);
+    private static final String START_SEARCH = "onStartSearch";
 
     @Override
     public void start() {
-        registerRouteWithHandler(GET, "/search", this::handleSearchRequest);
+        String searchString = config().getString(START_SEARCH, "");
+        if (!searchString.isEmpty()) {
+            Future<JsonObject> future = Future.future();
+            future.setHandler(ar -> {
+                if(ar.succeeded()) {
+                    LOG.info(ar.result().encodePrettily());
+                }
+            });
+            doSearch(searchString, "0", future);
+        } else {
+            registerRouteWithHandler(GET, "/search", this::handleSearchRequest);
+        }
     }
 
 
@@ -41,11 +56,13 @@ public class SearchVerticle extends AbstractRouteVerticle {
     }
 
     private void doSearch(String query, String pageNum, Future<JsonObject> responseHandler) {
-        WebClient client = WebClient.create(vertx);
+        WebClientOptions clientOptions = new WebClientOptions()
+                .setFollowRedirects(true);
+        WebClient client = WebClient.create(vertx, clientOptions);
 
         LOG.info("search for {}, page {}", query, pageNum);
 
-        client.get("ixirc.com", "/api")
+        client.get("ixirc.com", "/api/")
                 .addQueryParam("q", query)
                 .addQueryParam("pn", pageNum)
                 .as(BodyCodec.jsonObject())
@@ -57,5 +74,14 @@ public class SearchVerticle extends AbstractRouteVerticle {
                             responseHandler.fail(throwable);
                         }
                 );
+    }
+
+    public static void main(String[] args) {
+        DeploymentOptions options = new DeploymentOptions()
+                .setConfig(
+                        new JsonObject()
+                                .put(START_SEARCH, "muh")
+                );
+        Vertx.vertx().deployVerticle(SearchVerticle.class.getName(), options);
     }
 }

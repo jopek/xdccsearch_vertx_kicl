@@ -4,9 +4,9 @@ import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.handler.sockjs.BridgeEventType;
+import io.vertx.ext.bridge.BridgeEventType;
+import io.vertx.ext.bridge.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
-import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.lxbluem.Addresses.ROUTE_ADD;
-import static java.time.Instant.now;
 
 public class RouterVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(RouterVerticle.class);
@@ -129,7 +128,7 @@ public class RouterVerticle extends AbstractVerticle {
 
     private void sendHttpResponse(HttpServerResponse response, JsonObject replyMessage) {
         StringBuilder replyMessageEncoded = new StringBuilder();
-        if (replyMessage!=null) {
+        if (replyMessage != null) {
             replyMessageEncoded.append(replyMessage.encode());
         }
         Buffer buffer = Buffer.buffer(replyMessageEncoded.toString());

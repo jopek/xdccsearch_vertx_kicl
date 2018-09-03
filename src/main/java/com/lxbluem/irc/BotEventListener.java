@@ -13,10 +13,10 @@ import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
-import org.kitteh.irc.client.library.event.client.ClientReceiveMOTDEvent;
+import org.kitteh.irc.client.library.event.client.ClientReceiveMotdEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.helper.ChannelEvent;
-import org.kitteh.irc.client.library.event.user.PrivateCTCPQueryEvent;
+import org.kitteh.irc.client.library.event.user.PrivateCtcpQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public class BotEventListener {
     }
 
     @Handler
-    public void onMotd(ClientReceiveMOTDEvent event) {
+    public void onMotd(ClientReceiveMotdEvent event) {
         LOG.info("received message of the day MOTD - registering this nick");
         vertx.setTimer(30_500, timerEvent -> {
             Client client = event.getClient();
@@ -232,7 +232,7 @@ public class BotEventListener {
     }
 
     @Handler
-    public void onPrivateCTCPQuery(PrivateCTCPQueryEvent event) {
+    public void onPrivateCTCPQuery(PrivateCtcpQueryEvent event) {
         String message = event.getMessage();
         if (!message.startsWith("DCC ")) {
             LOG.debug("message received: {} - ignoring", message);
@@ -288,7 +288,7 @@ public class BotEventListener {
                                         ctcpQuery.getInteger("token")
                                 );
 
-                                client.sendCTCPMessage(pack.getNickName(), botReply);
+                                client.sendCtcpMessage(pack.getNickName(), botReply);
                             });
                         },
                         throwable -> {

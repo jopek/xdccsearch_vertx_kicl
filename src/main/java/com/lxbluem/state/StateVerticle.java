@@ -36,7 +36,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_INIT, this::init);
         handle(BOT_NOTICE, this::notice);
         handle(BOT_UPDATE_NICK, this::renameBot);
-//        handle(BOT_EXIT, this::exit);
+        handle(BOT_EXIT, this::exit);
         handle(BOT_FAIL, this::fail);
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
@@ -125,6 +125,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         return State.builder()
                 .movingAverage(new MovingAverage(AVG_SIZE_SEC))
                 .dccState(INIT)
+                .botState(BotState.RUN)
                 .oldBotNames(new ArrayList<>())
                 .messages(new ArrayList<>())
                 .started(Instant.now().toEpochMilli())
@@ -168,6 +169,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         State state = updateState(bot, timestamp);
         state.getMessages().add(message);
+        state.setBotState(BotState.EXIT);
     }
 
     private void dccStart(Message<JsonObject> eventMessage) {
@@ -261,6 +263,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())
                     .put("dccstate", state.getDccState())
+                    .put("botstate", state.getBotState())
                     .put("messages", state.getMessages())
                     .put("oldBotNames", state.getOldBotNames())
                     .put("bot", botname)

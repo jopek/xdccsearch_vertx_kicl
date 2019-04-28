@@ -22,4 +22,5 @@ class State {
     private String filenameOnDisk;
     private long bytesTotal;
     private long bytes;
+    private BotState botState;
 }

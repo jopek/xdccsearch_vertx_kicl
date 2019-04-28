@@ -2,6 +2,7 @@ package com.lxbluem;
 
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.BridgeEventType;
@@ -36,6 +37,7 @@ public class RouterVerticle extends AbstractVerticle {
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
         router.route("/eventbus/*").handler(eventBusHandler());
+        router.route("/sev/*").handler(sockjsHandler());
         router.route().last().handler(StaticHandler.create());
 
         Router api = Router.router(vertx);
@@ -59,6 +61,32 @@ public class RouterVerticle extends AbstractVerticle {
     private void unroute(Router router, Message<Object> message) {
         String target = ((JsonObject) message.body()).getString("target");
         verticleCounter.get(target).decrementAndGet();
+    }
+
+    private SockJSHandler sockjsHandler() {
+        SockJSHandler handler = SockJSHandler.create(vertx);
+
+        return handler.socketHandler(socket -> {
+            LOG.info("new websocket from {}", socket.remoteAddress());
+            Handler<Message<Object>> messageHandler = message -> {
+                JsonObject body = (JsonObject) message.body();
+                JsonObject returnMessage = new JsonObject()
+                        .put("type", message.address())
+                        .mergeIn(body);
+                socket.write(returnMessage.encode());
+            };
+
+            vertx.eventBus().consumer(Addresses.BOT_INIT, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_FAIL, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_DCC_INIT, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_DCC_START, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_DCC_PROGRESS, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_DCC_QUEUE, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_DCC_FINISH, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_NOTICE, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_UPDATE_NICK, messageHandler);
+            vertx.eventBus().consumer(Addresses.BOT_EXIT, messageHandler);
+        });
     }
 
     private SockJSHandler eventBusHandler() {

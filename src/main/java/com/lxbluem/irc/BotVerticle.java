@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -122,6 +123,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         BotEventListener botEventListener = new BotEventListener(vertx, pack);
         client.getEventManager().registerEventListener(botEventListener);
         client.addChannel(pack.getChannelName());
+        client.connect();
 
         packsByBot.put(client, pack);
         final JsonObject extra = new JsonObject().put("pack", JsonObject.mapFrom(pack));
@@ -140,8 +142,8 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .user("user_" + nick)
                 .realName("realname_" + nick)
                 .secure(false)
-//                .listenInput(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line))
-//                .listenOutput(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[O] " + line))
+//                .inputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line))
+//                .outputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[O] " + line))
                 .build();
     }
 

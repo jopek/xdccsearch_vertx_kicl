@@ -28,7 +28,12 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Addresses.BOT_DCC_INIT;
+import static com.lxbluem.Addresses.BOT_DCC_QUEUE;
+import static com.lxbluem.Addresses.BOT_FAIL;
+import static com.lxbluem.Addresses.BOT_NOTICE;
+import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
+import static com.lxbluem.Addresses.FILENAME_RESOLVE;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -56,10 +61,12 @@ public class BotEventListener {
     @Handler
     public void onMotd(ClientReceiveMotdEvent event) {
         LOG.info("received message of the day MOTD - registering this nick");
-        vertx.setTimer(30_500, timerEvent -> {
-            Client client = event.getClient();
-            client.sendMessage("Nickserv", "register hotA1 email@address.com");
+        registerNick(event.getClient());
+    }
 
+    private void registerNick(Client client) {
+        vertx.setTimer(30_500, timerEvent -> {
+            client.sendMessage("Nickserv", "register hotA1 email@address.com");
             joinRequiredChannels(client, requiredChannels);
         });
     }
@@ -201,10 +208,28 @@ public class BotEventListener {
             return;
         }
 
+        if (remoteNick.equalsIgnoreCase("nickserv")) {
+            if (noticeMessageLowerCase.contains("your nickname is not registered. to register it, use")) {
+                LOG.info("registering nick");
+                registerNick(event.getClient());
+                return;
+            }
+
+            Pattern pattern = Pattern.compile("nickname .* registered");
+            Matcher matcher = pattern.matcher(noticeMessageLowerCase);
+
+            if (matcher.find()) {
+                LOG.debug("requesting pack");
+                requestPackViaBot(event.getClient());
+                return;
+            }
+
+        }
+
         if (noticeMessageLowerCase.contains("you already requested")
                 || noticeMessageLowerCase.contains("download connection failed")
                 || noticeMessageLowerCase.contains("connection refused")
-                ) {
+        ) {
             messaging.notify(BOT_FAIL, botName, noticeMessage);
             return;
         }
@@ -265,7 +290,6 @@ public class BotEventListener {
                             .put("size", ctcpQuery.getLong("size"))
                             .put("filename", filenameAnswer.getString("filename"))
                             .put("token", ctcpQuery.getInteger("token"))
-                            .put("pack", JsonObject.mapFrom(pack))
                             .put("bot", botName);
 
                     return vertx.eventBus().<JsonObject>rxSend(BOT_DCC_INIT, botInitMessage);

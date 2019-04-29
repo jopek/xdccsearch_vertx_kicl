@@ -24,7 +24,11 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Addresses.BOT_DCC_FINISH;
+import static com.lxbluem.Addresses.BOT_DCC_INIT;
+import static com.lxbluem.Addresses.BOT_DCC_PROGRESS;
+import static com.lxbluem.Addresses.BOT_DCC_START;
+import static com.lxbluem.Addresses.BOT_FAIL;
 
 public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;
@@ -131,11 +135,12 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
                     byte[] outBuffer = new byte[4];
                     final long[] bytesTransferredValue = {0};
+                    final long[] totalBytesValue = {filesize};
                     final long[] lastProgressAt = {0};
 
                     socket.toObservable()
                             .subscribe(
-                                    bufferReceivedAction(fileOutput.get(), botname, socket, outBuffer, bytesTransferredValue, lastProgressAt),
+                                    bufferReceivedAction(fileOutput.get(), botname, socket, outBuffer, bytesTransferredValue, totalBytesValue, lastProgressAt),
                                     errorAction(filename, botname),
                                     completedAction(filename, file.get(), fileOutput.get(), botname, socket)
                             );
@@ -150,9 +155,12 @@ public class DccReceiverVerticle extends AbstractVerticle {
             NetSocket netSocket,
             byte[] outBuffer,
             long[] bytesTransferedValue,
-            long[] lastProgressAt) {
+            long[] totalBytesValue,
+            long[] lastProgressAt
+    ) {
         return buffer -> {
             long bytesTransfered = bytesTransferedValue[0];
+            long totalBytes = totalBytesValue[0];
             bytesTransfered += buffer.length();
             outBuffer[0] = (byte) ((bytesTransfered >> 24) & 0xff);
             outBuffer[1] = (byte) ((bytesTransfered >> 16) & 0xff);
@@ -169,7 +177,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
             long nowInMillis = Instant.now().toEpochMilli();
             long lastProgress = lastProgressAt[0];
-            if (nowInMillis <= lastProgress + 1000)
+            if (nowInMillis <= lastProgress + 1000 && totalBytes - bytesTransfered > 0)
                 return;
 
             lastProgressAt[0] = nowInMillis;

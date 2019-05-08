@@ -58,7 +58,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
 
-        setupStatePublishInterval();
+        setupProgressStatePublishInterval();
     }
 
     private void wrapMessage(Message<JsonObject> event) {
@@ -138,6 +138,8 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         final State state = stateMap.get(bot);
         state.setTimestamp(timestamp);
+
+        vertx.eventBus().publish(STATE, getStateEntries());
     }
 
     private State getInitialState() {
@@ -244,7 +246,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         return state;
     }
 
-    private void setupStatePublishInterval() {
+    private void setupProgressStatePublishInterval() {
         vertx.periodicStream(5000)
                 .handler(h -> {
                     final Map<String, Object> collect = getStateEntries()
@@ -263,7 +265,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     final JsonObject stateEntriesFiltered = new JsonObject();
                     stateEntriesFiltered.getMap().putAll(collect);
 
-                    vertx.eventBus().publish("stats", stateEntriesFiltered);
+                    vertx.eventBus().publish(STATE, stateEntriesFiltered);
                 });
     }
 
@@ -279,10 +281,8 @@ public class StateVerticle extends AbstractRouteVerticle {
             bots.put(botname, new JsonObject()
                     .put("started", state.getStartedTimestamp())
                     .put("duration", state.getEndedTimestamp() > 0
-                            ?
-                            state.getEndedTimestamp() - state.getStartedTimestamp()
-                            :
-                            Instant.now().toEpochMilli() - state.getStartedTimestamp()
+                            ? state.getEndedTimestamp() - state.getStartedTimestamp()
+                            : Instant.now().toEpochMilli() - state.getStartedTimestamp()
                     )
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())

@@ -76,6 +76,7 @@ public class RouterVerticle extends AbstractVerticle {
                 socket.write(returnMessage.encode());
             };
 
+            vertx.eventBus().consumer(Addresses.STATE, messageHandler);
             vertx.eventBus().consumer(Addresses.BOT_INIT, messageHandler);
             vertx.eventBus().consumer(Addresses.BOT_FAIL, messageHandler);
             vertx.eventBus().consumer(Addresses.BOT_DCC_INIT, messageHandler);

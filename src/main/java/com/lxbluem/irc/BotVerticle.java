@@ -11,19 +11,23 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.rxjava.core.eventbus.Message;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.exception.KittehConnectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Addresses.BOT_DCC_FINISH;
+import static com.lxbluem.Addresses.BOT_EXIT;
+import static com.lxbluem.Addresses.BOT_FAIL;
+import static com.lxbluem.Addresses.BOT_INIT;
+import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
 import static io.vertx.core.http.HttpMethod.POST;
 import static java.util.stream.Collectors.toMap;
@@ -40,10 +44,51 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         eventBus.consumer(BOT_DCC_FINISH, this::handleDccFinished);
         eventBus.consumer(BOT_FAIL, this::handleDccFinished);
+        eventBus.consumer(BOT_EXIT, this::handleExit);
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
+        registerRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
 
         messaging = new Messaging(eventBus);
+    }
+
+    private void handleExit(Message<JsonObject> message) {
+        String botname = message.body().getString("bot", "");
+        if (botname == null || botname.isEmpty()) {
+            return;
+        }
+        getClientStream(botname)
+                .collect(Collectors.toList())
+                .forEach(client -> packsByBot.remove(client));
+    }
+
+    private void handleStopTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+        String botname = serializedRequest.getParams().get("botname");
+        if (botname == null || botname.isEmpty()) {
+            jsonObjectFuture.fail("unspecified botname");
+            return;
+        }
+
+        Optional<Client> first = getClientStream(botname)
+                .findFirst();
+
+        if (first.isPresent()) {
+            first.map(client -> vertx.setTimer(100, event -> {
+                messaging.notify(BOT_EXIT, botname, "requested shutdown");
+                client.shutdown();
+                jsonObjectFuture.complete(new JsonObject().put("bot", client.getNick()));
+            }));
+        } else {
+            jsonObjectFuture.fail(String.format("unknown bot '%s'", botname));
+        }
+
+    }
+
+    private Stream<Client> getClientStream(String botname) {
+        return packsByBot.entrySet()
+                .stream()
+                .filter(clientPackEntry -> clientPackEntry.getKey().getNick().contentEquals(botname))
+                .map(Map.Entry::getKey);
     }
 
     private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -60,21 +105,14 @@ public class BotVerticle extends AbstractRouteVerticle {
     private void handleDccFinished(Message<JsonObject> message) {
         JsonObject body = message.body();
         final String bot = body.getString("bot");
-        MutableObject<Client> mutableClientObject = new MutableObject<>();
 
-        packsByBot.entrySet()
-                .stream()
-                .filter(clientPackEntry -> clientPackEntry.getKey().getNick().equalsIgnoreCase(bot))
-                .map(Map.Entry::getKey)
-                .forEach(ircClient -> {
-                    String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message", "finished transfer"));
-                    vertx.setTimer(100, event -> {
-                        messaging.notify(BOT_EXIT, bot, msg);
-                        ircClient.shutdown();
-                        packsByBot.remove(mutableClientObject.getValue());
-                    });
-                    mutableClientObject.setValue(ircClient);
-                });
+        getClientStream(bot).forEach(ircClient -> {
+            String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message", "finished transfer"));
+            vertx.setTimer(100, event -> {
+                messaging.notify(BOT_EXIT, bot, msg);
+                ircClient.shutdown();
+            });
+        });
     }
 
     private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {

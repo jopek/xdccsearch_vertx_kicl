@@ -17,7 +17,8 @@ class State {
     private List<String> oldBotNames;
     private List<String> messages;
     private long timestamp;
-    private long started;
+    private long endedTimestamp;
+    private long startedTimestamp;
     private JsonObject pack;
     private String filenameOnDisk;
     private long bytesTotal;

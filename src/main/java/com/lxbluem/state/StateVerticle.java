@@ -10,10 +10,26 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static com.lxbluem.Addresses.*;
-import static com.lxbluem.state.DccState.*;
+import static com.lxbluem.Addresses.BOT_DCC_FINISH;
+import static com.lxbluem.Addresses.BOT_DCC_PROGRESS;
+import static com.lxbluem.Addresses.BOT_DCC_START;
+import static com.lxbluem.Addresses.BOT_EXIT;
+import static com.lxbluem.Addresses.BOT_FAIL;
+import static com.lxbluem.Addresses.BOT_INIT;
+import static com.lxbluem.Addresses.BOT_NOTICE;
+import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
+import static com.lxbluem.Addresses.STATE;
+import static com.lxbluem.state.DccState.FAIL;
+import static com.lxbluem.state.DccState.FINISH;
+import static com.lxbluem.state.DccState.INIT;
+import static com.lxbluem.state.DccState.PROGRESS;
+import static com.lxbluem.state.DccState.START;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.stream.Collectors.toList;
@@ -89,7 +105,10 @@ public class StateVerticle extends AbstractRouteVerticle {
         final List<String> bots = stateMap.entrySet()
                 .stream()
                 .filter(entry -> entry.getValue() != null)
-                .filter(entry -> Arrays.asList(FINISH, FAIL).contains(entry.getValue().getDccState()))
+                .filter(entry ->
+                        Arrays.asList(FINISH, FAIL).contains(entry.getValue().getDccState())
+                                || entry.getValue().getBotState().equals(BotState.EXIT)
+                )
                 .map(Map.Entry::getKey)
                 .collect(toList());
         bots.forEach(key -> stateMap.remove(key));
@@ -128,7 +147,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                 .botState(BotState.RUN)
                 .oldBotNames(new ArrayList<>())
                 .messages(new ArrayList<>())
-                .started(Instant.now().toEpochMilli())
+                .startedTimestamp(Instant.now().toEpochMilli())
                 .build();
     }
 
@@ -258,8 +277,13 @@ public class StateVerticle extends AbstractRouteVerticle {
             }
 
             bots.put(botname, new JsonObject()
-                    .put("startedTimestamp", state.getStarted())
-                    .put("duration", state.getTimestamp() - state.getStarted())
+                    .put("started", state.getStartedTimestamp())
+                    .put("duration", state.getEndedTimestamp() > 0
+                            ?
+                            state.getEndedTimestamp() - state.getStartedTimestamp()
+                            :
+                            Instant.now().toEpochMilli() - state.getStartedTimestamp()
+                    )
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())
                     .put("dccstate", state.getDccState())

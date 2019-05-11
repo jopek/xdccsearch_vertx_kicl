@@ -33,6 +33,9 @@ public class Starter {
             deploy(vertx, SearchVerticle.class.getName());
             deploy(vertx, BotVerticle.class.getName());
         });
+
+//        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time1", new JsonObject().put("time1", Instant.now().toString())));
+//        vertx.periodicStream(1100).handler(i -> vertx.eventBus().publish("time2", new JsonObject().put("time2", Instant.now().toString())));
     }
 
     private static void deploy(Vertx vertx, String verticleClassname) {

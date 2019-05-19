@@ -220,6 +220,7 @@ public class BotEventListener {
 
             if (matcher.find()) {
                 LOG.debug("requesting pack");
+                requestingPack = true;
                 requestPackViaBot(event.getClient());
                 return;
             }

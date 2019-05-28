@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -69,19 +70,18 @@ public class BotVerticle extends AbstractRouteVerticle {
             return;
         }
 
-        Optional<Client> first = getClientStream(botname)
-                .findFirst();
+        Optional<Client> first = getClientStream(botname).findFirst();
 
         if (first.isPresent()) {
-            first.map(client -> vertx.setTimer(100, event -> {
-                messaging.notify(BOT_EXIT, botname, "requested shutdown");
-                client.shutdown();
-                jsonObjectFuture.complete(new JsonObject().put("bot", client.getNick()));
-            }));
+            Client client = first.get();
+            messaging.notify(BOT_EXIT, botname, "requested shutdown");
+            String packNickName = packsByBot.get(client).getNickName();
+            client.sendMessage(packNickName, "XDCC CANCEL");
+            jsonObjectFuture.complete(new JsonObject().put("bot", client.getNick()));
+            vertx.setTimer(2000, e -> client.shutdown());
         } else {
             jsonObjectFuture.fail(String.format("unknown bot '%s'", botname));
         }
-
     }
 
     private Stream<Client> getClientStream(String botname) {

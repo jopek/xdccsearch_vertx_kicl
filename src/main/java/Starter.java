@@ -11,8 +11,13 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 public class Starter {
     private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
@@ -34,6 +39,7 @@ public class Starter {
             deploy(vertx, BotVerticle.class.getName());
         });
 
+//        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time", new JsonObject().put("time", Instant.now().toString())));
 //        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time1", new JsonObject().put("time1", Instant.now().toString())));
 //        vertx.periodicStream(1100).handler(i -> vertx.eventBus().publish("time2", new JsonObject().put("time2", Instant.now().toString())));
     }

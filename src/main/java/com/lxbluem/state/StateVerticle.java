@@ -270,6 +270,32 @@ public class StateVerticle extends AbstractRouteVerticle {
                 });
     }
 
+    private void setupStaleStatePublishInterval() {
+        vertx.periodicStream(5000)
+                .handler(h -> {
+                    final Map<String, Object> collect = getStateEntries()
+                            .getMap()
+                            .entrySet()
+                            .stream()
+                            .filter(stringObjectEntry -> ((JsonObject) stringObjectEntry.getValue())
+                                    .getString("dccstate", "")
+                                    .equalsIgnoreCase("INIT")
+                            )
+                            .filter(stringObjectEntry -> Instant.now().toEpochMilli() - ((JsonObject) stringObjectEntry.getValue())
+                                    .getLong("started", 0L) > 60_000
+                            )
+                            .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+                    if (collect.size() == 0)
+                        return;
+
+                    final JsonObject stateEntriesFiltered = new JsonObject();
+                    stateEntriesFiltered.getMap().putAll(collect);
+
+                    vertx.eventBus().publish("stale", stateEntriesFiltered);
+                });
+    }
+
     private JsonObject getStateEntries() {
         JsonObject bots = new JsonObject();
 

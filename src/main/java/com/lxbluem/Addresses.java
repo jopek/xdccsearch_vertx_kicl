@@ -4,8 +4,10 @@ public class Addresses {
     public static final String ROUTE_ADD = "route";
     public static final String ROUTE_REMOVE = "unroute";
     public static final String BOT_INIT = "bot.init";
+    public static final String BOT_JOIN = "bot.join";
     public static final String BOT_FAIL = "bot.fail";
     public static final String BOT_DCC_INIT = "bot.dcc.init";
+    public static final String BOT_DCC_REQUESTING = "bot.dcc.request";
     public static final String BOT_DCC_START = "bot.dcc.start";
     public static final String BOT_DCC_PROGRESS = "bot.dcc.progress";
     public static final String BOT_DCC_QUEUE = "bot.dcc.queue";

@@ -76,7 +76,10 @@ public class BotEventListener {
         String eventChannelName = event.getChannel().getName();
         boolean isRequiredChannelsJoined = isRequiredChannelsJoined(event);
 
-        LOG.info("joined channel {}  {}", eventChannelName, isRequiredChannelsJoined ? "[all required joined]" : "");
+        String noticeMessage = String.format("joined channel %s %s", eventChannelName, isRequiredChannelsJoined ? "[all required joined]" : "");
+        LOG.info(noticeMessage);
+        messaging.notify(BOT_NOTICE, event.getClient().getNick(), noticeMessage);
+
     }
 
     private boolean isRequiredChannelsJoined(ChannelEvent event) {
@@ -183,7 +186,10 @@ public class BotEventListener {
     }
 
     private void requestPackViaBot(Client client) {
-        LOG.info("requesting pack #{} from {}", pack.getPackNumber(), pack.getNickName());
+        String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
+        final String botName = client.getNick();
+        LOG.info(noticeMessage);
+        messaging.notify(BOT_NOTICE, botName, noticeMessage);
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
@@ -227,9 +233,7 @@ public class BotEventListener {
 
         }
 
-        if (noticeMessageLowerCase.contains("you already requested")
-                || noticeMessageLowerCase.contains("download connection failed")
-                || noticeMessageLowerCase.contains("connection refused")
+        if (noticeMessageLowerCase.contains("download connection failed") || noticeMessageLowerCase.contains("connection refused")
         ) {
             messaging.notify(BOT_FAIL, botName, noticeMessage);
             return;

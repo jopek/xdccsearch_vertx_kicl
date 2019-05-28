@@ -58,7 +58,8 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
 
-        setupProgressStatePublishInterval();
+//        setupProgressStatePublishInterval();
+//        setupStaleStatePublishInterval();
     }
 
     private void wrapMessage(Message<JsonObject> event) {

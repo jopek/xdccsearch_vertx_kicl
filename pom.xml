@@ -14,6 +14,7 @@
         <vertx.version>3.5.3</vertx.version>
         <kitteh.irc.client-lib.version>4.0.2</kitteh.irc.client-lib.version>
         <lombok.version>1.16.10</lombok.version>
+        <main.verticle>Starter</main.verticle>
     </properties>
 
     <dependencies>
@@ -173,28 +174,24 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+
                         <configuration>
-                            <minimizeJar>false</minimizeJar>
-
-                            <!-- prevent java.lang.SecurityException: Invalid signature file digest for Manifest main attributes-->
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-
                             <transformers>
-                                <!-- add Main-Class to manifest file -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>Starter</mainClass>
+                                    <manifestEntries>
+                                        <Main-Class>${main.verticle}</Main-Class>
+                                        <Main-Verticle>${main.verticle}</Main-Verticle>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
                                 </transformer>
                             </transformers>
+                            <artifactSet>
+                            </artifactSet>
+                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
                         </configuration>
+
                     </execution>
                 </executions>
             </plugin>

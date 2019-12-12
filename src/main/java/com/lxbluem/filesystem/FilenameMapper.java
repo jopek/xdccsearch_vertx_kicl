@@ -13,11 +13,10 @@ import static java.util.stream.Collectors.joining;
 public class FilenameMapper {
 
     private static final String PART = "part";
-    private static final String PATTERN = "_\\d+_";
+    private static final String PATTERN = "_x\\d+x_";
 
     public String createPackName(String name) {
         List<String> split = getNameElements(name);
-        final String PATTERN = "_\\d+_";
 
         if (split.size() == 1)
             return name;
@@ -67,11 +66,11 @@ public class FilenameMapper {
         int size = nameElements.size();
 
         if (size == 1) {
-            nameElements.add(String.format("_%d_", suffix));
+            nameElements.add(String.format("_x%dx_", suffix));
         } else {
             String extension = nameElements.get(size - 1);
             nameElements.remove(size - 1);
-            nameElements.add(String.format("_%d_", suffix));
+            nameElements.add(String.format("_x%dx_", suffix));
             nameElements.add(extension);
         }
         nameElements.add(PART);

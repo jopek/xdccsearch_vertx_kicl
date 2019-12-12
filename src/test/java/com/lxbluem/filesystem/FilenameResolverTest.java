@@ -66,7 +66,7 @@ public class FilenameResolverTest {
         booleanFutureCaptor.getValue().handle(Future.succeededFuture(true));
 
         verify(fileSystem).readDir(eq(PATH), fileListFutureCaptor.capture());
-        List<String> filenameList = Arrays.asList("biene maja", "biene maja._1_", "biene maja._2_.part");
+        List<String> filenameList = Arrays.asList("biene maja", "biene maja._x1x_", "biene maja._x2x_.part");
         fileListFutureCaptor.getValue().handle(Future.succeededFuture(filenameList));
 
         filenameList.forEach(filename -> {
@@ -83,7 +83,7 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals(PATH + "/" + "biene maja._3_.part", filename);
+            assertEquals(PATH + "/" + "biene maja._x3x_.part", filename);
 
             verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(3));
         });
@@ -110,7 +110,7 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals(PATH + "/" + "biene maja._1_.part", filename);
+            assertEquals(PATH + "/" + "biene maja._x1x_.part", filename);
 
             verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(1));
         });
@@ -132,7 +132,7 @@ public class FilenameResolverTest {
             assertTrue(filenameAsyncResult.succeeded());
 
             String filename = filenameAsyncResult.result();
-            assertEquals(PATH + "/" + "biene maja._0_.part", filename);
+            assertEquals(PATH + "/" + "biene maja._x0x_.part", filename);
 
             verify(filenameMapper).getFsFilename(eq(PATH + "/" + requestedPackName), eq(0));
         });

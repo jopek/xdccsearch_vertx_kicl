@@ -17,4 +17,5 @@ public class Addresses {
     public static final String BOT_UPDATE_NICK = "bot.nick";
     public static final String BOT_EXIT = "bot.exit";
     public static final String STATE = "state";
+    public static final String REMOVED_STALE_BOTS = "removed";
 }

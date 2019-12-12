@@ -3,6 +3,7 @@ package com.lxbluem.state;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.Message;
 import org.slf4j.Logger;
@@ -16,15 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.lxbluem.Addresses.BOT_DCC_FINISH;
-import static com.lxbluem.Addresses.BOT_DCC_PROGRESS;
-import static com.lxbluem.Addresses.BOT_DCC_START;
-import static com.lxbluem.Addresses.BOT_EXIT;
-import static com.lxbluem.Addresses.BOT_FAIL;
-import static com.lxbluem.Addresses.BOT_INIT;
-import static com.lxbluem.Addresses.BOT_NOTICE;
-import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
-import static com.lxbluem.Addresses.STATE;
+import static com.lxbluem.Addresses.*;
 import static com.lxbluem.state.DccState.FAIL;
 import static com.lxbluem.state.DccState.FINISH;
 import static com.lxbluem.state.DccState.INIT;
@@ -113,7 +106,8 @@ public class StateVerticle extends AbstractRouteVerticle {
                 .map(Map.Entry::getKey)
                 .collect(toList());
         bots.forEach(key -> stateMap.remove(key));
-        jsonObjectFuture.complete(new JsonObject().put("removed", bots));
+        vertx.eventBus().publish(REMOVED_STALE_BOTS, new JsonArray(bots));
+        jsonObjectFuture.complete(new JsonObject().put(REMOVED_STALE_BOTS, bots));
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {

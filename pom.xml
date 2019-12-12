@@ -20,10 +20,10 @@
     <dependencies>
 
         <!--<dependency>-->
-            <!--<groupId>io.netty</groupId>-->
-            <!--<artifactId>netty-handler</artifactId>-->
-            <!--<version>4.1.8.Final</version>-->
-            <!--<scope>compile</scope>-->
+        <!--<groupId>io.netty</groupId>-->
+        <!--<artifactId>netty-handler</artifactId>-->
+        <!--<version>4.1.8.Final</version>-->
+        <!--<scope>compile</scope>-->
         <!--</dependency>-->
 
         <dependency>
@@ -148,7 +148,6 @@
     </dependencies>
 
 
-
     <build>
         <plugins>
             <!-- Set a compiler level -->
@@ -177,26 +176,75 @@
 
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>${main.verticle}</Main-Class>
                                         <Main-Verticle>${main.verticle}</Main-Verticle>
                                     </manifestEntries>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
                                 </transformer>
                             </transformers>
+
                             <artifactSet>
+
                             </artifactSet>
-                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
+                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar
+                            </outputFile>
                         </configuration>
 
                     </execution>
                 </executions>
             </plugin>
 
+            <!--<plugin>-->
+            <!--<artifactId>maven-resources-plugin</artifactId>-->
+            <!--<version>3.1.0</version>-->
+            <!--<executions>-->
+            <!--<execution>-->
+            <!--<id>copy-resources</id>-->
+            <!--&lt;!&ndash; here the phase you need &ndash;&gt;-->
+            <!--<phase>validate</phase>-->
+            <!--<goals>-->
+            <!--<goal>copy-resources</goal>-->
+            <!--</goals>-->
+            <!--<configuration>-->
+            <!--<outputDirectory>${basedir}/webroot</outputDirectory>-->
+            <!--<resources>-->
+            <!--<resource>-->
+            <!--<directory>${basedir}/webroot</directory>-->
+            <!--<filtering>true</filtering>-->
+            <!--</resource>-->
+            <!--</resources>-->
+            <!--</configuration>-->
+            <!--</execution>-->
+            <!--</executions>-->
+            <!--</plugin>-->
+
+            <!--<plugin>-->
+            <!--<groupId>org.apache.maven.plugins</groupId>-->
+            <!--<artifactId>maven-resources-plugin</artifactId>-->
+            <!--<version>3.1.0</version>-->
+            <!--<configuration>-->
+            <!--<resources>-->
+            <!--<resource>-->
+            <!--<directory>webroot</directory>-->
+            <!--</resource>-->
+            <!--</resources>-->
+            <!--</configuration>-->
+            <!--</plugin>-->
+
         </plugins>
+        <!---->
+        <!--<resources>-->
+            <!--<resource>-->
+                <!--<directory>webroot</directory>-->
+                <!--<targetPath>webroot</targetPath>-->
+            <!--</resource>-->
+        <!--</resources>-->
     </build>
 
 

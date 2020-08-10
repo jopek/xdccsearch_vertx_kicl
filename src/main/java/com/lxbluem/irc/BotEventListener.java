@@ -1,7 +1,7 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.Messaging;
-import com.lxbluem.model.Pack;
+import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.domain.Pack;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -46,15 +46,15 @@ public class BotEventListener {
     private Set<String> requiredChannels = new HashSet<>();
 
     private final ChannelExtractor channelExtractor = new ChannelExtractor();
-    private final Messaging messaging;
+    private final BotMessaging botMessaging;
 
     private final Vertx vertx;
     private final Pack pack;
 
-    BotEventListener(Vertx vertx, Pack pack) {
+    BotEventListener(BotMessaging botMessaging, Vertx vertx, Pack pack) {
+        this.botMessaging = botMessaging;
         this.vertx = vertx;
         this.pack = pack;
-        messaging = new Messaging(vertx.eventBus());
         requiredChannels.add(pack.getChannelName().toLowerCase());
     }
 
@@ -78,7 +78,7 @@ public class BotEventListener {
 
         String noticeMessage = String.format("joined channel %s %s", eventChannelName, isRequiredChannelsJoined ? "[all required joined]" : "");
         LOG.info(noticeMessage);
-        messaging.notify(BOT_NOTICE, event.getClient().getNick(), noticeMessage);
+        botMessaging.notify(BOT_NOTICE, event.getClient().getNick(), noticeMessage);
 
     }
 
@@ -167,7 +167,7 @@ public class BotEventListener {
 
         if (!channel.getNicknames().contains(nickName)) {
             final String message = format("bot %s not in channel %s", pack.getNickName(), pack.getChannelName());
-            messaging.notify(BOT_FAIL, client.getNick(), message);
+            botMessaging.notify(BOT_FAIL, client.getNick(), message);
             return;
         }
 
@@ -189,7 +189,7 @@ public class BotEventListener {
         String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
         final String botName = client.getNick();
         LOG.info(noticeMessage);
-        messaging.notify(BOT_NOTICE, botName, noticeMessage);
+        botMessaging.notify(BOT_NOTICE, botName, noticeMessage);
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
@@ -210,7 +210,7 @@ public class BotEventListener {
 
         final String noticeMessageLowerCase = noticeMessage.toLowerCase();
         if (noticeMessageLowerCase.contains("queue for pack") || noticeMessageLowerCase.contains("you already have that item queued")) {
-            messaging.notify(BOT_DCC_QUEUE, botName, noticeMessage);
+            botMessaging.notify(BOT_DCC_QUEUE, botName, noticeMessage);
             return;
         }
 
@@ -235,11 +235,11 @@ public class BotEventListener {
 
         if (noticeMessageLowerCase.contains("download connection failed") || noticeMessageLowerCase.contains("connection refused")
         ) {
-            messaging.notify(BOT_FAIL, botName, noticeMessage);
+            botMessaging.notify(BOT_FAIL, botName, noticeMessage);
             return;
         }
 
-        messaging.notify(BOT_NOTICE, botName, noticeMessage);
+        botMessaging.notify(BOT_NOTICE, botName, noticeMessage);
     }
 
     @Handler
@@ -258,7 +258,7 @@ public class BotEventListener {
         final JsonObject extra = new JsonObject()
                 .put("message", serverMessages)
                 .put("renameto", newNick);
-        messaging.notify(BOT_UPDATE_NICK, attemptedNick, extra);
+        botMessaging.notify(BOT_UPDATE_NICK, attemptedNick, extra);
     }
 
     @Handler
@@ -322,7 +322,7 @@ public class BotEventListener {
                         },
                         throwable -> {
                             LOG.error("subscribe to verticle reply failed: {}", throwable.getMessage());
-                            messaging.notify(BOT_FAIL, botName, throwable);
+                            botMessaging.notify(BOT_FAIL, botName, throwable);
                         }
                 );
     }

@@ -1,8 +1,8 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.Messaging;
-import com.lxbluem.model.Pack;
+import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.domain.Pack;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.json.DecodeException;
@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,8 +35,12 @@ import static java.util.stream.Collectors.toMap;
 public class BotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
 
-    private Messaging messaging;
+    private BotMessaging messaging;
     private Map<Client, Pack> packsByBot = new HashMap<>();
+
+    public BotVerticle(BotMessaging botMessaging) {
+        this.messaging = botMessaging;
+    }
 
     @Override
     public void start() {
@@ -49,8 +52,6 @@ public class BotVerticle extends AbstractRouteVerticle {
         registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         registerRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
         registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
-
-        messaging = new Messaging(eventBus);
     }
 
     private void handleExit(Message<JsonObject> message) {
@@ -158,7 +159,7 @@ public class BotVerticle extends AbstractRouteVerticle {
             }
         });
 
-        BotEventListener botEventListener = new BotEventListener(vertx, pack);
+        BotEventListener botEventListener = new BotEventListener(messaging, vertx, pack);
         client.getEventManager().registerEventListener(botEventListener);
         client.addChannel(pack.getChannelName());
         client.connect();

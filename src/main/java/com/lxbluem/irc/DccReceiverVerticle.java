@@ -1,6 +1,6 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.Messaging;
+import com.lxbluem.domain.ports.BotMessaging;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -34,14 +34,17 @@ public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;
     private static Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
 
-    private Messaging messaging;
+    private final BotMessaging botMessaging;
     private NetClient netClient;
     private NetServer netServer;
+
+    public DccReceiverVerticle(BotMessaging botMessaging) {
+        this.botMessaging = botMessaging;
+    }
 
     @Override
     public void start() throws Exception {
         EventBus eventBus = vertx.eventBus();
-        messaging = new Messaging(eventBus);
 
         final int bufferSize = 1 << 18;
         netClient = vertx.createNetClient(new NetClientOptions().setReceiveBufferSize(bufferSize));
@@ -121,7 +124,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
             fileOutput.get().seek(0);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
-            messaging.notify(BOT_FAIL, botname, error);
+            botMessaging.notify(BOT_FAIL, botname, error);
             return;
         }
 
@@ -130,7 +133,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                     final JsonObject extra = new JsonObject()
                             .put("filenameOnDisk", filename)
                             .put("bytesTotal", filesize);
-                    messaging.notify(BOT_DCC_START, botname, extra);
+                    botMessaging.notify(BOT_DCC_START, botname, extra);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -181,20 +184,20 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            messaging.notify(BOT_DCC_PROGRESS, botname, new JsonObject().put("bytes", bytesTransfered));
+            botMessaging.notify(BOT_DCC_PROGRESS, botname, new JsonObject().put("bytes", bytesTransfered));
         };
     }
 
     private Action1<Throwable> errorAction(String filename, String botname) {
         return error -> {
-            messaging.notify(BOT_FAIL, botname, error);
+            botMessaging.notify(BOT_FAIL, botname, error);
             LOG.error("transfer of {} failed {}", filename, error.getMessage());
         };
     }
 
     private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, String botname, NetSocket socket) {
         return () -> {
-            messaging.notify(BOT_DCC_FINISH, botname);
+            botMessaging.notify(BOT_DCC_FINISH, botname);
             LOG.info("transfer of {} finished", filename);
 
             try {

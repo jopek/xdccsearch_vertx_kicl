@@ -1,23 +1,20 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
+import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.adapter.EventBusBotMessaging;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
-import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateVerticle;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import io.vertx.rxjava.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
 
 public class Starter {
     private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
@@ -27,8 +24,10 @@ public class Starter {
         Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         Vertx vertx = Vertx.vertx();
+        BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus());
+
         deploy(vertx, EventLogger.class.getName());
-        deploy(vertx, DccReceiverVerticle.class.getName());
+        deploy(vertx, new DccReceiverVerticle(botMessaging));
 //        deploy(vertx, ExternalNotificationVerticle.class.getName());
         deploy(vertx, FilenameResolverVerticle.class.getName());
 
@@ -36,7 +35,7 @@ public class Starter {
             logDeployment(RouterVerticle.class.getName(), event);
             deploy(vertx, StateVerticle.class.getName());
             deploy(vertx, SearchVerticle.class.getName());
-            deploy(vertx, BotVerticle.class.getName());
+            deploy(vertx, new BotVerticle(botMessaging));
         });
 
 //        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time", new JsonObject().put("time", Instant.now().toString())));
@@ -46,6 +45,10 @@ public class Starter {
 
     private static void deploy(Vertx vertx, String verticleClassname) {
         vertx.deployVerticle(verticleClassname, event -> logDeployment(verticleClassname, event));
+    }
+
+    private static void deploy(Vertx vertx, AbstractVerticle verticle) {
+        vertx.getDelegate().deployVerticle(verticle, event -> logDeployment(verticle.getClass().getName(), event));
     }
 
     private static void deploy(Vertx vertx, String verticleClassname, Handler<AsyncResult<String>> asyncResultHandler) {

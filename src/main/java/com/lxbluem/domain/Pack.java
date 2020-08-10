@@ -1,4 +1,4 @@
-package com.lxbluem.model;
+package com.lxbluem.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

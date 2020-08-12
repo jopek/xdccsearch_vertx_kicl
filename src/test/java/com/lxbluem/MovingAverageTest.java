@@ -1,7 +1,7 @@
 package com.lxbluem;
 
-import com.lxbluem.state.MovingAverage;
-import com.lxbluem.state.Progress;
+import com.lxbluem.state.domain.model.MovingAverage;
+import com.lxbluem.state.domain.model.Progress;
 import org.junit.Before;
 import org.junit.Test;
 

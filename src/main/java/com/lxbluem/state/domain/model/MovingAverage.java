@@ -1,5 +1,6 @@
-package com.lxbluem.state;
+package com.lxbluem.state.domain.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@EqualsAndHashCode
 public class MovingAverage {
     private List<Progress> q;
     private int secondsToSave;

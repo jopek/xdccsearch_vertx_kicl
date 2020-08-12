@@ -1,7 +1,12 @@
 package com.lxbluem.state;
 
 import com.lxbluem.AbstractRouteVerticle;
+import com.lxbluem.domain.Pack;
 import com.lxbluem.model.SerializedRequest;
+import com.lxbluem.state.domain.model.BotState;
+import com.lxbluem.state.domain.model.MovingAverage;
+import com.lxbluem.state.domain.model.Progress;
+import com.lxbluem.state.domain.model.State;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -18,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 
 import static com.lxbluem.Addresses.*;
-import static com.lxbluem.state.DccState.FAIL;
-import static com.lxbluem.state.DccState.FINISH;
-import static com.lxbluem.state.DccState.INIT;
-import static com.lxbluem.state.DccState.PROGRESS;
-import static com.lxbluem.state.DccState.START;
+import static com.lxbluem.state.domain.model.DccState.FAIL;
+import static com.lxbluem.state.domain.model.DccState.FINISH;
+import static com.lxbluem.state.domain.model.DccState.INIT;
+import static com.lxbluem.state.domain.model.DccState.PROGRESS;
+import static com.lxbluem.state.domain.model.DccState.START;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.stream.Collectors.toList;
@@ -33,7 +38,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     private Map<String, State> stateMap = new HashMap<>();
     private Map<String, String> aliasMap = new HashMap<>();
 
-    private static final int AVG_SIZE_SEC = 5;
+    static final int AVG_SIZE_SEC = 5;
 
 
     @Override
@@ -53,15 +58,6 @@ public class StateVerticle extends AbstractRouteVerticle {
 
 //        setupProgressStatePublishInterval();
 //        setupStaleStatePublishInterval();
-    }
-
-    private void wrapMessage(Message<JsonObject> event) {
-        final JsonObject pack = event.body().getJsonObject("pack");
-        String botname = pack.getString("botname");
-        JsonObject state = getStateByBotName(botname);
-        JsonObject toBePublished = new JsonObject().put("topic", event.address());
-
-        vertx.eventBus().publish(STATE, toBePublished.mergeIn(state));
     }
 
     private void getStateByBotName(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
@@ -124,7 +120,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     private void init(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         String bot = body.getString("bot");
-        JsonObject pack = body.getJsonObject("pack");
+        Pack pack = body.getJsonObject("pack").mapTo(Pack.class);
         long timestamp = body.getLong("timestamp");
 
         final State initialState = getInitialState();

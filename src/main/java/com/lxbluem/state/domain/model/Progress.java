@@ -1,4 +1,4 @@
-package com.lxbluem.state;
+package com.lxbluem.state.domain.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

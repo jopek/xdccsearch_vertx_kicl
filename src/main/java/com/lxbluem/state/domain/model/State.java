@@ -1,17 +1,14 @@
-package com.lxbluem.state;
+package com.lxbluem.state.domain.model;
 
-import io.vertx.core.json.JsonObject;
+import com.lxbluem.domain.Pack;
 import lombok.*;
 
 import java.util.List;
 
-@Getter
-@Setter
+@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @ToString
-class State {
+public class State {
     private MovingAverage movingAverage;
     private DccState dccState;
     private List<String> oldBotNames;
@@ -19,7 +16,7 @@ class State {
     private long timestamp;
     private long endedTimestamp;
     private long startedTimestamp;
-    private JsonObject pack;
+    private Pack pack;
     private String filenameOnDisk;
     private long bytesTotal;
     private long bytes;

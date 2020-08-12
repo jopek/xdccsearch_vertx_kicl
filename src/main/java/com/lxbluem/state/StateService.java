@@ -172,7 +172,7 @@ public class StateService {
                 .map(Map.Entry::getKey)
                 .collect(toList());
 
-        bots.forEach(key -> stateMap.remove(key));
+        bots.forEach(stateRepository::removeStateByBotName);
 
         return bots;
     }

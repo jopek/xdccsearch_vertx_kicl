@@ -7,24 +7,32 @@ import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.search.SearchVerticle;
+import com.lxbluem.state.StateService;
 import com.lxbluem.state.StateVerticle;
+import com.lxbluem.state.adapters.InMemoryStateRepository;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava.core.Vertx;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
+import java.time.Clock;
+
+@Slf4j
 public class Starter {
-    private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
 
     public static void main(String[] args) throws InterruptedException {
-        LOG.info("starting");
+        log.info("starting");
         Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         Vertx vertx = Vertx.vertx();
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus());
+
+        StateService stateService = new StateService(
+                new InMemoryStateRepository(),
+                Clock.systemDefaultZone()
+        );
 
         deploy(vertx, EventLogger.class.getName());
         deploy(vertx, new DccReceiverVerticle(botMessaging));
@@ -33,7 +41,7 @@ public class Starter {
 
         deploy(vertx, RouterVerticle.class.getName(), event -> {
             logDeployment(RouterVerticle.class.getName(), event);
-            deploy(vertx, StateVerticle.class.getName());
+            deploy(vertx, new StateVerticle(stateService));
             deploy(vertx, SearchVerticle.class.getName());
             deploy(vertx, new BotVerticle(botMessaging));
         });
@@ -57,9 +65,9 @@ public class Starter {
 
     private static void logDeployment(String name, AsyncResult<String> event) {
         if (event.succeeded())
-            LOG.info("deployed {} with id {}", name, event.result());
+            log.info("deployed {} with id {}", name, event.result());
         else {
-            LOG.error("deployed {} with id {} {}", name, event.result(), " - FAILED! : " + event.cause().getMessage());
+            log.error("deployed {} with id {} {}", name, event.result(), " - FAILED! : " + event.cause().getMessage());
             event.cause().printStackTrace();
         }
     }

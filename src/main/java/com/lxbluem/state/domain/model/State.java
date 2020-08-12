@@ -21,4 +21,5 @@ public class State {
     private long bytesTotal;
     private long bytes;
     private BotState botState;
+    private String botName;
 }

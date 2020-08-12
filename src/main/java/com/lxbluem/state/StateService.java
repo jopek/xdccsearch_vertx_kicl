@@ -7,8 +7,6 @@ import com.lxbluem.state.domain.model.Progress;
 import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.model.request.*;
 import com.lxbluem.state.domain.ports.StateRepository;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -17,7 +15,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.lxbluem.Addresses.REMOVED_STALE_BOTS;
 import static com.lxbluem.state.domain.model.DccState.*;
 import static java.util.stream.Collectors.toList;
 
@@ -35,9 +32,12 @@ public class StateService {
     public void init(InitRequest initRequest) {
         String botname = initRequest.getBotName();
         Pack pack = initRequest.getPack();
+        long timestamp = initRequest.getTimestamp();
         State initState = getInitialState();
 
+        initState.setBotName(botname);
         initState.setPack(pack);
+        initState.setTimestamp(timestamp);
 
         stateRepository.saveStateByBotName(botname, initState);
     }

@@ -3,10 +3,8 @@ package com.lxbluem.state;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.model.SerializedRequest;
-import com.lxbluem.state.domain.model.BotState;
-import com.lxbluem.state.domain.model.MovingAverage;
-import com.lxbluem.state.domain.model.Progress;
 import com.lxbluem.state.domain.model.State;
+import com.lxbluem.state.domain.model.request.*;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -16,36 +14,28 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.lxbluem.Addresses.*;
-import static com.lxbluem.state.domain.model.DccState.FAIL;
-import static com.lxbluem.state.domain.model.DccState.FINISH;
-import static com.lxbluem.state.domain.model.DccState.INIT;
-import static com.lxbluem.state.domain.model.DccState.PROGRESS;
-import static com.lxbluem.state.domain.model.DccState.START;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 public class StateVerticle extends AbstractRouteVerticle {
-    private static Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
-    private Map<String, State> stateMap = new HashMap<>();
-    private Map<String, String> aliasMap = new HashMap<>();
+    private static final Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
 
     static final int AVG_SIZE_SEC = 5;
 
+    private final StateService service;
+
+    public StateVerticle(StateService service) {
+        this.service = service;
+    }
 
     @Override
     public void start() throws Exception {
         registerRouteWithHandler(DELETE, "/state", this::clearFinished);
         registerRouteWithHandler(GET, "/state", this::getState);
-        registerRouteWithHandler(GET, "/state/:botname", this::getStateByBotName);
 
         handle(BOT_INIT, this::init);
         handle(BOT_NOTICE, this::notice);
@@ -55,59 +45,18 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_START, this::dccStart);
         handle(BOT_DCC_PROGRESS, this::dccProgress);
         handle(BOT_DCC_FINISH, this::dccFinish);
-
-//        setupProgressStatePublishInterval();
-//        setupStaleStatePublishInterval();
-    }
-
-    private void getStateByBotName(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        String botnamePathParam = serializedRequest.getParams().get("botname");
-        if (botnamePathParam == null || botnamePathParam.isEmpty()) {
-            jsonObjectFuture.fail("pack id format");
-            return;
-        }
-
-        JsonObject entry = getStateByBotName(botnamePathParam);
-
-        if (!entry.isEmpty())
-            jsonObjectFuture.complete(entry);
-        else
-            jsonObjectFuture.fail("not found");
-    }
-
-    private JsonObject getStateByBotName(String requestedBotname) {
-        final String aliasBotName = aliasMap.get(requestedBotname);
-
-        final JsonObject stateEntries = getStateEntries();
-
-        JsonObject stateJsonObject = stateEntries.getJsonObject(requestedBotname);
-
-        if (stateJsonObject == null && aliasBotName != null)
-            stateJsonObject = stateEntries.getJsonObject(aliasBotName);
-
-        if (stateJsonObject == null)
-            return new JsonObject();
-
-        return stateJsonObject;
     }
 
     private void clearFinished(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        final List<String> bots = stateMap.entrySet()
-                .stream()
-                .filter(entry -> entry.getValue() != null)
-                .filter(entry ->
-                        Arrays.asList(FINISH, FAIL).contains(entry.getValue().getDccState())
-                                || entry.getValue().getBotState().equals(BotState.EXIT)
-                )
-                .map(Map.Entry::getKey)
-                .collect(toList());
-        bots.forEach(key -> stateMap.remove(key));
+        List<String> bots = service.clearFinished();
         vertx.eventBus().publish(REMOVED_STALE_BOTS, new JsonArray(bots));
         jsonObjectFuture.complete(new JsonObject().put(REMOVED_STALE_BOTS, bots));
     }
 
     private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
-        jsonObjectFuture.complete(getStateEntries());
+        JsonObject entries = getStateEntriesJsonObject();
+        LOG.debug("getState {}", entries);
+        jsonObjectFuture.complete(entries);
     }
 
     private void handle(String address, Action1<Message<JsonObject>> method) {
@@ -123,25 +72,10 @@ public class StateVerticle extends AbstractRouteVerticle {
         Pack pack = body.getJsonObject("pack").mapTo(Pack.class);
         long timestamp = body.getLong("timestamp");
 
-        final State initialState = getInitialState();
-        initialState.setPack(pack);
-        stateMap.putIfAbsent(bot, initialState);
+        service.init(new InitRequest(bot, timestamp, pack));
 
-        final State state = stateMap.get(bot);
-        state.setTimestamp(timestamp);
-
-        vertx.eventBus().publish(STATE, getStateEntries());
-    }
-
-    private State getInitialState() {
-        return State.builder()
-                .movingAverage(new MovingAverage(AVG_SIZE_SEC))
-                .dccState(INIT)
-                .botState(BotState.RUN)
-                .oldBotNames(new ArrayList<>())
-                .messages(new ArrayList<>())
-                .startedTimestamp(Instant.now().toEpochMilli())
-                .build();
+        Map<String, State> state = service.getState();
+        vertx.eventBus().publish(STATE, state);
     }
 
     private void notice(Message<JsonObject> eventMessage) {
@@ -149,10 +83,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         String bot = body.getString("bot");
         String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
-
-        State state = updateState(bot, timestamp);
-
-        state.getMessages().add(message);
+        service.noticeMessage(new NoticeMessageRequest(bot, message, timestamp));
     }
 
     private void renameBot(Message<JsonObject> eventMessage) {
@@ -161,16 +92,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         String newBot = body.getString("renameto");
         String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
-
-        State state = stateMap.remove(bot);
-        if (state == null)
-            state = getInitialState();
-        stateMap.put(newBot, state);
-        aliasMap.put(bot, newBot);
-
-        state.getOldBotNames().add(bot);
-        state.setTimestamp(timestamp);
-        state.getMessages().add(message);
+        service.renameBot(new RenameBotRequest(bot, newBot, message, timestamp));
     }
 
     private void exit(Message<JsonObject> eventMessage) {
@@ -178,10 +100,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         String bot = body.getString("bot");
         String message = body.getString("message");
         long timestamp = body.getLong("timestamp");
-
-        State state = updateState(bot, timestamp);
-        state.getMessages().add(message);
-        state.setBotState(BotState.EXIT);
+        service.exit(new ExitRequest(bot, message, timestamp));
     }
 
     private void dccStart(Message<JsonObject> eventMessage) {
@@ -190,11 +109,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         String filenameOnDisk = body.getString("filenameOnDisk");
         long timestamp = body.getLong("timestamp");
         long bytesTotal = body.getLong("bytesTotal");
-
-        State state = updateState(bot, timestamp);
-        state.setDccState(START);
-        state.setBytesTotal(bytesTotal);
-        state.setFilenameOnDisk(filenameOnDisk);
+        service.dccStart(new DccStartRequest(bot, bytesTotal, filenameOnDisk, timestamp));
     }
 
     private void dccProgress(Message<JsonObject> eventMessage) {
@@ -202,99 +117,27 @@ public class StateVerticle extends AbstractRouteVerticle {
         long bytes = body.getLong("bytes", 0L);
         String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp", 1L);
-
-        State state = updateState(bot, timestamp);
-
-        MovingAverage movingAverage = state.getMovingAverage();
-        movingAverage.addValue(new Progress(bytes, timestamp));
-
-        state.setDccState(PROGRESS);
-        state.setBytes(bytes);
+        service.dccProgress(new DccProgressRequest(bot, bytes, timestamp));
     }
 
     private void dccFinish(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
-
-        State state = updateState(bot, timestamp);
-        state.setDccState(FINISH);
+        service.dccFinish(new DccFinishRequest(bot, timestamp));
     }
 
     private void fail(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         String bot = body.getString("bot");
         long timestamp = body.getLong("timestamp");
-
-        State state = updateState(bot, timestamp);
-        state.setDccState(FAIL);
-        state.getMessages().add(body.getString("message"));
+        service.fail(new FailRequest(bot, "", timestamp));
     }
 
-    private State updateState(String botname, long timestamp) {
-        final State state = stateMap.get(botname);
-        state.setTimestamp(timestamp);
-        return state;
-    }
-
-    private void setupProgressStatePublishInterval() {
-        vertx.periodicStream(5000)
-                .handler(h -> {
-                    final Map<String, Object> collect = getStateEntries()
-                            .getMap()
-                            .entrySet()
-                            .stream()
-                            .filter(stringObjectEntry -> ((JsonObject) stringObjectEntry.getValue())
-                                    .getString("dccstate", "")
-                                    .equalsIgnoreCase("PROGRESS")
-                            )
-                            .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-                    if (collect.size() == 0)
-                        return;
-
-                    final JsonObject stateEntriesFiltered = new JsonObject();
-                    stateEntriesFiltered.getMap().putAll(collect);
-
-                    vertx.eventBus().publish(STATE, stateEntriesFiltered);
-                });
-    }
-
-    private void setupStaleStatePublishInterval() {
-        vertx.periodicStream(5000)
-                .handler(h -> {
-                    final Map<String, Object> collect = getStateEntries()
-                            .getMap()
-                            .entrySet()
-                            .stream()
-                            .filter(stringObjectEntry -> ((JsonObject) stringObjectEntry.getValue())
-                                    .getString("dccstate", "")
-                                    .equalsIgnoreCase("INIT")
-                            )
-                            .filter(stringObjectEntry -> Instant.now().toEpochMilli() - ((JsonObject) stringObjectEntry.getValue())
-                                    .getLong("started", 0L) > 60_000
-                            )
-                            .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-                    if (collect.size() == 0)
-                        return;
-
-                    final JsonObject stateEntriesFiltered = new JsonObject();
-                    stateEntriesFiltered.getMap().putAll(collect);
-
-                    vertx.eventBus().publish("stale", stateEntriesFiltered);
-                });
-    }
-
-    private JsonObject getStateEntries() {
+    private JsonObject getStateEntriesJsonObject() {
         JsonObject bots = new JsonObject();
 
-        stateMap.forEach((botname, state) -> {
-            if (state == null) {
-                LOG.info("stateMap {}", stateMap);
-                return;
-            }
-
+        service.getState().forEach((botname, state) -> {
             bots.put(botname, new JsonObject()
                     .put("started", state.getStartedTimestamp())
                     .put("duration", state.getEndedTimestamp() > 0
@@ -311,8 +154,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("filenameOnDisk", state.getFilenameOnDisk())
                     .put("bytesTotal", state.getBytesTotal())
                     .put("bytes", state.getBytes())
-                    .put("bot", botname)
-                    .put("pack", state.getPack()));
+                    .put("pack", JsonObject.mapFrom(state.getPack())));
         });
 
         return bots;

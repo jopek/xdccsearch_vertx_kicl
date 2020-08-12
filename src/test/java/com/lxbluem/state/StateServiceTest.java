@@ -49,13 +49,14 @@ public class StateServiceTest {
                 .serverHostName("someHost")
                 .nickName("someRemoteBot")
                 .build();
-        InitRequest initRequest = new InitRequest(botName, pack);
+        InitRequest initRequest = new InitRequest(botName, 9999L, pack);
 
         ut.init(initRequest);
 
         State stateFromRepo = stateRepository.getStateByBotName(botName);
 
         State expected = initialStateWithPack(pack);
+        expected.setTimestamp(9999L);
         assertEquals(expected, stateFromRepo);
     }
 

@@ -36,7 +36,6 @@ public class Pack {
     @JsonProperty(value = "naddr")
     private String serverHostName;
 
-    @NonNull
     @JsonProperty(value = "nport")
     private int serverPort;
 

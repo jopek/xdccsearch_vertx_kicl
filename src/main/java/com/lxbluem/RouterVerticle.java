@@ -36,8 +36,8 @@ public class RouterVerticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) {
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
-        router.route("/eventbus/*").handler(eventBusHandler());
-        router.route("/sev/*").handler(sockjsHandler());
+        router.route("/eventbus/*").subRouter(eventBusHandler());
+        router.route("/sev/*").subRouter(sockjsHandler());
         router.route().last().handler(StaticHandler.create());
 
         Router api = Router.router(vertx);
@@ -63,7 +63,7 @@ public class RouterVerticle extends AbstractVerticle {
         verticleCounter.get(target).decrementAndGet();
     }
 
-    private SockJSHandler sockjsHandler() {
+    private Router sockjsHandler() {
         SockJSHandler handler = SockJSHandler.create(vertx);
 
         return handler.socketHandler(socket -> {
@@ -91,7 +91,7 @@ public class RouterVerticle extends AbstractVerticle {
         });
     }
 
-    private SockJSHandler eventBusHandler() {
+    private Router eventBusHandler() {
         PermittedOptions permitted = new PermittedOptions().setAddressRegex(".*");
         BridgeOptions options = new BridgeOptions().addOutboundPermitted(permitted);
         return SockJSHandler

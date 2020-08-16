@@ -55,12 +55,12 @@ public class StateServiceTest {
 
         State stateFromRepo = stateRepository.getStateByBotName(botName);
 
-        State expected = initialStateWithPack(pack);
+        State expected = initialStateWithPack(botName, pack);
         expected.setTimestamp(9999L);
         assertEquals(expected, stateFromRepo);
     }
 
-    private State initialStateWithPack(Pack pack) {
+    private State initialStateWithPack(String botName, Pack pack) {
         return State.builder()
                 .movingAverage(new MovingAverage(AVG_SIZE_SEC))
                 .dccState(INIT)
@@ -69,13 +69,14 @@ public class StateServiceTest {
                 .messages(new ArrayList<>())
                 .startedTimestamp(Instant.now(clock).toEpochMilli())
                 .pack(pack)
+                .botName(botName)
                 .build();
     }
 
     @Test
     public void notice_messages_added_to_state() {
         String botName = "Andy";
-        State state = initialStateWithPack(null);
+        State state = initialStateWithPack(botName, null);
         stateRepository.saveStateByBotName(botName, state);
 
         NoticeMessageRequest noticeMessageRequest = new NoticeMessageRequest(botName, "message1", 9999L);
@@ -95,7 +96,7 @@ public class StateServiceTest {
 
     @Test
     public void rename_bot_renames_bot_and_holds_name_history() {
-        State state = initialStateWithPack(null);
+        State state = initialStateWithPack("Andy", null);
         stateRepository.saveStateByBotName("Andy", state);
 
         RenameBotRequest renameBotRequest;
@@ -137,7 +138,7 @@ public class StateServiceTest {
     public void exit() {
         ExitRequest exitRequest = new ExitRequest("Andy", "bot Andy exited", 9999L);
 
-        stateRepository.saveStateByBotName("Andy", initialStateWithPack(null));
+        stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
 
         ut.exit(exitRequest);
 
@@ -153,7 +154,7 @@ public class StateServiceTest {
     public void dcc_start() {
         DccStartRequest dccStartRequest = new DccStartRequest("Andy", 1233123L, "filenameOn.disk", 9999L);
 
-        stateRepository.saveStateByBotName("Andy", initialStateWithPack(null));
+        stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
 
         ut.dccStart(dccStartRequest);
 
@@ -170,7 +171,7 @@ public class StateServiceTest {
     public void dcc_progress() {
         DccProgressRequest dccProgressRequest = new DccProgressRequest("Andy", 5555L, 9999L);
 
-        State initialState = initialStateWithPack(null);
+        State initialState = initialStateWithPack("Andy", null);
         assertTrue(initialState.getMovingAverage().getQ().isEmpty());
         stateRepository.saveStateByBotName("Andy", initialState);
 
@@ -190,7 +191,7 @@ public class StateServiceTest {
     public void dcc_finish() {
         DccFinishRequest dccFinishRequest = new DccFinishRequest("Andy", 9999L);
 
-        State initialState = initialStateWithPack(null);
+        State initialState = initialStateWithPack("Andy", null);
         stateRepository.saveStateByBotName("Andy", initialState);
 
         ut.dccFinish(dccFinishRequest);
@@ -206,7 +207,7 @@ public class StateServiceTest {
     public void fail() {
         FailRequest failRequest = new FailRequest("Andy", "failed because reasons.", 9999L);
 
-        stateRepository.saveStateByBotName("Andy", initialStateWithPack(null));
+        stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
 
         ut.fail(failRequest);
 
@@ -220,9 +221,10 @@ public class StateServiceTest {
 
     @Test
     public void get_state_entries() {
-        stateRepository.saveStateByBotName("Andy", initialStateWithPack(null));
-        stateRepository.saveStateByBotName("Karl", initialStateWithPack(null));
-        stateRepository.saveStateByBotName("Mandy", initialStateWithPack(null));
+
+        stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
+        stateRepository.saveStateByBotName("Karl", initialStateWithPack("Karl", null));
+        stateRepository.saveStateByBotName("Mandy", initialStateWithPack("Mandy", null));
 
         Map<String, State> stateMap = ut.getState();
 
@@ -238,16 +240,16 @@ public class StateServiceTest {
 
     @Test
     public void clear_finished() {
-        State stateAndy = initialStateWithPack(null);
+        State stateAndy = initialStateWithPack("Andy", null);
         stateAndy.setDccState(DccState.INIT);
         stateRepository.saveStateByBotName("Andy", stateAndy);
-        State stateKarl = initialStateWithPack(null);
+        State stateKarl = initialStateWithPack("Karl", null);
         stateKarl.setDccState(DccState.PROGRESS);
         stateRepository.saveStateByBotName("Karl", stateKarl);
-        State stateMandy = initialStateWithPack(null);
+        State stateMandy = initialStateWithPack("Mandy", null);
         stateMandy.setDccState(DccState.FINISH);
         stateRepository.saveStateByBotName("Mandy", stateMandy);
-        State stateSusy = initialStateWithPack(null);
+        State stateSusy = initialStateWithPack("Susy", null);
         stateSusy.setDccState(FAIL);
         stateRepository.saveStateByBotName("Susy", stateSusy);
 

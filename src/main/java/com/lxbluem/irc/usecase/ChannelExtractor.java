@@ -1,11 +1,11 @@
-package com.lxbluem.irc;
+package com.lxbluem.irc.usecase;
 
 import java.util.HashSet;
 import java.util.Set;
 
 class ChannelExtractor {
 
-    Set<String> getMentionedChannels(String topic) {
+    public static Set<String> getMentionedChannels(String topic) {
         Set<String> channels = new HashSet<>();
 
         for (String rawTokens : topic.toLowerCase().split("[\\[\\], ]")) {

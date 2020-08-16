@@ -6,6 +6,8 @@ import com.lxbluem.adapter.EventBusBotMessaging;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
+import com.lxbluem.irc.usecase.requestmodel.BotMessage;
+import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateService;
 import com.lxbluem.state.StateVerticle;
@@ -15,24 +17,32 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.Json;
 import io.vertx.rxjava.core.Vertx;
+import io.vertx.rxjava.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
 
 @Slf4j
 public class Starter {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         log.info("starting");
+//        DatabindCodec.mapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         Vertx vertx = Vertx.vertx();
-        BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus());
+        EventBus eventBus = vertx.eventBus();
+        Clock clock = Clock.systemDefaultZone();
 
-        StateService stateService = new StateService(
-                new InMemoryStateRepository(),
-                Clock.systemDefaultZone()
-        );
+        Map<Class<? extends BotMessage>, String> botMessageStringMap = new HashMap<>();
+        botMessageStringMap.put(BotRenameMessage.class, BOT_UPDATE_NICK);
+        BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock, botMessageStringMap);
+
+        StateService stateService = new StateService(new InMemoryStateRepository(), clock);
 
         deploy(vertx, EventLogger.class.getName());
         deploy(vertx, new DccReceiverVerticle(botMessaging));

@@ -86,10 +86,9 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private Stream<Client> getClientStream(String botname) {
-        return packsByBot.entrySet()
+        return packsByBot.keySet()
                 .stream()
-                .filter(clientPackEntry -> clientPackEntry.getKey().getNick().contentEquals(botname))
-                .map(Map.Entry::getKey);
+                .filter(pack -> pack.getNick().contentEquals(botname));
     }
 
     private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {

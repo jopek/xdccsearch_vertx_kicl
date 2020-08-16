@@ -14,7 +14,7 @@ public class EventLogger extends AbstractVerticle {
     public void start() throws Exception {
         EventBus eventBus = vertx.eventBus();
 
-        eventBus.addInterceptor(handler -> {
+        eventBus.addInboundInterceptor(handler -> {
                     Message message = handler.message();
                     LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
                             message.address(),

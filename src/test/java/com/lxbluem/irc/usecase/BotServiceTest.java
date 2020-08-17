@@ -1,5 +1,6 @@
 package com.lxbluem.irc.usecase;
 
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
@@ -9,6 +10,7 @@ import com.lxbluem.irc.domain.DefaultDccBotState;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
+import com.lxbluem.irc.usecase.requestmodel.BotDccQueueMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 import org.junit.Assert;
@@ -115,7 +117,7 @@ public class BotServiceTest {
         verify(botPort).changeNickname(nickChangeCaptor.capture());
 
         ArgumentCaptor<BotRenameMessage> messageSentCaptor = ArgumentCaptor.forClass(BotRenameMessage.class);
-        verify(botMessaging).notify(messageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_UPDATE_NICK), messageSentCaptor.capture());
 
         String actual = nickChangeCaptor.getValue();
         assertNotEquals("Andy", actual);
@@ -163,7 +165,7 @@ public class BotServiceTest {
         verify(botPort).requestDccPack("keex", 5);
 
         ArgumentCaptor<BotNoticeMessage> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeMessage.class);
-        verify(botMessaging).notify(messageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
 
         BotNoticeMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());

@@ -1,5 +1,6 @@
 package com.lxbluem.irc.usecase;
 
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.NameGenerator;
@@ -39,7 +40,7 @@ public class BotService {
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
             BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), noticeMessage);
-            botMessaging.notify(message);
+            botMessaging.notify(Address.BOT_NOTICE, message);
         };
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
         stateStorage.save(botNick, dccBotState);
@@ -78,7 +79,7 @@ public class BotService {
                 .serverMessages(serverMessages)
                 .timestamp(nowEpochMillis())
                 .build();
-        botMessaging.notify(renameMessage);
+        botMessaging.notify(Address.BOT_UPDATE_NICK, renameMessage);
     }
 
     public void handleNoticeMessage(String botName, String remoteNick, String noticeMessage) {
@@ -90,7 +91,7 @@ public class BotService {
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            botMessaging.notify(new BotDccQueueMessage(botName, nowEpochMillis(), noticeMessage));
+            botMessaging.notify(Address.BOT_DCC_QUEUE, new BotDccQueueMessage(botName, nowEpochMillis(), noticeMessage));
             return;
         }
 
@@ -114,11 +115,11 @@ public class BotService {
         if (lowerCaseNoticeMessage.contains("download connection failed")
                 || lowerCaseNoticeMessage.contains("connection refused")
         ) {
-            botMessaging.notify(new BotFailMessage(botName, nowEpochMillis(), noticeMessage));
+            botMessaging.notify(Address.BOT_FAIL, new BotFailMessage(botName, nowEpochMillis(), noticeMessage));
             return;
         }
 
-        botMessaging.notify(new BotNoticeMessage(botName, nowEpochMillis(), noticeMessage));
+        botMessaging.notify(Address.BOT_NOTICE, new BotNoticeMessage(botName, nowEpochMillis(), noticeMessage));
     }
 
     private long nowEpochMillis() {

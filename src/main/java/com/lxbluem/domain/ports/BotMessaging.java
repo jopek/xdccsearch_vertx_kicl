@@ -33,5 +33,5 @@ public interface BotMessaging {
     @Deprecated
     void notify(String address, String botName, String message);
 
-    <T extends BotMessage> void notify(T message);
+    <T extends BotMessage> void notify(Address address, T message);
 }

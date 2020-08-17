@@ -28,6 +28,30 @@ public class DccBotStateTest {
     }
 
     @Test
+    public void not_all_channels_joined() {
+        Pack pack = getPack();
+
+        DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
+        dccDccBotStateGate.joinedChannel("#1");
+        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
+        dccDccBotStateGate.channelReferences("#1", channelReferences);
+        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.joinedChannel("#2");
+
+        assertFalse(dccDccBotStateGate.canRequestPack());
+    }
+
+    @Test
+    public void no_joined_channels() {
+        Pack pack = getPack();
+
+        DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
+        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+
+        assertFalse(dccDccBotStateGate.canRequestPack());
+    }
+
+    @Test
     public void allConditionsMet_registry_required() {
         Pack pack = getPack();
 

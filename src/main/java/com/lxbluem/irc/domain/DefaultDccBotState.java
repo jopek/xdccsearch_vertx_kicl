@@ -55,7 +55,10 @@ public class DefaultDccBotState implements DccBotState {
 
     @Override
     public boolean canRequestPack() {
-        boolean allChannelsJoined = joinedChannels.containsAll(referencedChannelNames);
+        boolean main = joinedChannels.contains(mainChannelName);
+        boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);
+        boolean allChannelsJoined = main && allAdditional;
+
         return remoteUserSeen && allChannelsJoined && !nickRegistryRequired
                 || remoteUserSeen && allChannelsJoined && nickRegistered;
     }

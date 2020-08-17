@@ -1,24 +1,26 @@
 package com.lxbluem.adapter;
 
+import com.lxbluem.Address;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.usecase.requestmodel.BotMessage;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.Serializable;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class EventBusBotMessaging implements BotMessaging {
     private final EventBus eventBus;
     private final Clock clock;
-    private final Map<Class<? extends BotMessage>, String> messageToAddressMap;
 
     public EventBusBotMessaging(EventBus eventBus, Clock clock, Map<Class<? extends BotMessage>, String> messageToAddressMap) {
         this.eventBus = eventBus;
         this.clock = clock;
-        this.messageToAddressMap = messageToAddressMap;
     }
 
     @Override
@@ -42,10 +44,9 @@ public class EventBusBotMessaging implements BotMessaging {
     }
 
     @Override
-    public <T extends BotMessage> void notify(T message) {
+    public <T extends BotMessage> void notify(Address address, T message) {
         JsonObject messageObject = JsonObject.mapFrom(message);
-        String address = messageToAddressMap.get(message.getClass());
-        publish(address, messageObject);
+        publish(address.getAddressValue(), messageObject);
     }
 
     private void notify(String address, String botName, String message, JsonObject extra) {

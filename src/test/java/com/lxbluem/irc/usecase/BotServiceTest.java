@@ -57,6 +57,8 @@ public class BotServiceTest {
 
         botService.init("Andy", testPack());
 
+        verifyNoMoreInteractions(botMessaging, botPort);
+
         assertNotNull(stateStorage.getBotStateByNick("Andy"));
         Assert.assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").getPack());
     }
@@ -65,6 +67,7 @@ public class BotServiceTest {
     public void mark_channel_joined() {
         botService.init("Andy", testPack());
         botService.onRequestedChannelJoinComplete("Andy", "#download");
+        verifyNoMoreInteractions(botMessaging, botPort);
 
         DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
         Set<String> joinedChannels = ((DefaultDccBotState) dccBotState).getJoinedChannels();
@@ -87,6 +90,7 @@ public class BotServiceTest {
     public void users_in_channel() {
         botService.init("Andy", testPack());
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
+        verifyNoMoreInteractions(botMessaging, botPort);
 
         DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
         assertTrue(((DefaultDccBotState) dccBotState).isRemoteUserSeen());
@@ -100,6 +104,7 @@ public class BotServiceTest {
         HashSet<String> channelReferences = new HashSet<>(asList("#room", "#voice"));
         DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
         assertEquals(channelReferences, ((DefaultDccBotState) dccBotState).getReferencedChannelNames());
+        verifyNoMoreInteractions(botMessaging, botPort);
     }
 
     @Test
@@ -107,6 +112,7 @@ public class BotServiceTest {
         botService.messageOfTheDay("Andy", asList("message of the", "dayyyyyy", "in multiple strings"));
 
         verify(botPort).registerNickname("Andy");
+        verifyNoMoreInteractions(botMessaging, botPort);
     }
 
     @Test
@@ -129,6 +135,8 @@ public class BotServiceTest {
         assertEquals("something happened; serverMessages; more serverMessages", sentMesssage.getMessage());
         assertNotEquals("Andy", sentMesssage.getNewBotName());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+
+        verifyNoMoreInteractions(botMessaging, botPort);
     }
 
     @Test
@@ -143,6 +151,7 @@ public class BotServiceTest {
 
         verify(botPort).registerNickname(botNick);
 
+        verifyNoMoreInteractions(botMessaging, botPort);
     }
 
     @Test
@@ -171,6 +180,8 @@ public class BotServiceTest {
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+
+        verifyNoMoreInteractions(botMessaging, botPort);
     }
 
 }

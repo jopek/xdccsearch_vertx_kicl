@@ -11,6 +11,7 @@ import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 import com.lxbluem.irc.usecase.requestmodel.BotDccQueueMessage;
+import com.lxbluem.irc.usecase.requestmodel.BotFailMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 import org.junit.Assert;
@@ -200,6 +201,34 @@ public class BotServiceTest {
         assertEquals("", sentMesssage.getRemoteNick());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+
+        verifyNoMoreInteractions(botMessaging, botPort);
+    }
+
+    @Test
+    public void notice_message_handler_connection_refused() {
+        String botNick = "Andy";
+        String remoteNick = "keex";
+        String noticeMessage = "connection refused";
+
+        Pack pack = testPack();
+
+        botService.init(botNick, pack);
+        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        int botStateHash = botState.hashCode();
+
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+        int botStateHashAfterMethod = botState.hashCode();
+
+        assertEquals("bot state was altered in the notice message handler", botStateHash, botStateHashAfterMethod);
+
+        ArgumentCaptor<BotFailMessage> messageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_FAIL), messageSentCaptor.capture());
+
+        BotFailMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("connection refused", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         verifyNoMoreInteractions(botMessaging, botPort);

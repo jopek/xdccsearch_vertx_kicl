@@ -7,8 +7,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class DccBotStateTest {
 
@@ -118,6 +117,51 @@ public class DccBotStateTest {
         workflow.joinedChannel("#3");
 
         assertFalse(workflow.canRequestPack());
+    }
+
+    @Test
+    public void hashcodes_DefaultDccBotState() {
+        Pack pack = getPack();
+        DccBotState workflow = new DefaultDccBotState(pack);
+        int initialHash = workflow.hashCode();
+        workflow.joinedChannel("#1");
+        int afterJoinedHash = workflow.hashCode();
+        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
+        workflow.channelReferences("#1", channelReferences);
+        int afterChannelRefsHash = workflow.hashCode();
+        workflow.channelNickList("#1", Arrays.asList("user2", "user3"));
+        int afterChannelNickListHash = workflow.hashCode();
+        workflow.joinedChannel("#2");
+        workflow.joinedChannel("#3");
+        int afterJoinedHash2 = workflow.hashCode();
+
+        assertNotEquals(initialHash, afterJoinedHash);
+        assertNotEquals(initialHash, afterChannelNickListHash);
+        assertNotEquals(initialHash, afterChannelRefsHash);
+        assertNotEquals(initialHash, afterJoinedHash2);
+    }
+
+    @Test
+    public void hashcodes_HookedDccBotState() {
+        Pack pack = getPack();
+        DccBotState workflow = new HookedDccBotState(pack, () -> {
+        });
+        int initialHash = workflow.hashCode();
+        workflow.joinedChannel("#1");
+        int afterJoinedHash = workflow.hashCode();
+        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
+        workflow.channelReferences("#1", channelReferences);
+        int afterChannelRefsHash = workflow.hashCode();
+        workflow.channelNickList("#1", Arrays.asList("user2", "user3"));
+        int afterChannelNickListHash = workflow.hashCode();
+        workflow.joinedChannel("#2");
+        workflow.joinedChannel("#3");
+        int afterJoinedHash2 = workflow.hashCode();
+
+        assertNotEquals(initialHash, afterJoinedHash);
+        assertNotEquals(initialHash, afterChannelNickListHash);
+        assertNotEquals(initialHash, afterChannelRefsHash);
+        assertNotEquals(initialHash, afterJoinedHash2);
     }
 
     @Test(expected = RuntimeException.class)

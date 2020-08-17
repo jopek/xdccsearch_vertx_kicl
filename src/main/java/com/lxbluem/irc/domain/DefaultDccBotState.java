@@ -1,10 +1,7 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.domain.Pack;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 
 import java.util.HashSet;
 import java.util.List;
@@ -13,6 +10,7 @@ import java.util.Set;
 @Getter
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class DefaultDccBotState implements DccBotState {
     private final Pack pack;
     private final String mainChannelName;

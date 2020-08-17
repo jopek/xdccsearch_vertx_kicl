@@ -1,11 +1,11 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.domain.Pack;
-import lombok.Getter;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
-import java.util.Set;
 
+@EqualsAndHashCode(callSuper = true)
 public class HookedDccBotState extends DefaultDccBotState {
     private final Callback canRequestHook;
 

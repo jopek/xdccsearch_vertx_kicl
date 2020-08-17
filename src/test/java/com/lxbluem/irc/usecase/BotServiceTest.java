@@ -184,4 +184,39 @@ public class BotServiceTest {
         verifyNoMoreInteractions(botMessaging, botPort);
     }
 
+    @Test
+    public void notice_message_handler_queued() {
+        String botNick = "Andy";
+        String remoteNick = "keex";
+        String noticeMessage = "queue for pack";
+
+        Pack pack = testPack();
+
+        botService.init(botNick, pack);
+        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
+        botState.joinedChannel(pack.getChannelName());
+
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+
+        verify(botPort, times(1)).requestDccPack("keex", 5);
+
+        ArgumentCaptor<BotNoticeMessage> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
+
+        BotNoticeMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+
+        ArgumentCaptor<BotDccQueueMessage> queueMessageSentCaptor = ArgumentCaptor.forClass(BotDccQueueMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_DCC_QUEUE), queueMessageSentCaptor.capture());
+        BotDccQueueMessage sentQueueMesssage = queueMessageSentCaptor.getValue();
+        assertEquals("Andy", sentQueueMesssage.getBot());
+        assertEquals("queue for pack", sentQueueMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentQueueMesssage.getTimestamp());
+
+        verifyNoMoreInteractions(botMessaging, botPort);
+    }
+
 }

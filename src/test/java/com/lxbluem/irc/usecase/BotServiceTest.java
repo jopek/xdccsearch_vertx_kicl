@@ -9,6 +9,7 @@ import com.lxbluem.irc.domain.DefaultDccBotState;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
+import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 import org.junit.Assert;
 import org.junit.Before;
@@ -161,5 +162,13 @@ public class BotServiceTest {
         verify(botPort, never()).registerNickname(botNick);
         verify(botPort).requestDccPack("keex", 5);
 
+        ArgumentCaptor<BotNoticeMessage> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeMessage.class);
+        verify(botMessaging).notify(messageSentCaptor.capture());
+
+        BotNoticeMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
+
 }

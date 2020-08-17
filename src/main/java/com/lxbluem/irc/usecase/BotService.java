@@ -7,7 +7,9 @@ import com.lxbluem.irc.domain.DccBotState;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
-import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
+import com.lxbluem.irc.usecase.requestmodel.BotDccQueueMessage;
+import com.lxbluem.irc.usecase.requestmodel.BotFailMessage;
+import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 
 import java.time.Clock;
@@ -31,8 +33,14 @@ public class BotService {
     }
 
     public void init(String botNick, Pack pack) {
-        BotPort botPort = botStorage.getBotByNick(botNick);
-        DccBotState.Callback execution = () -> botPort.requestDccPack(pack.getNickName(), pack.getPackNumber());
+        DccBotState.Callback execution = () -> {
+            botStorage.getBotByNick(botNick)
+                    .requestDccPack(pack.getNickName(), pack.getPackNumber());
+
+            String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
+            BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), noticeMessage);
+            botMessaging.notify(message);
+        };
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
         stateStorage.save(botNick, dccBotState);
     }
@@ -68,7 +76,7 @@ public class BotService {
                 .attemptedBotName(botName)
                 .newBotName(randomNick)
                 .serverMessages(serverMessages)
-                .timestamp(Instant.now(clock).toEpochMilli())
+                .timestamp(nowEpochMillis())
                 .build();
         botMessaging.notify(renameMessage);
     }
@@ -77,10 +85,20 @@ public class BotService {
         BotPort bot = botStorage.getBotByNick(botName);
         DccBotState botState = stateStorage.getBotStateByNick(botName);
 
+        if (remoteNick.toLowerCase().startsWith("ls"))
+            return;
+
+        String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
+        if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
+            botMessaging.notify(new BotDccQueueMessage(botName, nowEpochMillis(), noticeMessage));
+            return;
+        }
+
         if (remoteNick.equalsIgnoreCase("nickserv")) {
-            if (noticeMessage.toLowerCase().contains("your nickname is not registered. to register it, use")) {
+            if (lowerCaseNoticeMessage.contains("your nickname is not registered. to register it, use")) {
                 botState.nickRegistryRequired();
                 bot.registerNickname(botName);
+                return;
             }
 
             Pattern pattern = Pattern.compile("nickname .* registered", Pattern.CASE_INSENSITIVE);
@@ -93,5 +111,17 @@ public class BotService {
             return;
         }
 
+        if (lowerCaseNoticeMessage.contains("download connection failed")
+                || lowerCaseNoticeMessage.contains("connection refused")
+        ) {
+            botMessaging.notify(new BotFailMessage(botName, nowEpochMillis(), noticeMessage));
+            return;
+        }
+
+        botMessaging.notify(new BotNoticeMessage(botName, nowEpochMillis(), noticeMessage));
+    }
+
+    private long nowEpochMillis() {
+        return Instant.now(clock).toEpochMilli();
     }
 }

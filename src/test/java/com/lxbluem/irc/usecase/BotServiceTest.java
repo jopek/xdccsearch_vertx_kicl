@@ -140,6 +140,26 @@ public class BotServiceTest {
     }
 
     @Test
+    public void notice_message_handler_send_other_messages_via_notice() {
+        String botNick = "Andy";
+
+        String remoteNick = "someDude";
+        String noticeMessage = "lalala";
+
+        botService.init(botNick, testPack());
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+
+        ArgumentCaptor<BotNoticeMessage> captor = ArgumentCaptor.forClass(BotNoticeMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_NOTICE), captor.capture());
+
+        BotNoticeMessage botNoticeMessage = captor.getValue();
+        assertEquals("someDude", botNoticeMessage.getRemoteNick());
+        assertEquals("lalala", botNoticeMessage.getMessage());
+
+        verifyNoMoreInteractions(botMessaging, botPort);
+    }
+
+    @Test
     public void notice_message_handler_nickserv_register_nick() {
         String botNick = "Andy";
 
@@ -177,6 +197,7 @@ public class BotServiceTest {
         verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
 
         BotNoticeMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("", sentMesssage.getRemoteNick());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
@@ -205,6 +226,7 @@ public class BotServiceTest {
         verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
 
         BotNoticeMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("", sentMesssage.getRemoteNick());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());

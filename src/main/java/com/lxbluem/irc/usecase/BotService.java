@@ -39,7 +39,7 @@ public class BotService {
                     .requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), noticeMessage);
+            BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), "", noticeMessage);
             botMessaging.notify(Address.BOT_NOTICE, message);
         };
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
@@ -119,7 +119,7 @@ public class BotService {
             return;
         }
 
-        botMessaging.notify(Address.BOT_NOTICE, new BotNoticeMessage(botName, nowEpochMillis(), noticeMessage));
+        botMessaging.notify(Address.BOT_NOTICE, new BotNoticeMessage(botName, nowEpochMillis(), remoteNick, noticeMessage));
     }
 
     private long nowEpochMillis() {

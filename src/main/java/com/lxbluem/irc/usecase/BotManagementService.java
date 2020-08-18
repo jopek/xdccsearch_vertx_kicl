@@ -2,10 +2,10 @@ package com.lxbluem.irc.usecase;
 
 import com.lxbluem.domain.Pack;
 import com.lxbluem.irc.NameGenerator;
+import com.lxbluem.irc.usecase.ports.BotManagementPort;
+import com.lxbluem.irc.usecase.ports.BotPort;
+import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
-import com.lxbluem.irc.usecase.ports.*;
-
-import java.util.List;
 
 public class BotManagementService implements BotManagementPort {
 
@@ -46,11 +46,6 @@ public class BotManagementService implements BotManagementPort {
                 .serverHostName(pack.getServerHostName())
                 .serverPort(pack.getServerPort())
                 .build();
-    }
-
-    @Override
-    public List<String> transferBots() {
-        return bots.botNames();
     }
 
 }

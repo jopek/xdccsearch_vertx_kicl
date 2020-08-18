@@ -24,15 +24,11 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.lxbluem.Addresses.BOT_DCC_FINISH;
-import static com.lxbluem.Addresses.BOT_DCC_INIT;
-import static com.lxbluem.Addresses.BOT_DCC_PROGRESS;
-import static com.lxbluem.Addresses.BOT_DCC_START;
-import static com.lxbluem.Addresses.BOT_FAIL;
+import static com.lxbluem.Addresses.*;
 
 public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;
-    private static Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DccReceiverVerticle.class);
 
     private final BotMessaging botMessaging;
     private NetClient netClient;
@@ -76,11 +72,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 .map(Message::body)
                 .groupBy(this::isPassiveTransfer)
                 .flatMap(group -> {
+                    // is passive
                     if (group.getKey())
                         return group.sample(serverSocketSubject)
                                 .withLatestFrom(serverSocketSubject, (initMessage, netSocket) ->
                                         new InitMessageConnection(initMessage, Observable.just(netSocket)));
 
+                    // is active
                     return group.map(initMessage -> {
                         Observable<NetSocket> netSocketObservable = getActiveTransferClient(initMessage);
                         return new InitMessageConnection(initMessage, netSocketObservable);
@@ -217,7 +215,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         boolean renameSucceeded = file.renameTo(new File(filename));
     }
 
-    private class InitMessageConnection {
+    private static class InitMessageConnection {
         private final JsonObject initMessage;
         private final Observable<NetSocket> netSocketObservable;
 

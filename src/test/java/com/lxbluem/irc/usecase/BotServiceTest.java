@@ -60,8 +60,11 @@ public class BotServiceTest {
         assertNull(stateStorage.getBotStateByNick("Andy"));
 
         botService.init("Andy", testPack());
-
+        ArgumentCaptor<BotInitMessage> messageCaptor = ArgumentCaptor.forClass(BotInitMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_INIT), messageCaptor.capture());
         verifyNoMoreInteractions(botMessaging, botPort);
+
+        assertEquals(messageCaptor.getValue().getPack(), testPack());
 
         assertNotNull(stateStorage.getBotStateByNick("Andy"));
         Assert.assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").getPack());
@@ -70,6 +73,8 @@ public class BotServiceTest {
     @Test
     public void mark_channel_joined() {
         botService.init("Andy", testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         botService.onRequestedChannelJoinComplete("Andy", "#download");
         verifyNoMoreInteractions(botMessaging, botPort);
 
@@ -93,6 +98,8 @@ public class BotServiceTest {
     @Test
     public void users_in_channel() {
         botService.init("Andy", testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
         verifyNoMoreInteractions(botMessaging, botPort);
 
@@ -103,6 +110,8 @@ public class BotServiceTest {
     @Test
     public void channel_topic() {
         botService.init("Andy", testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
 
         HashSet<String> channelReferences = new HashSet<>(asList("#room", "#voice"));
@@ -151,6 +160,8 @@ public class BotServiceTest {
         String noticeMessage = "lalala";
 
         botService.init(botNick, testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 
         ArgumentCaptor<BotNoticeMessage> captor = ArgumentCaptor.forClass(BotNoticeMessage.class);
@@ -171,8 +182,9 @@ public class BotServiceTest {
         String noticeMessage = "your nickname is not registered. to register it, use";
 
         botService.init(botNick, testPack());
-        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
 
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
         verify(botPort).registerNickname(botNick);
 
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -187,6 +199,8 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.init(botNick, pack);
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         botState.nickRegistryRequired();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
@@ -218,6 +232,8 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.init(botNick, pack);
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         int botStateHash = botState.hashCode();
 
@@ -246,6 +262,8 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.init(botNick, pack);
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
@@ -279,6 +297,8 @@ public class BotServiceTest {
         String incoming_message = "crrrrrap";
 
         botService.init(botNick, testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
@@ -293,6 +313,8 @@ public class BotServiceTest {
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
         botService.init(botNick, testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
@@ -311,6 +333,7 @@ public class BotServiceTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
 
         botService.init(botNick, testPack());
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 3232260865L);

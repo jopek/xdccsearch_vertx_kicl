@@ -46,6 +46,8 @@ public class BotService {
         };
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
         stateStorage.save(botNick, dccBotState);
+
+        botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNick, nowEpochMillis(), pack));
     }
 
     public void onRequestedChannelJoinComplete(String botNick, String channelName) {

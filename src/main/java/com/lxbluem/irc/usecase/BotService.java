@@ -8,17 +8,19 @@ import com.lxbluem.irc.domain.DccBotState;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
-import com.lxbluem.irc.usecase.requestmodel.BotDccQueueMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotFailMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
+import com.lxbluem.irc.usecase.requestmodel.*;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.String.format;
 
 public class BotService {
     private final BotStorage botStorage;
@@ -120,6 +122,39 @@ public class BotService {
         }
 
         botMessaging.notify(Address.BOT_NOTICE, new BotNoticeMessage(botName, nowEpochMillis(), remoteNick, noticeMessage));
+    }
+
+    public void handleCtcpQuery(String botNick, DccCtcpQuery ctcpQuery, long localIp) {
+        if (!ctcpQuery.isValid()) {
+            return;
+        }
+
+        BotPort botPort = botStorage.getBotByNick(botNick);
+        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+
+        AtomicReference<String> resolvedFilename = new AtomicReference<>("");
+
+        Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
+            int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
+            String nickName = botState.getPack().getNickName();
+            String dccSendRequest = format("DCC SEND %s %d %d %d %d",
+                    resolvedFilename.get(),
+                    localIp,
+                    passiveDccSocketPort,
+                    ctcpQuery.getSize(),
+                    ctcpQuery.getToken()
+            );
+
+            botPort.sendCtcpMessage(nickName, dccSendRequest);
+        };
+
+        Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
+            String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
+            resolvedFilename.set(filenameAnswer);
+            botMessaging.ask(Address.BOT_DCC_INIT, ctcpQuery, passiveDccSocketPortConsumer);
+        };
+
+        botMessaging.ask(Address.FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
     }
 
     private long nowEpochMillis() {

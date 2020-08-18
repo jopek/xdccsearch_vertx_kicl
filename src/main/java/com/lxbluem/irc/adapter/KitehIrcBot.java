@@ -3,9 +3,11 @@ package com.lxbluem.irc.adapter;
 import com.lxbluem.irc.usecase.BotService;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
+import com.lxbluem.irc.usecase.requestmodel.DccCtcpQuery;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.defaults.DefaultClient;
+import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.ServerMessage;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
@@ -13,6 +15,7 @@ import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
 import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
 import org.kitteh.irc.client.library.event.client.ClientReceiveMotdEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
+import org.kitteh.irc.client.library.event.user.PrivateCtcpQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 
 import java.text.SimpleDateFormat;
@@ -81,6 +84,11 @@ public class KitehIrcBot implements BotPort {
         client.sendMessage(remoteBotName, String.format("xdcc send #%d", packNumber));
     }
 
+    @Override
+    public void sendCtcpMessage(String nick, String message) {
+        client.sendCtcpMessage(nick, message);
+    }
+
 
     @Handler
     public void channelJoined(RequestedChannelJoinCompleteEvent event) {
@@ -89,14 +97,14 @@ public class KitehIrcBot implements BotPort {
 
     @Handler
     public void userListAvailable(ChannelUsersUpdatedEvent event) {
-        List<String> usersInChannel = event.getChannel()
+        Channel channel = event.getChannel();
+        List<String> usersInChannel = channel
                 .getUsers()
                 .stream()
                 .map(User::getNick)
                 .collect(Collectors.toList());
-
-        botService.usersInChannel(botName, event.getChannel().getName(), usersInChannel);
-        System.out.print(event);
+        String channelName = channel.getName();
+        botService.usersInChannel(botName, channelName, usersInChannel);
     }
 
     @Handler
@@ -135,6 +143,30 @@ public class KitehIrcBot implements BotPort {
         String noticeMessage = event.getMessage();
 
         botService.handleNoticeMessage(botName, remoteNick, noticeMessage);
+    }
+
+    @Handler
+    public void onPrivateCTCPQuery(PrivateCtcpQueryEvent event) {
+        DccCtcpQuery dccCtcpQuery = DccCtcpQuery.fromQueryString(event.getMessage());
+        long localIp = event.getClient()
+                .getUser()
+                .map(User::getHost)
+                .map(this::transformIpToLong)
+                .orElse(0L);
+        botService.handleCtcpQuery(botName, dccCtcpQuery, localIp);
+    }
+
+    private long transformIpToLong(String ipString) {
+        String[] ipParts = ipString.trim().split("\\.");
+        long ipLong = 0;
+        try {
+            for (int i = 0; i <= 3; i++) {
+                ipLong += Long.parseLong(ipParts[i]) << 8 * (3 - i);
+            }
+            return ipLong;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
 }

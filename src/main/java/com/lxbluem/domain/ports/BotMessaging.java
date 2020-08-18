@@ -34,4 +34,6 @@ public interface BotMessaging {
     void notify(String address, String botName, String message);
 
     <T extends BotMessage> void notify(Address address, T message);
+
+    <T extends Serializable> void ask(Address address, T message, Consumer<Map<String, Object>> answerHandler);
 }

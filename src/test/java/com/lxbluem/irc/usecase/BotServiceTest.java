@@ -10,27 +10,26 @@ import com.lxbluem.irc.domain.DefaultDccBotState;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
-import com.lxbluem.irc.usecase.requestmodel.BotDccQueueMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotFailMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotNoticeMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
+import com.lxbluem.irc.usecase.requestmodel.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+@RunWith(MockitoJUnitRunner.class)
 public class BotServiceTest {
 
     private DccBotStateStorage stateStorage;
@@ -39,6 +38,10 @@ public class BotServiceTest {
 
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
     private BotPort botPort;
+
+    @Captor
+    private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
+
 
     @Before
     public void setUp() {
@@ -270,4 +273,56 @@ public class BotServiceTest {
         verifyNoMoreInteractions(botMessaging, botPort);
     }
 
+    @Test
+    public void incoming_invalid_ctcp_query() {
+        String botNick = "Andy";
+        String incoming_message = "crrrrrap";
+
+        botService.init(botNick, testPack());
+
+        DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+        botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
+        verifyZeroInteractions(botMessaging, botPort);
+    }
+
+    @Test
+    public void incoming_ctcp_query_active_dcc() {
+        String botNick = "Andy";
+        // DCC SEND <filename> <ip> <port> <file size>
+        String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
+        DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+
+        botService.init(botNick, testPack());
+        botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
+
+        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
+        Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
+        resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
+
+        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(ctcpQuery), consumerArgumentCaptor.capture());
+        Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
+        dccInitConsumer.accept(Collections.emptyMap());
+    }
+
+    @Test
+    public void incoming_ctcp_query_passive_dcc() {
+        String botNick = "Andy";
+        // DCC SEND <filename> <ip> <port> <file size>
+        String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
+
+        botService.init(botNick, testPack());
+
+        DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+        botService.handleCtcpQuery(botNick, ctcpQuery, 3232260865L);
+
+        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
+        Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
+        resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
+
+        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(ctcpQuery), consumerArgumentCaptor.capture());
+        Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
+        dccInitConsumer.accept(Collections.singletonMap("port", 12345));
+
+        verify(botPort).sendCtcpMessage("keex", "DCC SEND test1._x0x_.bin 3232260865 12345 6 1");
+    }
 }

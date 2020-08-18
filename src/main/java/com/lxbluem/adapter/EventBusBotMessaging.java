@@ -3,7 +3,6 @@ package com.lxbluem.adapter;
 import com.lxbluem.Address;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.usecase.requestmodel.BotMessage;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +60,19 @@ public class EventBusBotMessaging implements BotMessaging {
             messageObject.mergeIn(extra);
 
         publish(address, messageObject);
+    }
+
+    @Override
+    public <T extends Serializable> void ask(Address address, T message, Consumer<Map<String, Object>> answerHandler) {
+        JsonObject messageObject = JsonObject.mapFrom(message);
+        eventBus.request(address.getAddressValue(), messageObject, event -> {
+            if (event.succeeded()) {
+                Object body = event.result().body();
+                JsonObject entries = JsonObject.mapFrom(body);
+                answerHandler.accept(entries.getMap());
+            }
+        });
+
     }
 
     private void publish(String address, JsonObject messageObject) {

@@ -8,4 +8,5 @@ public interface BotPort {
     void registerNickname(String nick);
     void changeNickname(String newNick);
     void requestDccPack(String nick, int packNumber);
+    void sendCtcpMessage(String nick, String message);
 }

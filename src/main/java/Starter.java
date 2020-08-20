@@ -1,13 +1,11 @@
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.EventLogger;
 import com.lxbluem.RouterVerticle;
-import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.adapter.EventBusBotMessaging;
+import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.BotVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
-import com.lxbluem.irc.usecase.requestmodel.BotMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotRenameMessage;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateService;
 import com.lxbluem.state.StateVerticle;
@@ -21,10 +19,6 @@ import io.vertx.rxjava.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
 
 @Slf4j
 public class Starter {
@@ -38,9 +32,7 @@ public class Starter {
         EventBus eventBus = vertx.eventBus();
         Clock clock = Clock.systemDefaultZone();
 
-        Map<Class<? extends BotMessage>, String> botMessageStringMap = new HashMap<>();
-        botMessageStringMap.put(BotRenameMessage.class, BOT_UPDATE_NICK);
-        BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock, botMessageStringMap);
+        BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock);
 
         StateService stateService = new StateService(new InMemoryStateRepository(), clock);
 

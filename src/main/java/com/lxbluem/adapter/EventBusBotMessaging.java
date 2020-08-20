@@ -17,7 +17,7 @@ public class EventBusBotMessaging implements BotMessaging {
     private final EventBus eventBus;
     private final Clock clock;
 
-    public EventBusBotMessaging(EventBus eventBus, Clock clock, Map<Class<? extends BotMessage>, String> messageToAddressMap) {
+    public EventBusBotMessaging(EventBus eventBus, Clock clock) {
         this.eventBus = eventBus;
         this.clock = clock;
     }

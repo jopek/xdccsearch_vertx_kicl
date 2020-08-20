@@ -5,7 +5,7 @@ import com.lxbluem.domain.Pack;
 import com.lxbluem.model.SerializedRequest;
 import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.model.request.*;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -34,8 +34,8 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() throws Exception {
-        registerRouteWithHandler(DELETE, "/state", this::clearFinished);
-        registerRouteWithHandler(GET, "/state", this::getState);
+        promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished);
+        promisedRegisterRouteWithHandler(GET, "/state", this::getState);
 
         handle(BOT_INIT, this::init);
         handle(BOT_NOTICE, this::notice);
@@ -47,16 +47,16 @@ public class StateVerticle extends AbstractRouteVerticle {
         handle(BOT_DCC_FINISH, this::dccFinish);
     }
 
-    private void clearFinished(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+    private void clearFinished(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         List<String> bots = service.clearFinished();
         vertx.eventBus().publish(REMOVED_STALE_BOTS, new JsonArray(bots));
-        jsonObjectFuture.complete(new JsonObject().put(REMOVED_STALE_BOTS, bots));
+        result.complete(new JsonObject().put(REMOVED_STALE_BOTS, bots));
     }
 
-    private void getState(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+    private void getState(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         JsonObject entries = getStateEntriesJsonObject();
         LOG.debug("getState {}", entries);
-        jsonObjectFuture.complete(entries);
+        result.complete(entries);
     }
 
     private void handle(String address, Action1<Message<JsonObject>> method) {

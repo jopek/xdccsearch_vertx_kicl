@@ -34,8 +34,8 @@ public class NewBotVerticleTest {
 
     private Vertx vertx;
     private BotPort mockBot;
-    private final String startAddress = "NewBotVerticle:POST:/v2/xfers";
-    private final String stopAddress = "NewBotVerticle:DELETE:/v2/xfers/:botname";
+    private final String startAddress = "NewBotVerticle:POST:/xfers";
+    private final String stopAddress = "NewBotVerticle:DELETE:/xfers/:botname";
     private final JsonObject startMessage = new JsonObject()
             .put("method", "POST")
             .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"mybotDCCp\",  \"n\": 1}");

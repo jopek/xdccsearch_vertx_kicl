@@ -26,17 +26,56 @@ public class BotService {
     private final BotStorage botStorage;
     private final DccBotStateStorage stateStorage;
     private final BotMessaging botMessaging;
+    private final BotFactory botFactory;
     private final Clock clock;
+    private final NameGenerator nameGenerator;
 
-    public BotService(BotStorage botStorage, DccBotStateStorage stateStorage, BotMessaging botMessaging, Clock clock) {
+    public BotService(
+            BotStorage botStorage,
+            DccBotStateStorage stateStorage,
+            BotMessaging botMessaging,
+            BotFactory botFactory,
+            Clock clock,
+            NameGenerator nameGenerator) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
+        this.botFactory = botFactory;
         this.clock = clock;
+        this.nameGenerator = nameGenerator;
     }
 
-    public void init(String botNick, Pack pack) {
-        DccBotState.Callback execution = () -> {
+    public String initializeBot(Pack pack) {
+        String botNick = nameGenerator.getNick();
+
+        BotPort bot = botFactory.createNewInstance(this);
+        botStorage.save(botNick, bot);
+
+        BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNick);
+        bot.connect(botConnectionDetails);
+        bot.joinChannel(pack.getChannelName());
+
+        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, dccRequestHook(botNick, pack));
+        stateStorage.save(botNick, dccBotState);
+
+        botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNick, nowEpochMillis(), pack));
+
+        return botNick;
+    }
+
+    private BotConnectionDetails connectionDetailsFromPack(Pack pack, String botNick) {
+        return BotConnectionDetails.builder()
+                .botNick(botNick)
+                .name("name_" + botNick)
+                .user("user_" + botNick)
+                .realName("realname_" + botNick)
+                .serverHostName(pack.getServerHostName())
+                .serverPort(pack.getServerPort())
+                .build();
+    }
+
+    private DccBotState.Callback dccRequestHook(String botNick, Pack pack) {
+        return () -> {
             botStorage.getBotByNick(botNick)
                     .requestDccPack(pack.getNickName(), pack.getPackNumber());
 
@@ -44,8 +83,7 @@ public class BotService {
             BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), "", noticeMessage);
             botMessaging.notify(Address.BOT_NOTICE, message);
         };
-        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
-        stateStorage.save(botNick, dccBotState);
+    }
 
         botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNick, nowEpochMillis(), pack));
     }
@@ -75,7 +113,7 @@ public class BotService {
 
     public void changeNick(String botName, String serverMessages) {
         BotPort bot = botStorage.getBotByNick(botName);
-        String randomNick = NameGenerator.getRandomNick();
+        String randomNick = nameGenerator.getNick();
         bot.changeNickname(randomNick);
         BotRenameMessage renameMessage = BotRenameMessage.builder()
                 .attemptedBotName(botName)

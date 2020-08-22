@@ -3,15 +3,16 @@ package com.lxbluem.irc.usecase;
 import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.irc.NameGenerator;
 import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapter.InMemoryBotStorage;
 import com.lxbluem.irc.domain.DccBotState;
 import com.lxbluem.irc.domain.DefaultDccBotState;
+import com.lxbluem.irc.usecase.exception.BotNotFoundException;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 import com.lxbluem.irc.usecase.requestmodel.*;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,6 +42,7 @@ public class BotServiceTest {
 
     @Captor
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
+    private final NameGenerator nameGenerator = mock(NameGenerator.class);
 
 
     @Before
@@ -48,32 +50,42 @@ public class BotServiceTest {
         stateStorage = new InMemoryBotStateStorage();
         botMessaging = mock(BotMessaging.class);
         botPort = mock(BotPort.class);
+        BotFactory botFactory = service -> botPort;
         BotStorage botStorage = new InMemoryBotStorage();
-        botStorage.save("Andy", botPort);
-
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
-        botService = new BotService(botStorage, stateStorage, botMessaging, clock);
+
+        when(nameGenerator.getNick()).thenReturn("Andy");
+
+        botService = new BotService(
+                botStorage,
+                stateStorage,
+                botMessaging,
+                botFactory,
+                clock,
+                nameGenerator
+        );
     }
 
     @Test
     public void initialize_service_for_bot() {
         assertNull(stateStorage.getBotStateByNick("Andy"));
 
-        botService.init("Andy", testPack());
+        botService.initializeBot(testPack());
+
         ArgumentCaptor<BotInitMessage> messageCaptor = ArgumentCaptor.forClass(BotInitMessage.class);
         verify(botMessaging).notify(eq(Address.BOT_INIT), messageCaptor.capture());
+        verify(botPort).connect(any(BotConnectionDetails.class));
+        verify(botPort).joinChannel(eq("#download"));
         verifyNoMoreInteractions(botMessaging, botPort);
-
-        assertEquals(messageCaptor.getValue().getPack(), testPack());
-
+        assertEquals(testPack(), messageCaptor.getValue().getPack());
         assertNotNull(stateStorage.getBotStateByNick("Andy"));
-        Assert.assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").getPack());
+        assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").getPack());
     }
 
     @Test
     public void mark_channel_joined() {
-        botService.init("Andy", testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.onRequestedChannelJoinComplete("Andy", "#download");
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -97,8 +109,8 @@ public class BotServiceTest {
 
     @Test
     public void users_in_channel() {
-        botService.init("Andy", testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -109,8 +121,8 @@ public class BotServiceTest {
 
     @Test
     public void channel_topic() {
-        botService.init("Andy", testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
 
@@ -122,6 +134,9 @@ public class BotServiceTest {
 
     @Test
     public void message_of_the_day() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
+
         botService.messageOfTheDay("Andy", asList("message of the", "dayyyyyy", "in multiple strings"));
 
         verify(botPort).registerNickname("Andy");
@@ -130,23 +145,21 @@ public class BotServiceTest {
 
     @Test
     public void register_new_nick_when_rejected() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
+
+        when(nameGenerator.getNick()).thenReturn("Randy");
         botService.changeNick("Andy", "something happened; serverMessages; more serverMessages");
 
-        ArgumentCaptor<String> nickChangeCaptor = ArgumentCaptor.forClass(String.class);
-        verify(botPort).changeNickname(nickChangeCaptor.capture());
+        verify(botPort).changeNickname(eq("Randy"));
 
         ArgumentCaptor<BotRenameMessage> messageSentCaptor = ArgumentCaptor.forClass(BotRenameMessage.class);
         verify(botMessaging).notify(eq(Address.BOT_UPDATE_NICK), messageSentCaptor.capture());
 
-        String actual = nickChangeCaptor.getValue();
-        assertNotEquals("Andy", actual);
-        assertNotEquals("", actual);
-        assertEquals(4, actual.length());
-
         BotRenameMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("something happened; serverMessages; more serverMessages", sentMesssage.getMessage());
-        assertNotEquals("Andy", sentMesssage.getNewBotName());
+        assertEquals("Randy", sentMesssage.getNewBotName());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -159,8 +172,8 @@ public class BotServiceTest {
         String remoteNick = "someDude";
         String noticeMessage = "lalala";
 
-        botService.init(botNick, testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 
@@ -181,8 +194,8 @@ public class BotServiceTest {
         String remoteNick = "nickserv";
         String noticeMessage = "your nickname is not registered. to register it, use";
 
-        botService.init(botNick, testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
         verify(botPort).registerNickname(botNick);
@@ -198,8 +211,8 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.init(botNick, pack);
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(pack);
+        reset(botMessaging, botPort);
 
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         botState.nickRegistryRequired();
@@ -231,8 +244,8 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.init(botNick, pack);
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(pack);
+        reset(botMessaging, botPort);
 
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         int botStateHash = botState.hashCode();
@@ -261,8 +274,8 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.init(botNick, pack);
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(pack);
+        reset(botMessaging, botPort);
 
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
@@ -296,9 +309,8 @@ public class BotServiceTest {
         String botNick = "Andy";
         String incoming_message = "crrrrrap";
 
-        botService.init(botNick, testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
-
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
@@ -312,8 +324,8 @@ public class BotServiceTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        botService.init(botNick, testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
 
@@ -332,8 +344,8 @@ public class BotServiceTest {
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
 
-        botService.init(botNick, testPack());
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 3232260865L);

@@ -1,8 +1,8 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.domain.Pack;
+import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.json.DecodeException;
@@ -23,20 +23,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.lxbluem.Addresses.BOT_DCC_FINISH;
-import static com.lxbluem.Addresses.BOT_EXIT;
-import static com.lxbluem.Addresses.BOT_FAIL;
-import static com.lxbluem.Addresses.BOT_INIT;
-import static io.vertx.core.http.HttpMethod.DELETE;
-import static io.vertx.core.http.HttpMethod.GET;
-import static io.vertx.core.http.HttpMethod.POST;
+import static com.lxbluem.Addresses.*;
+import static io.vertx.core.http.HttpMethod.*;
 import static java.util.stream.Collectors.toMap;
 
 public class BotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(BotVerticle.class);
 
-    private BotMessaging messaging;
-    private Map<Client, Pack> packsByBot = new HashMap<>();
+    private final BotMessaging messaging;
+    private final Map<Client, Pack> packsByBot = new HashMap<>();
 
     public BotVerticle(BotMessaging botMessaging) {
         this.messaging = botMessaging;
@@ -141,7 +136,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private void initializeTransfer(Pack pack, Future<JsonObject> jsonObjectFuture) {
-        String nick = NameGenerator.getRandomNick();
+        String nick = new RandomNameGenerator().getNick();
         Client client = getClient(pack, nick);
 
         final String botName = client.getNick();

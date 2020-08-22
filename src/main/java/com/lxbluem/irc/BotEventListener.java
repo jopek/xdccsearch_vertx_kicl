@@ -1,7 +1,7 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.domain.Pack;
+import com.lxbluem.domain.ports.BotMessaging;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -28,12 +28,7 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.Addresses.BOT_DCC_INIT;
-import static com.lxbluem.Addresses.BOT_DCC_QUEUE;
-import static com.lxbluem.Addresses.BOT_FAIL;
-import static com.lxbluem.Addresses.BOT_NOTICE;
-import static com.lxbluem.Addresses.BOT_UPDATE_NICK;
-import static com.lxbluem.Addresses.FILENAME_RESOLVE;
+import static com.lxbluem.Addresses.*;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -43,7 +38,7 @@ public class BotEventListener {
 
     private boolean requestingPack;
     private boolean hasSeenPackUser;
-    private Set<String> requiredChannels = new HashSet<>();
+    private final Set<String> requiredChannels = new HashSet<>();
 
     private final ChannelExtractor channelExtractor = new ChannelExtractor();
     private final BotMessaging botMessaging;
@@ -250,7 +245,7 @@ public class BotEventListener {
                 .map(ServerMessage::getMessage)
                 .collect(joining("; "));
         String attemptedNick = event.getAttemptedNick();
-        String newNick = NameGenerator.getRandomNick();
+        String newNick = new RandomNameGenerator().getNick();
 
         event.setNewNick(newNick);
 

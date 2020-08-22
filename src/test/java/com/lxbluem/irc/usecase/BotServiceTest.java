@@ -83,6 +83,37 @@ public class BotServiceTest {
     }
 
     @Test
+    public void terminte_bot() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
+
+        botService.manualExit("Andy");
+        verify(botPort).terminate();
+
+        ArgumentCaptor<BotTerminateRequestMessage> terminationRequestCaptor = ArgumentCaptor.forClass(BotTerminateRequestMessage.class);
+        verify(botMessaging).ask(eq(Address.BOT_DCC_TERMINATE), terminationRequestCaptor.capture(), consumerArgumentCaptor.capture());
+        assertEquals("Andy", terminationRequestCaptor.getValue().getBot());
+        assertEquals(fixedInstant.toEpochMilli(), terminationRequestCaptor.getValue().getTimestamp());
+
+        consumerArgumentCaptor.getValue().accept(Collections.emptyMap());
+
+        ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
+        verifyNoMoreInteractions(botMessaging, botPort);
+
+        BotExitMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("requested shutdown", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+    }
+
+    @Test(expected = BotNotFoundException.class)
+    public void terminte_bot_for_missing_bot() {
+        botService.manualExit("Andy");
+        verify(botPort).terminate();
+    }
+
+    @Test
     public void mark_channel_joined() {
         botService.initializeBot(testPack());
         reset(botMessaging, botPort);

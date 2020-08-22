@@ -32,13 +32,17 @@ import static org.mockito.Mockito.verify;
 @RunWith(VertxUnitRunner.class)
 public class NewBotVerticleTest {
 
+    private Vertx vertx;
+    private BotPort mockBot;
+    private final String startAddress = "NewBotVerticle:POST:/v2/xfers";
+    private final String stopAddress = "NewBotVerticle:DELETE:/v2/xfers/:botname";
+    private final JsonObject startMessage = new JsonObject()
+            .put("method", "POST")
+            .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"mybotDCCp\",  \"n\": 1}");
+
     @Before
     public void setUp() {
-    }
-
-    @Test(timeout = 5000)
-    public void async_behavior(TestContext context) {
-        Vertx vertx = Vertx.vertx();
+        vertx = Vertx.vertx();
 
 //        vertx.eventBus().addOutboundInterceptor(interceptor("out"));
 //        vertx.eventBus().addInboundInterceptor(interceptor("in"));
@@ -47,22 +51,20 @@ public class NewBotVerticleTest {
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
         InMemoryBotStateStorage stateStorage = new InMemoryBotStateStorage();
-        BotService botService = new BotService(botStorage, stateStorage, botMessaging, clock);
-        BotPort botPortMock = mock(BotPort.class);
-        BotFactory botFactory = ddd -> botPortMock;
-        BotManagementService managementService = new BotManagementService(botStorage, botFactory, botService);
-
-        NewBotVerticle verticle = new NewBotVerticle(botMessaging, managementService);
+        mockBot = mock(BotPort.class);
+        BotFactory botFactory = ddd -> mockBot;
+        NameGenerator nameGenerator = () -> "Andy";
+        BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
+        NewBotVerticle verticle = new NewBotVerticle(botService);
         vertx.deployVerticle(verticle);
+    }
 
-        String address = "NewBotVerticle:POST:/v2/xfers";
-        JsonObject jsonObject = new JsonObject()
-                .put("method", "POST")
-                .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"mybotDCCp\",  \"n\": 1}");
+    @Test(timeout = 5000)
+    public void startTransfer(TestContext context) {
 
         AtomicReference<String> botname = new AtomicReference<>();
         vertx.eventBus()
-                .request(address, jsonObject, context.asyncAssertSuccess(m -> {
+                .request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     System.out.println(m.body());
                     botname.set(((JsonObject) m.body()).getString("bot"));
                 }));
@@ -78,7 +80,7 @@ public class NewBotVerticleTest {
 
 
         ArgumentCaptor<BotConnectionDetails> connectionDetailsCaptor = ArgumentCaptor.forClass(BotConnectionDetails.class);
-        verify(botPortMock).connect(connectionDetailsCaptor.capture());
+        verify(mockBot).connect(connectionDetailsCaptor.capture());
         BotConnectionDetails connectionDetails = connectionDetailsCaptor.getValue();
         assertEquals(botname.get(), connectionDetails.getBotNick());
         assertEquals("name_" + botname.get(), connectionDetails.getName());
@@ -88,8 +90,60 @@ public class NewBotVerticleTest {
         assertEquals(6668, connectionDetails.getServerPort());
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(botPortMock).joinChannel(captor.capture());
+        verify(mockBot).joinChannel(captor.capture());
         assertEquals("#download", captor.getValue());
+    }
+
+    @Test(timeout = 2000)
+    public void stopTransfer_fails_when_bot_missing(TestContext context) {
+        JsonObject stopMessage = new JsonObject()
+                .put("method", "DELETE")
+                .put("params", new JsonObject().put("botname", "missing"));
+
+        vertx.eventBus()
+                .request(stopAddress, stopMessage, context.asyncAssertFailure(
+                        reply -> context.assertEquals("bot 'missing' not found", reply.getMessage())
+                ));
+    }
+
+    @Test(timeout = 5000)
+    public void stopTransfer(TestContext context) {
+
+        AtomicReference<String> botname = new AtomicReference<>();
+        Async botnameAsync = context.async();
+        vertx.eventBus()
+                .request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    String botnameFromReply = ((JsonObject) m.body()).getString("bot");
+                    botname.set(botnameFromReply);
+                    botnameAsync.complete();
+                }));
+        botnameAsync.await();
+
+        System.out.printf("got botname %s\n", botname.get());
+
+        JsonObject stopMessage = new JsonObject()
+                .put("method", "DELETE")
+                .put("params", new JsonObject().put("botname", botname.get()));
+        System.out.println(stopMessage.encode());
+
+        Async async = context.async();
+        vertx.eventBus()
+                .consumer(Address.BOT_DCC_TERMINATE.getAddressValue(), result -> {
+                    JsonObject body = (JsonObject) result.body();
+                    System.out.println(body.encode());
+                    String botnameFromMessage = body.getString("bot");
+                    context.assertEquals(botname.get(), botnameFromMessage);
+                    async.complete();
+                });
+
+        vertx.eventBus()
+                .request(stopAddress, stopMessage, context.asyncAssertSuccess(reply -> {
+                    JsonObject body = (JsonObject) reply.body();
+                    String botnameFromReply = body.getString("bot");
+                    context.assertEquals(botname.get(), botnameFromReply);
+                    System.out.println(body.encode());
+                }));
+
     }
 
     private Handler<DeliveryContext<Object>> interceptor(String direction) {

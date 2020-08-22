@@ -12,6 +12,7 @@ public enum Address {
     BOT_DCC_PROGRESS("bot.dcc.progress"),
     BOT_DCC_QUEUE("bot.dcc.queue"),
     BOT_DCC_FINISH("bot.dcc.finish"),
+    BOT_DCC_TERMINATE("bot.dcc.terminate"),
     FILENAME_RESOLVE("filename.resolve"),
     BOT_NOTICE("bot.notice"),
     BOT_UPDATE_NICK("bot.nick"),

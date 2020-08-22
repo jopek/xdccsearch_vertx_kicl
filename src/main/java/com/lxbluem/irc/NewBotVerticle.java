@@ -11,6 +11,9 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
+import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
 public class NewBotVerticle extends AbstractRouteVerticle {
@@ -23,7 +26,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start(Future<Void> start) {
-        promisedRegisterRouteWithHandler(POST, "/v2/xfers", this::handleStartTransfer)
+        promisedRegisterRouteWithHandler(POST, "/v2/xfers", this::startTransfer);
+        promisedRegisterRouteWithHandler(DELETE, "/v2/xfers/:botname", this::stopTransfer)
                 .setHandler(start);
     }
 
@@ -37,15 +41,14 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         }
     }
 
-    private Pack readPackInfo(String requestBody) {
-        if (StringUtils.isEmpty(requestBody)) {
-            return null;
-        }
+    private void stopTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
+        Map<String, String> params = serializedRequest.getParams();
+        String botname = params.get("botname");
         try {
-            return Json.decodeValue(requestBody, Pack.class);
-        } catch (DecodeException e) {
-            LOG.error("error decoding String -> Pack", e);
-            return null;
+            botService.manualExit(botname);
+            result.complete(new JsonObject().put("bot", botname));
+        } catch (Throwable t) {
+            result.fail(t);
         }
     }
 }

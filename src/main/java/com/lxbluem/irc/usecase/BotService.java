@@ -87,7 +87,17 @@ public class BotService {
         };
     }
 
-        botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNick, nowEpochMillis(), pack));
+    public void manualExit(String botname) {
+        BotPort botByNick = botStorage.getBotByNick(botname)
+                .orElseThrow(() -> new BotNotFoundException(botname));
+        botByNick.terminate();
+
+        BotTerminateRequestMessage terminationRequest = new BotTerminateRequestMessage(botname, nowEpochMillis());
+        botMessaging.ask(Address.BOT_DCC_TERMINATE, terminationRequest,
+                m -> {
+                    BotExitMessage requested_shutdown = new BotExitMessage(botname, nowEpochMillis(), "requested shutdown");
+                    botMessaging.notify(Address.BOT_EXIT, requested_shutdown);
+                });
     }
 
     public void onRequestedChannelJoinComplete(String botNick, String channelName) {

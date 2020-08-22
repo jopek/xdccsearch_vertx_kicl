@@ -89,6 +89,11 @@ public class KitehIrcBot implements BotPort {
         client.sendCtcpMessage(nick, message);
     }
 
+    @Override
+    public void terminate() {
+        client.shutdown();
+    }
+
 
     @Handler
     public void channelJoined(RequestedChannelJoinCompleteEvent event) {

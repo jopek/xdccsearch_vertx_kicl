@@ -5,6 +5,7 @@ import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.NameGenerator;
 import com.lxbluem.irc.domain.DccBotState;
+import com.lxbluem.irc.usecase.exception.BotNotFoundException;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
@@ -77,6 +78,7 @@ public class BotService {
     private DccBotState.Callback dccRequestHook(String botNick, Pack pack) {
         return () -> {
             botStorage.getBotByNick(botNick)
+                    .orElseThrow(() -> new BotNotFoundException(botNick))
                     .requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
@@ -106,13 +108,15 @@ public class BotService {
     }
 
     public void messageOfTheDay(String botName, List<String> motd) {
-        BotPort bot = botStorage.getBotByNick(botName);
+        BotPort bot = botStorage.getBotByNick(botName)
+                .orElseThrow(() -> new BotNotFoundException(botName));
         bot.registerNickname(botName);
     }
 
 
     public void changeNick(String botName, String serverMessages) {
-        BotPort bot = botStorage.getBotByNick(botName);
+        BotPort bot = botStorage.getBotByNick(botName)
+                .orElseThrow(() -> new BotNotFoundException(botName));
         String randomNick = nameGenerator.getNick();
         bot.changeNickname(randomNick);
         BotRenameMessage renameMessage = BotRenameMessage.builder()
@@ -125,7 +129,8 @@ public class BotService {
     }
 
     public void handleNoticeMessage(String botName, String remoteNick, String noticeMessage) {
-        BotPort bot = botStorage.getBotByNick(botName);
+        BotPort bot = botStorage.getBotByNick(botName)
+                .orElseThrow(() -> new BotNotFoundException(botName));
         DccBotState botState = stateStorage.getBotStateByNick(botName);
 
         if (remoteNick.toLowerCase().startsWith("ls"))
@@ -169,7 +174,8 @@ public class BotService {
             return;
         }
 
-        BotPort botPort = botStorage.getBotByNick(botNick);
+        BotPort botPort = botStorage.getBotByNick(botNick)
+                .orElseThrow(() -> new BotNotFoundException(botNick));
         DccBotState botState = stateStorage.getBotStateByNick(botNick);
 
         AtomicReference<String> resolvedFilename = new AtomicReference<>("");

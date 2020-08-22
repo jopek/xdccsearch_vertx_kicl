@@ -69,7 +69,11 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
                     Promise<JsonObject> promise = Promise.promise();
                     promise.future()
                             .onSuccess(message::reply)
-                            .onFailure(e -> message.fail(500, e.getCause().getMessage()));
+                            .onFailure(e -> {
+                                Throwable cause = e.getCause();
+                                String causeMessage = Objects.isNull(cause) ? e.getMessage() : cause.getMessage();
+                                message.fail(500, causeMessage);
+                            });
                     requestHandler.accept(request, promise);
                 })
                 .completionHandler(c -> consumerSetupCompletion.complete());

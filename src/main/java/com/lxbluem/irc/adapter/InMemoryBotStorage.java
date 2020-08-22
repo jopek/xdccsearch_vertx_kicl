@@ -3,17 +3,14 @@ package com.lxbluem.irc.adapter;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class InMemoryBotStorage implements BotStorage {
     private final Map<String, BotPort> bots = new HashMap<>();
 
     @Override
-    public BotPort getBotByNick(String botNick) {
-        return bots.get(botNick);
+    public Optional<BotPort> getBotByNick(String botNick) {
+        return Optional.ofNullable(bots.get(botNick));
     }
 
     @Override

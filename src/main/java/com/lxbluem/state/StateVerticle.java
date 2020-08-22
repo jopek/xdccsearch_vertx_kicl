@@ -75,7 +75,8 @@ public class StateVerticle extends AbstractRouteVerticle {
         service.init(new InitRequest(bot, timestamp, pack));
 
         Map<String, State> state = service.getState();
-        vertx.eventBus().publish(STATE, state);
+        JsonObject result = JsonObject.mapFrom(state);
+        vertx.eventBus().publish(STATE, result);
     }
 
     private void notice(Message<JsonObject> eventMessage) {

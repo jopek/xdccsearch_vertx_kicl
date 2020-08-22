@@ -34,8 +34,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     private void startTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         try {
             Pack pack = Json.decodeValue(serializedRequest.getBody(), Pack.class);
-            String botNick = botService.initializeBot(pack);
-            result.complete(new JsonObject().put("bot", botNick));
+            String botNickName = botService.initializeBot(pack);
+            result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);
         }
@@ -43,10 +43,10 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     private void stopTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         Map<String, String> params = serializedRequest.getParams();
-        String botname = params.get("botname");
+        String botNickName = params.get("botname");
         try {
-            botService.manualExit(botname);
-            result.complete(new JsonObject().put("bot", botname));
+            botService.manualExit(botNickName);
+            result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);
         }

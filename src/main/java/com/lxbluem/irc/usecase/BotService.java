@@ -47,115 +47,115 @@ public class BotService {
     }
 
     public String initializeBot(Pack pack) {
-        String botNick = nameGenerator.getNick();
+        String botNickName = nameGenerator.getNick();
 
         BotPort bot = botFactory.createNewInstance(this);
-        botStorage.save(botNick, bot);
+        botStorage.save(botNickName, bot);
 
-        BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNick);
+        BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNickName);
         bot.connect(botConnectionDetails);
         bot.joinChannel(pack.getChannelName());
 
-        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, dccRequestHook(botNick, pack));
-        stateStorage.save(botNick, dccBotState);
+        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, dccRequestHook(botNickName, pack));
+        stateStorage.save(botNickName, dccBotState);
 
-        botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNick, nowEpochMillis(), pack));
+        botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNickName, nowEpochMillis(), pack));
 
-        return botNick;
+        return botNickName;
     }
 
-    private BotConnectionDetails connectionDetailsFromPack(Pack pack, String botNick) {
+    private BotConnectionDetails connectionDetailsFromPack(Pack pack, String botNickName) {
         return BotConnectionDetails.builder()
-                .botNick(botNick)
-                .name("name_" + botNick)
-                .user("user_" + botNick)
-                .realName("realname_" + botNick)
+                .botNick(botNickName)
+                .name("name_" + botNickName)
+                .user("user_" + botNickName)
+                .realName("realname_" + botNickName)
                 .serverHostName(pack.getServerHostName())
                 .serverPort(pack.getServerPort())
                 .build();
     }
 
-    private DccBotState.Callback dccRequestHook(String botNick, Pack pack) {
+    private DccBotState.Callback dccRequestHook(String botNickName, Pack pack) {
         return () -> {
-            botStorage.getBotByNick(botNick)
-                    .orElseThrow(() -> new BotNotFoundException(botNick))
+            botStorage.getBotByNick(botNickName)
+                    .orElseThrow(() -> new BotNotFoundException(botNickName))
                     .requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotNoticeMessage message = new BotNoticeMessage(botNick, nowEpochMillis(), "", noticeMessage);
+            BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), "", noticeMessage);
             botMessaging.notify(Address.BOT_NOTICE, message);
         };
     }
 
-    public void manualExit(String botname) {
-        BotPort botByNick = botStorage.getBotByNick(botname)
-                .orElseThrow(() -> new BotNotFoundException(botname));
+    public void manualExit(String botNickName) {
+        BotPort botByNick = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
         botByNick.terminate();
 
-        BotTerminateRequestMessage terminationRequest = new BotTerminateRequestMessage(botname, nowEpochMillis());
+        BotTerminateRequestMessage terminationRequest = new BotTerminateRequestMessage(botNickName, nowEpochMillis());
         botMessaging.ask(Address.BOT_DCC_TERMINATE, terminationRequest,
                 m -> {
-                    BotExitMessage requested_shutdown = new BotExitMessage(botname, nowEpochMillis(), "requested shutdown");
+                    BotExitMessage requested_shutdown = new BotExitMessage(botNickName, nowEpochMillis(), "requested shutdown");
                     botMessaging.notify(Address.BOT_EXIT, requested_shutdown);
                 });
     }
 
-    public void onRequestedChannelJoinComplete(String botNick, String channelName) {
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+    public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
+        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
         botState.joinedChannel(channelName);
     }
 
-    public void usersInChannel(String botNick, String channelName, List<String> usersInChannel) {
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+    public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
+        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
         botState.channelNickList(channelName, usersInChannel);
     }
 
-    public void channelTopic(String botName, String channelName, String topic) {
-        DccBotState botState = stateStorage.getBotStateByNick(botName);
+    public void channelTopic(String botNickName, String channelName, String topic) {
+        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
         Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
 
         botState.channelReferences(channelName, mentionedChannels);
     }
 
-    public void messageOfTheDay(String botName, List<String> motd) {
-        BotPort bot = botStorage.getBotByNick(botName)
-                .orElseThrow(() -> new BotNotFoundException(botName));
-        bot.registerNickname(botName);
+    public void messageOfTheDay(String botNickName, List<String> motd) {
+        BotPort bot = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        bot.registerNickname(botNickName);
     }
 
 
-    public void changeNick(String botName, String serverMessages) {
-        BotPort bot = botStorage.getBotByNick(botName)
-                .orElseThrow(() -> new BotNotFoundException(botName));
-        String randomNick = nameGenerator.getNick();
-        bot.changeNickname(randomNick);
+    public void changeNick(String botNickName, String serverMessages) {
+        BotPort bot = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        String newBotNickName = nameGenerator.getNick();
+        bot.changeNickname(newBotNickName);
         BotRenameMessage renameMessage = BotRenameMessage.builder()
-                .attemptedBotName(botName)
-                .newBotName(randomNick)
+                .attemptedBotName(botNickName)
+                .newBotName(newBotNickName)
                 .serverMessages(serverMessages)
                 .timestamp(nowEpochMillis())
                 .build();
         botMessaging.notify(Address.BOT_UPDATE_NICK, renameMessage);
     }
 
-    public void handleNoticeMessage(String botName, String remoteNick, String noticeMessage) {
-        BotPort bot = botStorage.getBotByNick(botName)
-                .orElseThrow(() -> new BotNotFoundException(botName));
-        DccBotState botState = stateStorage.getBotStateByNick(botName);
+    public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
+        BotPort bot = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
 
-        if (remoteNick.toLowerCase().startsWith("ls"))
+        if (remoteName.toLowerCase().startsWith("ls"))
             return;
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            botMessaging.notify(Address.BOT_DCC_QUEUE, new BotDccQueueMessage(botName, nowEpochMillis(), noticeMessage));
+            botMessaging.notify(Address.BOT_DCC_QUEUE, new BotDccQueueMessage(botNickName, nowEpochMillis(), noticeMessage));
             return;
         }
 
-        if (remoteNick.equalsIgnoreCase("nickserv")) {
+        if (remoteName.equalsIgnoreCase("nickserv")) {
             if (lowerCaseNoticeMessage.contains("your nickname is not registered. to register it, use")) {
                 botState.nickRegistryRequired();
-                bot.registerNickname(botName);
+                bot.registerNickname(botNickName);
                 return;
             }
 
@@ -172,21 +172,23 @@ public class BotService {
         if (lowerCaseNoticeMessage.contains("download connection failed")
                 || lowerCaseNoticeMessage.contains("connection refused")
         ) {
-            botMessaging.notify(Address.BOT_FAIL, new BotFailMessage(botName, nowEpochMillis(), noticeMessage));
+            BotFailMessage message = new BotFailMessage(botNickName, nowEpochMillis(), noticeMessage);
+            botMessaging.notify(Address.BOT_FAIL, message);
             return;
         }
 
-        botMessaging.notify(Address.BOT_NOTICE, new BotNoticeMessage(botName, nowEpochMillis(), remoteNick, noticeMessage));
+        BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), remoteName, noticeMessage);
+        botMessaging.notify(Address.BOT_NOTICE, message);
     }
 
-    public void handleCtcpQuery(String botNick, DccCtcpQuery ctcpQuery, long localIp) {
+    public void handleCtcpQuery(String botNickName, DccCtcpQuery ctcpQuery, long localIp) {
         if (!ctcpQuery.isValid()) {
             return;
         }
 
-        BotPort botPort = botStorage.getBotByNick(botNick)
-                .orElseThrow(() -> new BotNotFoundException(botNick));
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        BotPort botPort = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
 
         AtomicReference<String> resolvedFilename = new AtomicReference<>("");
 

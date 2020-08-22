@@ -19,7 +19,7 @@ public class InMemoryBotStorage implements BotStorage {
     }
 
     @Override
-    public List<String> botNames() {
+    public List<String> botNickNames() {
         return new ArrayList<>(bots.keySet());
     }
 }

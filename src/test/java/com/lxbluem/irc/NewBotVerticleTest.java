@@ -1,11 +1,11 @@
 package com.lxbluem.irc;
 
+import com.lxbluem.Address;
 import com.lxbluem.adapter.EventBusBotMessaging;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapter.InMemoryBotStorage;
 import com.lxbluem.irc.usecase.BotFactory;
-import com.lxbluem.irc.usecase.BotManagementService;
 import com.lxbluem.irc.usecase.BotService;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
@@ -75,9 +75,7 @@ public class NewBotVerticleTest {
                     System.out.println(m.body());
                     async3.complete();
                 });
-
         async3.await();
-
 
         ArgumentCaptor<BotConnectionDetails> connectionDetailsCaptor = ArgumentCaptor.forClass(BotConnectionDetails.class);
         verify(mockBot).connect(connectionDetailsCaptor.capture());

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BotStorage {
-    Optional<BotPort> getBotByNick(String botNick);
-    void save(String botNick, BotPort bot);
-    List<String> botNames();
+    Optional<BotPort> getBotByNick(String botNickName);
+    void save(String botNickName, BotPort bot);
+    List<String> botNickNames();
 }

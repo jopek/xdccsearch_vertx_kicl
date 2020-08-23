@@ -131,7 +131,7 @@ public class BotService {
         bot.changeNickname(newBotNickName);
         BotRenameMessage renameMessage = BotRenameMessage.builder()
                 .attemptedBotName(botNickName)
-                .newBotName(newBotNickName)
+                .renameto(newBotNickName)
                 .serverMessages(serverMessages)
                 .timestamp(nowEpochMillis())
                 .build();

@@ -190,7 +190,7 @@ public class BotServiceTest {
         BotRenameMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("something happened; serverMessages; more serverMessages", sentMesssage.getMessage());
-        assertEquals("Randy", sentMesssage.getNewBotName());
+        assertEquals("Randy", sentMesssage.getRenameto());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         verifyNoMoreInteractions(botMessaging, botPort);

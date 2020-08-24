@@ -16,7 +16,12 @@ public class InMemoryBotStateStorage implements DccBotStateStorage {
     }
 
     @Override
-    public DccBotState save(String botNick, DccBotState dccBotState) {
-        return botStates.put(botNick, dccBotState);
+    public DccBotState save(String botNickName, DccBotState dccBotState) {
+        return botStates.put(botNickName, dccBotState);
+    }
+
+    @Override
+    public DccBotState removeBotState(String botNickName) {
+        return botStates.remove(botNickName);
     }
 }

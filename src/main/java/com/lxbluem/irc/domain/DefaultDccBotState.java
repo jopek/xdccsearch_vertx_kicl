@@ -52,6 +52,11 @@ public class DefaultDccBotState implements DccBotState {
     }
 
     @Override
+    public boolean hasSeenRemoteUser() {
+        return remoteUserSeen;
+    }
+
+    @Override
     public boolean canRequestPack() {
         boolean main = joinedChannels.contains(mainChannelName);
         boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);

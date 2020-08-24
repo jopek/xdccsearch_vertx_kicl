@@ -2,6 +2,7 @@ package com.lxbluem.irc.usecase.requestmodel;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.AllArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -9,7 +10,7 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@lombok.AllArgsConstructor
+@AllArgsConstructor
 @Builder
 @Getter
 public class DccCtcpQuery implements Serializable {

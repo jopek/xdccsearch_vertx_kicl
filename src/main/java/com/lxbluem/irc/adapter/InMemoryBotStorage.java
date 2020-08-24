@@ -22,4 +22,9 @@ public class InMemoryBotStorage implements BotStorage {
     public List<String> botNickNames() {
         return new ArrayList<>(bots.keySet());
     }
+
+    @Override
+    public void removeBot(String botNickName) {
+        bots.remove(botNickName);
+    }
 }

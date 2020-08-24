@@ -7,4 +7,5 @@ public interface BotStorage {
     Optional<BotPort> getBotByNick(String botNickName);
     void save(String botNickName, BotPort bot);
     List<String> botNickNames();
+    void removeBot(String botNickName);
 }

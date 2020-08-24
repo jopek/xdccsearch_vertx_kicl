@@ -57,7 +57,8 @@ public class BotService {
         bot.connect(botConnectionDetails);
         bot.joinChannel(pack.getChannelName());
 
-        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, dccRequestHook(botNickName, pack));
+        DccBotState.Callback execution = dccRequestHook(botNickName, pack);
+        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
         stateStorage.save(botNickName, dccBotState);
 
         botMessaging.notify(Address.BOT_INIT, new BotInitMessage(botNickName, nowEpochMillis(), pack));
@@ -90,16 +91,19 @@ public class BotService {
     }
 
     public void manualExit(String botNickName) {
-        BotPort botByNick = botStorage.getBotByNick(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-        botByNick.terminate();
+        exit(botNickName, "requested shutdown");
+    }
 
-        BotTerminateRequestMessage terminationRequest = new BotTerminateRequestMessage(botNickName, nowEpochMillis());
-        botMessaging.ask(Address.BOT_DCC_TERMINATE, terminationRequest,
-                m -> {
-                    BotExitMessage requested_shutdown = new BotExitMessage(botNickName, nowEpochMillis(), "requested shutdown");
-                    botMessaging.notify(Address.BOT_EXIT, requested_shutdown);
-                });
+    public void exit(String botNickName, String reason) {
+        BotPort bot = botStorage.getBotByNick(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        bot.terminate();
+        botStorage.removeBot(botNickName);
+        stateStorage.removeBotState(botNickName);
+
+        String reasonMessage = String.format("%s exiting because %s", botNickName, reason);
+        BotExitMessage requested_shutdown = new BotExitMessage(botNickName, nowEpochMillis(), reasonMessage);
+        botMessaging.notify(Address.BOT_EXIT, requested_shutdown);
     }
 
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
@@ -111,8 +115,13 @@ public class BotService {
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
         stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
-                    botState.channelNickList(channelName, usersInChannel);
-                });
+            botState.channelNickList(channelName, usersInChannel);
+            if (!botState.hasSeenRemoteUser()) {
+                String remoteUser = botState.getPack().getNickName();
+                final String message = format("bot %s not in channel %s", remoteUser, channelName);
+                botMessaging.notify(Address.BOT_FAIL, new BotFailMessage(botNickName, nowEpochMillis(), message));
+            }
+        });
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
@@ -128,7 +137,6 @@ public class BotService {
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         bot.registerNickname(botNickName);
     }
-
 
     public void changeNick(String botNickName, String serverMessages) {
         BotPort bot = botStorage.getBotByNick(botNickName)

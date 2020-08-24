@@ -65,11 +65,9 @@ public class EventBusBotMessaging implements BotMessaging {
     @Override
     public <T extends Serializable> void ask(Address address, T message, Consumer<Map<String, Object>> answerHandler) {
         JsonObject messageObject = JsonObject.mapFrom(message);
-        eventBus.request(address.getAddressValue(), messageObject, event -> {
+        eventBus.<JsonObject>request(address.getAddressValue(), messageObject, event -> {
             if (event.succeeded()) {
-                Object body = event.result().body();
-                JsonObject entries = JsonObject.mapFrom(body);
-                answerHandler.accept(entries.getMap());
+                answerHandler.accept(event.result().body().getMap());
             }
         });
 

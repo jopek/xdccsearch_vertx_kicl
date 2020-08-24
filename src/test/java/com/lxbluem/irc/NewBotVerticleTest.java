@@ -9,7 +9,9 @@ import com.lxbluem.irc.usecase.BotFactory;
 import com.lxbluem.irc.usecase.BotService;
 import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
+import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
+import com.lxbluem.irc.usecase.requestmodel.BotDccFinishedMessage;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -23,7 +25,10 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
-import java.util.concurrent.atomic.AtomicReference;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -41,49 +46,48 @@ public class NewBotVerticleTest {
             .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"mybotDCCp\",  \"n\": 1}");
 
     @Before
-    public void setUp() {
+    public void setUp(TestContext context) {
         vertx = Vertx.vertx();
 
 //        vertx.eventBus().addOutboundInterceptor(interceptor("out"));
 //        vertx.eventBus().addInboundInterceptor(interceptor("in"));
 
+        String botNickName = "Andy";
+        NameGenerator nameGenerator = () -> botNickName;
+
         Clock clock = Clock.systemDefaultZone();
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
-        InMemoryBotStateStorage stateStorage = new InMemoryBotStateStorage();
+        DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(BotPort.class);
-        BotFactory botFactory = ddd -> mockBot;
-        NameGenerator nameGenerator = () -> "Andy";
+        BotFactory botFactory = ignored -> mockBot;
         BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
         NewBotVerticle verticle = new NewBotVerticle(botService);
-        vertx.deployVerticle(verticle);
+        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
     }
 
-    @Test(timeout = 5000)
-    public void startTransfer(TestContext context) {
-
-        AtomicReference<String> botname = new AtomicReference<>();
+    @Test(timeout = 3_000)
+    public void startTransfer_bot_connects_to_irc(TestContext context) {
         vertx.eventBus()
-                .request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
-                    System.out.println(m.body());
-                    botname.set(((JsonObject) m.body()).getString("bot"));
+                .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    context.assertEquals("Andy", m.body().getString("bot"));
                 }));
 
-        Async async3 = context.async();
+        Async botConnect = context.async();
         vertx.eventBus()
                 .consumer("bot.init", m -> {
-                    System.out.println(m.body());
-                    async3.complete();
+                    botConnect.complete();
                 });
-        async3.await();
+        botConnect.await();
 
         ArgumentCaptor<BotConnectionDetails> connectionDetailsCaptor = ArgumentCaptor.forClass(BotConnectionDetails.class);
         verify(mockBot).connect(connectionDetailsCaptor.capture());
+
         BotConnectionDetails connectionDetails = connectionDetailsCaptor.getValue();
-        assertEquals(botname.get(), connectionDetails.getBotNick());
-        assertEquals("name_" + botname.get(), connectionDetails.getName());
-        assertEquals("realname_" + botname.get(), connectionDetails.getRealName());
-        assertEquals("user_" + botname.get(), connectionDetails.getUser());
+        assertEquals("Andy", connectionDetails.getBotNick());
+        assertEquals("name_Andy", connectionDetails.getName());
+        assertEquals("realname_Andy", connectionDetails.getRealName());
+        assertEquals("user_Andy", connectionDetails.getUser());
         assertEquals("192.168.99.100", connectionDetails.getServerHostName());
         assertEquals(6668, connectionDetails.getServerPort());
 
@@ -92,7 +96,7 @@ public class NewBotVerticleTest {
         assertEquals("#download", captor.getValue());
     }
 
-    @Test(timeout = 2000)
+    @Test(timeout = 3_000)
     public void stopTransfer_fails_when_bot_missing(TestContext context) {
         JsonObject stopMessage = new JsonObject()
                 .put("method", "DELETE")
@@ -104,43 +108,58 @@ public class NewBotVerticleTest {
                 ));
     }
 
-    @Test(timeout = 5000)
-    public void stopTransfer(TestContext context) {
-
-        AtomicReference<String> botname = new AtomicReference<>();
-        Async botnameAsync = context.async();
+    @Test(timeout = 3_000)
+    public void stopTransfer_via_request(TestContext context) {
         vertx.eventBus()
-                .request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
-                    String botnameFromReply = ((JsonObject) m.body()).getString("bot");
-                    botname.set(botnameFromReply);
-                    botnameAsync.complete();
+                .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    context.assertEquals("Andy", m.body().getString("bot"));
                 }));
-        botnameAsync.await();
 
-        System.out.printf("got botname %s\n", botname.get());
+        Async async2 = context.async();
+        vertx.eventBus()
+                .<JsonObject>consumer(Address.BOT_EXIT.getAddressValue(), result -> {
+                    context.assertEquals("Andy", result.body().getString("bot"));
+                    List<String> expectedMessageKeys = Arrays.asList("bot", "timestamp");
+                    Set<String> messageKeys = result.body().getMap().keySet();
+                    context.assertTrue(messageKeys.containsAll(expectedMessageKeys));
+                    async2.complete();
+                });
 
+        // trigger
         JsonObject stopMessage = new JsonObject()
                 .put("method", "DELETE")
-                .put("params", new JsonObject().put("botname", botname.get()));
-        System.out.println(stopMessage.encode());
+                .put("params", new JsonObject().put("botname", "Andy"));
+
+        System.out.printf("serialized https request: %s\n", stopMessage.encode());
+        vertx.eventBus()
+                .<JsonObject>request(stopAddress, stopMessage, context.asyncAssertSuccess(reply -> {
+                    JsonObject body = reply.body();
+                    context.assertEquals("Andy", body.getString("bot"));
+                    System.out.printf("stop request reply: %s\n", body.encode());
+                }));
+    }
+
+    @Test(timeout = 3_000)
+    public void stopTransfer_because_dcc_transfer_finished(TestContext context) {
+        vertx.eventBus()
+                .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    context.assertEquals("Andy", m.body().getString("bot"));
+                }));
 
         Async async = context.async();
         vertx.eventBus()
-                .consumer(Address.BOT_DCC_TERMINATE.getAddressValue(), result -> {
+                .consumer(Address.BOT_EXIT.getAddressValue(), result -> {
                     JsonObject body = (JsonObject) result.body();
                     System.out.println(body.encode());
-                    String botnameFromMessage = body.getString("bot");
-                    context.assertEquals(botname.get(), botnameFromMessage);
+                    context.assertEquals("Andy", body.getString("bot"));
+                    context.assertEquals("Andy exiting because DCC transfer finished", body.getString("message"));
                     async.complete();
                 });
 
+        BotDccFinishedMessage botDccFinishedMessage = new BotDccFinishedMessage("Andy", Instant.now().toEpochMilli());
+        JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFinishedMessage);
         vertx.eventBus()
-                .request(stopAddress, stopMessage, context.asyncAssertSuccess(reply -> {
-                    JsonObject body = (JsonObject) reply.body();
-                    String botnameFromReply = body.getString("bot");
-                    context.assertEquals(botname.get(), botnameFromReply);
-                    System.out.println(body.encode());
-                }));
+                .publish(Address.BOT_DCC_FINISH.getAddressValue(), dccFinishJsonObject);
 
     }
 

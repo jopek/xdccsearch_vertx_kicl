@@ -13,6 +13,8 @@ public interface DccBotState {
 
     void channelNickList(String channelName, List<String> channelNickList);
 
+    boolean hasSeenRemoteUser();
+
     boolean canRequestPack();
 
     boolean hasRequestedPack();

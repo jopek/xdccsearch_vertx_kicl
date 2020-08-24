@@ -198,6 +198,24 @@ public class BotServiceTest {
     }
 
     @Test
+    public void users_in_channel__remoteUser_of_target_channel_missing() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
+
+        botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
+
+        ArgumentCaptor<BotFailMessage> messageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_FAIL), messageSentCaptor.capture());
+        verifyNoMoreInteractions(botMessaging, botPort);
+
+        assertEquals("bot keex not in channel #download", messageSentCaptor.getValue().getMessage());
+
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
+        assertFalse(((DefaultDccBotState) dccBotState).isRemoteUserSeen());
+    }
+
+    @Test
     public void channel_topic() {
         botService.initializeBot(testPack());
         reset(botMessaging, botPort);

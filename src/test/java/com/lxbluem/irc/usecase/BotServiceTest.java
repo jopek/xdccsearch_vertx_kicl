@@ -435,7 +435,8 @@ public class BotServiceTest {
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
-        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(ctcpQuery), consumerArgumentCaptor.capture());
+        BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNick);
+        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.emptyMap());
     }
@@ -456,7 +457,8 @@ public class BotServiceTest {
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
-        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(ctcpQuery), consumerArgumentCaptor.capture());
+        BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNick);
+        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.singletonMap("port", 12345));
 

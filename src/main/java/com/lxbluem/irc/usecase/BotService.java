@@ -78,16 +78,16 @@ public class BotService {
     }
 
     private DccBotState.Callback dccRequestHook(String botNickName, Pack pack) {
-        return () -> {
-            botStorage.getBotByNick(botNickName)
-                    .ifPresent(bot -> {
-                        bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
+        Consumer<BotPort> botRequestFn = bot -> {
+            bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
-                        String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-                        BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), "", noticeMessage);
-                        botMessaging.notify(Address.BOT_NOTICE, message);
-                    });
+            String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
+            BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), "", noticeMessage);
+            botMessaging.notify(Address.BOT_NOTICE, message);
         };
+
+        return () -> botStorage.getBotByNick(botNickName)
+                .ifPresent(botRequestFn);
     }
 
     public void manualExit(String botNickName) {
@@ -155,10 +155,11 @@ public class BotService {
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
         BotPort bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
+
         Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
-        DccBotState botState = optionalDccBotState.get();
         if (!optionalDccBotState.isPresent())
             return;
+        DccBotState botState = optionalDccBotState.get();
 
         if (remoteName.toLowerCase().startsWith("ls"))
             return;
@@ -188,6 +189,7 @@ public class BotService {
 
         if (lowerCaseNoticeMessage.contains("download connection failed")
                 || lowerCaseNoticeMessage.contains("connection refused")
+                || lowerCaseNoticeMessage.contains("you already requested that pack")
         ) {
             BotFailMessage message = new BotFailMessage(botNickName, nowEpochMillis(), noticeMessage);
             botMessaging.notify(Address.BOT_FAIL, message);
@@ -205,10 +207,11 @@ public class BotService {
 
         BotPort botPort = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
+
         Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
-        DccBotState botState = optionalDccBotState.get();
         if (!optionalDccBotState.isPresent())
             return;
+        DccBotState botState = optionalDccBotState.get();
 
         AtomicReference<String> resolvedFilename = new AtomicReference<>("");
 
@@ -229,7 +232,8 @@ public class BotService {
         Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
             String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
             resolvedFilename.set(filenameAnswer);
-            botMessaging.ask(Address.BOT_DCC_INIT, ctcpQuery, passiveDccSocketPortConsumer);
+            BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNickName);
+            botMessaging.ask(Address.BOT_DCC_INIT, query, passiveDccSocketPortConsumer);
         };
 
         botMessaging.ask(Address.FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);

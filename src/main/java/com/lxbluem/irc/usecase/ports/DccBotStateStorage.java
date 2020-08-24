@@ -2,7 +2,9 @@ package com.lxbluem.irc.usecase.ports;
 
 import com.lxbluem.irc.domain.DccBotState;
 
+import java.util.Optional;
+
 public interface DccBotStateStorage {
-    DccBotState getBotStateByNick(String botNick);
-    DccBotState save(String botNick, DccBotState dccBotState);
+    Optional<DccBotState> getBotStateByNick(String botNickName);
+    DccBotState save(String botNickName, DccBotState dccBotState);
 }

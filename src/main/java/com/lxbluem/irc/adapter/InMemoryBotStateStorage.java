@@ -5,13 +5,14 @@ import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class InMemoryBotStateStorage implements DccBotStateStorage {
     private final Map<String, DccBotState> botStates = new HashMap<>();
 
     @Override
-    public DccBotState getBotStateByNick(String botNick) {
-        return botStates.get(botNick);
+    public Optional<DccBotState> getBotStateByNick(String botNickName) {
+        return Optional.ofNullable(botStates.get(botNickName));
     }
 
     @Override

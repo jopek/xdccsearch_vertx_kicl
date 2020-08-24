@@ -68,7 +68,8 @@ public class BotServiceTest {
 
     @Test
     public void initialize_service_for_bot() {
-        assertNull(stateStorage.getBotStateByNick("Andy"));
+        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertFalse(botStorage.getBotByNick("Andy").isPresent());
 
         botService.initializeBot(testPack());
 
@@ -77,9 +78,11 @@ public class BotServiceTest {
         verify(botPort).connect(any(BotConnectionDetails.class));
         verify(botPort).joinChannel(eq("#download"));
         verifyNoMoreInteractions(botMessaging, botPort);
+
         assertEquals(testPack(), messageCaptor.getValue().getPack());
-        assertNotNull(stateStorage.getBotStateByNick("Andy"));
-        assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").getPack());
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertTrue(botStorage.getBotByNick("Andy").isPresent());
+        assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").get().getPack());
     }
 
     @Test
@@ -90,12 +93,8 @@ public class BotServiceTest {
         botService.manualExit("Andy");
         verify(botPort).terminate();
 
-        ArgumentCaptor<BotTerminateRequestMessage> terminationRequestCaptor = ArgumentCaptor.forClass(BotTerminateRequestMessage.class);
-        verify(botMessaging).ask(eq(Address.BOT_DCC_TERMINATE), terminationRequestCaptor.capture(), consumerArgumentCaptor.capture());
-        assertEquals("Andy", terminationRequestCaptor.getValue().getBot());
-        assertEquals(fixedInstant.toEpochMilli(), terminationRequestCaptor.getValue().getTimestamp());
-
-        consumerArgumentCaptor.getValue().accept(Collections.emptyMap());
+        assertFalse(botStorage.getBotByNick("Andy").isPresent());
+        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
 
         ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
         verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
@@ -121,7 +120,8 @@ public class BotServiceTest {
         botService.onRequestedChannelJoinComplete("Andy", "#download");
         verifyNoMoreInteractions(botMessaging, botPort);
 
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
         Set<String> joinedChannels = ((DefaultDccBotState) dccBotState).getJoinedChannels();
         List<String> expectedJoinedChannels = Collections.singletonList("#download");
         assertTrue(joinedChannels.containsAll(expectedJoinedChannels));
@@ -146,7 +146,8 @@ public class BotServiceTest {
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
         verifyNoMoreInteractions(botMessaging, botPort);
 
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
         assertTrue(((DefaultDccBotState) dccBotState).isRemoteUserSeen());
     }
 
@@ -158,7 +159,9 @@ public class BotServiceTest {
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
 
         HashSet<String> channelReferences = new HashSet<>(asList("#room", "#voice"));
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy");
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
+
         assertEquals(channelReferences, ((DefaultDccBotState) dccBotState).getReferencedChannelNames());
         verifyNoMoreInteractions(botMessaging, botPort);
     }
@@ -245,7 +248,9 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, botPort);
 
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+
         botState.nickRegistryRequired();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
@@ -278,7 +283,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, botPort);
 
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
         int botStateHash = botState.hashCode();
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
@@ -308,7 +314,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, botPort);
 
-        DccBotState botState = stateStorage.getBotStateByNick(botNick);
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
 

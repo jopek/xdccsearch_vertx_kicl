@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -78,12 +79,13 @@ public class BotService {
     private DccBotState.Callback dccRequestHook(String botNickName, Pack pack) {
         return () -> {
             botStorage.getBotByNick(botNickName)
-                    .orElseThrow(() -> new BotNotFoundException(botNickName))
-                    .requestDccPack(pack.getNickName(), pack.getPackNumber());
+                    .ifPresent(bot -> {
+                        bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
-            String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), "", noticeMessage);
-            botMessaging.notify(Address.BOT_NOTICE, message);
+                        String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
+                        BotNoticeMessage message = new BotNoticeMessage(botNickName, nowEpochMillis(), "", noticeMessage);
+                        botMessaging.notify(Address.BOT_NOTICE, message);
+                    });
         };
     }
 
@@ -101,20 +103,24 @@ public class BotService {
     }
 
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
-        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
-        botState.joinedChannel(channelName);
+        stateStorage.getBotStateByNick(botNickName)
+                .ifPresent(botState ->
+        botState.joinedChannel(channelName)
+                );
     }
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
-        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
-        botState.channelNickList(channelName, usersInChannel);
+        stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
+                    botState.channelNickList(channelName, usersInChannel);
+                });
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
-        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
+        stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
         Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
 
         botState.channelReferences(channelName, mentionedChannels);
+    });
     }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {
@@ -141,7 +147,10 @@ public class BotService {
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
         BotPort bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
-        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
+        Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        DccBotState botState = optionalDccBotState.get();
+        if (!optionalDccBotState.isPresent())
+            return;
 
         if (remoteName.toLowerCase().startsWith("ls"))
             return;
@@ -188,7 +197,10 @@ public class BotService {
 
         BotPort botPort = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
-        DccBotState botState = stateStorage.getBotStateByNick(botNickName);
+        Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        DccBotState botState = optionalDccBotState.get();
+        if (!optionalDccBotState.isPresent())
+            return;
 
         AtomicReference<String> resolvedFilename = new AtomicReference<>("");
 

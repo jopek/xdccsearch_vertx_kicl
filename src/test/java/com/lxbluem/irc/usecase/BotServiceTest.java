@@ -36,9 +36,9 @@ public class BotServiceTest {
     private DccBotStateStorage stateStorage;
     private BotService botService;
     private BotMessaging botMessaging;
-
-    private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
     private BotPort botPort;
+    private BotStorage botStorage;
+    private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
 
     @Captor
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
@@ -47,11 +47,11 @@ public class BotServiceTest {
 
     @Before
     public void setUp() {
-        stateStorage = new InMemoryBotStateStorage();
         botMessaging = mock(BotMessaging.class);
         botPort = mock(BotPort.class);
         BotFactory botFactory = service -> botPort;
-        BotStorage botStorage = new InMemoryBotStorage();
+        stateStorage = new InMemoryBotStateStorage();
+        botStorage = new InMemoryBotStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
 
         when(nameGenerator.getNick()).thenReturn("Andy");
@@ -86,7 +86,27 @@ public class BotServiceTest {
     }
 
     @Test
-    public void terminte_bot() {
+    public void exit_before_executing() {
+        botService.initializeBot(testPack());
+        verify(botPort).connect(any(BotConnectionDetails.class));
+        verify(botPort).joinChannel(eq("#download"));
+        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+
+        DccBotState state = stateStorage.getBotStateByNick("Andy").get();
+
+        state.joinedChannel("#download");
+        state.channelReferences("#download", new HashSet<String>());
+
+        botService.manualExit("Andy");
+        verify(botPort).terminate();
+        verify(botMessaging).notify(eq(Address.BOT_EXIT), any(BotExitMessage.class));
+
+        state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
+        verifyZeroInteractions(botPort, botMessaging);
+    }
+
+    @Test
+    public void terminte_bot_manually() {
         botService.initializeBot(testPack());
         reset(botMessaging, botPort);
 
@@ -98,18 +118,44 @@ public class BotServiceTest {
 
         ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
         verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
-        verifyNoMoreInteractions(botMessaging, botPort);
 
         BotExitMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("requested shutdown", sentMesssage.getMessage());
+        assertEquals("Andy exiting because requested shutdown", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+
+        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        verifyNoMoreInteractions(botMessaging, botPort);
+
+        assertEquals("Andy", sentMesssage.getBot());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
 
     @Test(expected = BotNotFoundException.class)
-    public void terminte_bot_for_missing_bot() {
+    public void terminte_bot_manually_for_missing_bot() {
         botService.manualExit("Andy");
         verify(botPort).terminate();
+    }
+
+    @Test
+    public void terminte_bot() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, botPort);
+
+        botService.exit("Andy", "failure");
+        verify(botPort).terminate();
+
+        assertFalse(botStorage.getBotByNick("Andy").isPresent());
+        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+
+        ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
+        verifyNoMoreInteractions(botMessaging, botPort);
+
+        BotExitMessage sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("Andy exiting because failure", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
 
     @Test

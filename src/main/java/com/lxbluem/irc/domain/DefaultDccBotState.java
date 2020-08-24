@@ -1,7 +1,10 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.domain.Pack;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 import java.util.HashSet;
 import java.util.List;

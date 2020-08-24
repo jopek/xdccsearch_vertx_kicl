@@ -1,8 +1,8 @@
 package com.lxbluem.irc.usecase.requestmodel;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.AllArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Objects;

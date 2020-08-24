@@ -109,7 +109,7 @@ public class BotService {
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
         stateStorage.getBotStateByNick(botNickName)
                 .ifPresent(botState ->
-        botState.joinedChannel(channelName)
+                        botState.joinedChannel(channelName)
                 );
     }
 
@@ -126,10 +126,10 @@ public class BotService {
 
     public void channelTopic(String botNickName, String channelName, String topic) {
         stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
-        Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
+            Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
 
-        botState.channelReferences(channelName, mentionedChannels);
-    });
+            botState.channelReferences(channelName, mentionedChannels);
+        });
     }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {

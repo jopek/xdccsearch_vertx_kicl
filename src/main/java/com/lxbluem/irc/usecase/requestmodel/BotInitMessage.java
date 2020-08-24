@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 public class BotInitMessage extends BotMessage {
     private Pack pack;
 
-    @Builder public BotInitMessage(String bot, long timestamp, Pack pack) {
+    @Builder
+    public BotInitMessage(String bot, long timestamp, Pack pack) {
         super(timestamp, bot);
         this.pack = pack;
     }

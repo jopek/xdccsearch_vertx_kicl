@@ -1,9 +1,13 @@
 package com.lxbluem.irc.usecase.requestmodel;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class BotMessage {
-    private final long timestamp;
-    private final String bot;
+    private long timestamp;
+    private String bot;
 }

@@ -6,12 +6,10 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class BotDccQueueMessage extends BotMessage {
-    private String message;
-
+public class BotDccFinishedMessage extends BotMessage {
     @Builder
-    public BotDccQueueMessage(String botName, long timestamp, String noticeMessage) {
+    public BotDccFinishedMessage(String botName, long timestamp) {
         super(timestamp, botName);
-        message = noticeMessage;
     }
 }
+

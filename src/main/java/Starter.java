@@ -4,8 +4,14 @@ import com.lxbluem.RouterVerticle;
 import com.lxbluem.adapter.EventBusBotMessaging;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
-import com.lxbluem.irc.BotVerticle;
-import com.lxbluem.irc.DccReceiverVerticle;
+import com.lxbluem.irc.*;
+import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
+import com.lxbluem.irc.adapter.InMemoryBotStorage;
+import com.lxbluem.irc.adapter.IrcBotFactory;
+import com.lxbluem.irc.usecase.BotFactory;
+import com.lxbluem.irc.usecase.BotService;
+import com.lxbluem.irc.usecase.ports.BotStorage;
+import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateService;
 import com.lxbluem.state.StateVerticle;
@@ -13,7 +19,7 @@ import com.lxbluem.state.adapters.InMemoryStateRepository;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.json.Json;
+import io.vertx.core.json.jackson.DatabindCodec;
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +31,7 @@ public class Starter {
 
     public static void main(String[] args) {
         log.info("starting");
-//        DatabindCodec.mapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        Json.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        DatabindCodec.mapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
@@ -35,6 +40,12 @@ public class Starter {
         BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock);
 
         StateService stateService = new StateService(new InMemoryStateRepository(), clock);
+
+        BotStorage botStorage = new InMemoryBotStorage();
+        DccBotStateStorage dccBotStateStorage = new InMemoryBotStateStorage();
+        BotFactory botFactory = new IrcBotFactory();
+        NameGenerator nameGenerator = new RandomNameGenerator();
+        BotService botService = new BotService(botStorage, dccBotStateStorage, botMessaging, botFactory, clock, nameGenerator);
 
         deploy(vertx, EventLogger.class.getName());
         deploy(vertx, new DccReceiverVerticle(botMessaging));
@@ -45,7 +56,8 @@ public class Starter {
             logDeployment(RouterVerticle.class.getName(), event);
             deploy(vertx, new StateVerticle(stateService));
             deploy(vertx, SearchVerticle.class.getName());
-            deploy(vertx, new BotVerticle(botMessaging));
+//            deploy(vertx, new BotVerticle(botMessaging));
+            deploy(vertx, new NewBotVerticle(botService));
         });
 
 //        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time", new JsonObject().put("time", Instant.now().toString())));

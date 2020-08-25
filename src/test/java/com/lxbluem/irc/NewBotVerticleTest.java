@@ -118,7 +118,7 @@ public class NewBotVerticleTest {
 
         Async async2 = context.async();
         vertx.eventBus()
-                .<JsonObject>consumer(Address.BOT_EXIT.getAddressValue(), result -> {
+                .<JsonObject>consumer(Address.BOT_EXITED.address(), result -> {
                     context.assertEquals("Andy", result.body().getString("bot"));
                     List<String> expectedMessageKeys = Arrays.asList("bot", "timestamp");
                     Set<String> messageKeys = result.body().getMap().keySet();
@@ -149,7 +149,7 @@ public class NewBotVerticleTest {
 
         Async async = context.async();
         vertx.eventBus()
-                .consumer(Address.BOT_EXIT.getAddressValue(), result -> {
+                .consumer(Address.BOT_EXITED.address(), result -> {
                     JsonObject body = (JsonObject) result.body();
                     System.out.println(body.encode());
                     context.assertEquals("Andy", body.getString("bot"));
@@ -160,7 +160,7 @@ public class NewBotVerticleTest {
         BotDccFinishedMessage botDccFinishedMessage = new BotDccFinishedMessage("Andy", Instant.now().toEpochMilli());
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFinishedMessage);
         vertx.eventBus()
-                .publish(Address.BOT_DCC_FINISH.getAddressValue(), dccFinishJsonObject);
+                .publish(Address.DCC_FINISHED.address(), dccFinishJsonObject);
 
     }
 
@@ -173,7 +173,7 @@ public class NewBotVerticleTest {
 
         Async exitAsync = context.async();
         vertx.eventBus()
-                .consumer(Address.BOT_EXIT.getAddressValue(), result -> {
+                .consumer(Address.BOT_EXITED.address(), result -> {
                     JsonObject body = (JsonObject) result.body();
                     System.out.println(body.encode());
                     context.assertEquals("Andy", body.getString("bot"));
@@ -184,7 +184,7 @@ public class NewBotVerticleTest {
         BotDccFailedMessage botDccFailedMessage = new BotDccFailedMessage("Andy", Instant.now().toEpochMilli(), "no space on filesystem");
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFailedMessage);
         vertx.eventBus()
-                .publish(Address.BOT_DCC_FAILED.getAddressValue(), dccFinishJsonObject);
+                .publish(Address.DCC_FAILED.address(), dccFinishJsonObject);
 
     }
 

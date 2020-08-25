@@ -21,14 +21,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.Address.BOT_DCC_INIT;
-import static com.lxbluem.Address.BOT_DCC_QUEUE;
-import static com.lxbluem.Address.BOT_EXIT;
-import static com.lxbluem.Address.BOT_FAIL;
-import static com.lxbluem.Address.BOT_INIT;
-import static com.lxbluem.Address.BOT_NOTICE;
-import static com.lxbluem.Address.BOT_UPDATE_NICK;
-import static com.lxbluem.Address.FILENAME_RESOLVE;
+import static com.lxbluem.Address.*;
 import static java.lang.String.format;
 
 public class BotService {
@@ -68,7 +61,7 @@ public class BotService {
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
         stateStorage.save(botNickName, dccBotState);
 
-        botMessaging.notify(BOT_INIT, new BotInitMessage(botNickName, nowEpochMillis(), pack));
+        botMessaging.notify(BOT_INITIALIZED, new BotInitMessage(botNickName, nowEpochMillis(), pack));
 
         return botNickName;
     }
@@ -110,7 +103,7 @@ public class BotService {
 
         String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
         BotExitMessage requested_shutdown = new BotExitMessage(botNickName, nowEpochMillis(), reasonMessage);
-        botMessaging.notify(BOT_EXIT, requested_shutdown);
+        botMessaging.notify(BOT_EXITED, requested_shutdown);
     }
 
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
@@ -157,7 +150,7 @@ public class BotService {
                 .serverMessages(serverMessages)
                 .timestamp(nowEpochMillis())
                 .build();
-        botMessaging.notify(BOT_UPDATE_NICK, renameMessage);
+        botMessaging.notify(BOT_NICK_UPDATED, renameMessage);
     }
 
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
@@ -174,7 +167,7 @@ public class BotService {
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            botMessaging.notify(BOT_DCC_QUEUE, new BotDccQueueMessage(botNickName, nowEpochMillis(), noticeMessage));
+            botMessaging.notify(DCC_QUEUED, new BotDccQueueMessage(botNickName, nowEpochMillis(), noticeMessage));
             return;
         }
 
@@ -241,14 +234,14 @@ public class BotService {
             String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
             resolvedFilename.set(filenameAnswer);
             BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNickName);
-            botMessaging.ask(BOT_DCC_INIT, query, passiveDccSocketPortConsumer);
+            botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
         };
 
         botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
     }
 
     private void botFailed(BotFailMessage message) {
-        botMessaging.notify(BOT_FAIL, message);
+        botMessaging.notify(BOT_FAILED, message);
         exit(message.getBot(), message.getMessage());
     }
 

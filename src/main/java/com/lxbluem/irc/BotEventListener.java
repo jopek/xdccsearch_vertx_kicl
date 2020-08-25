@@ -1,5 +1,6 @@
 package com.lxbluem.irc;
 
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import io.vertx.core.json.JsonObject;
@@ -8,7 +9,6 @@ import io.vertx.rxjava.core.eventbus.Message;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.element.Channel;
-import org.kitteh.irc.client.library.element.ServerMessage;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
@@ -28,9 +28,8 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Address.*;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
 public class BotEventListener {
@@ -73,7 +72,7 @@ public class BotEventListener {
 
         String noticeMessage = String.format("joined channel %s %s", eventChannelName, isRequiredChannelsJoined ? "[all required joined]" : "");
         LOG.info(noticeMessage);
-        botMessaging.notify(BOT_NOTICE, event.getClient().getNick(), noticeMessage);
+        botMessaging.notify(BOT_NOTICE.address(), event.getClient().getNick(), noticeMessage);
 
     }
 
@@ -162,7 +161,7 @@ public class BotEventListener {
 
         if (!channel.getNicknames().contains(nickName)) {
             final String message = format("bot %s not in channel %s", pack.getNickName(), pack.getChannelName());
-            botMessaging.notify(BOT_FAIL, client.getNick(), message);
+            botMessaging.notify(BOT_FAILED.address(), client.getNick(), message);
             return;
         }
 
@@ -184,7 +183,7 @@ public class BotEventListener {
         String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
         final String botName = client.getNick();
         LOG.info(noticeMessage);
-        botMessaging.notify(BOT_NOTICE, botName, noticeMessage);
+        botMessaging.notify(BOT_NOTICE.address(), botName, noticeMessage);
         client.sendMessage(pack.getNickName(), "xdcc send #" + pack.getPackNumber());
     }
 
@@ -205,7 +204,7 @@ public class BotEventListener {
 
         final String noticeMessageLowerCase = noticeMessage.toLowerCase();
         if (noticeMessageLowerCase.contains("queue for pack") || noticeMessageLowerCase.contains("you already have that item queued")) {
-            botMessaging.notify(BOT_DCC_QUEUE, botName, noticeMessage);
+            botMessaging.notify(Address.DCC_QUEUED.address(), botName, noticeMessage);
             return;
         }
 
@@ -230,11 +229,11 @@ public class BotEventListener {
 
         if (noticeMessageLowerCase.contains("download connection failed") || noticeMessageLowerCase.contains("connection refused")
         ) {
-            botMessaging.notify(BOT_FAIL, botName, noticeMessage);
+            botMessaging.notify(BOT_FAILED.address(), botName, noticeMessage);
             return;
         }
 
-        botMessaging.notify(BOT_NOTICE, botName, noticeMessage);
+        botMessaging.notify(BOT_NOTICE.address(), botName, noticeMessage);
     }
 
     @Handler
@@ -249,7 +248,7 @@ public class BotEventListener {
         final JsonObject extra = new JsonObject()
                 .put("message", serverMessages)
                 .put("renameto", newNick);
-        botMessaging.notify(BOT_UPDATE_NICK, attemptedNick, extra);
+        botMessaging.notify(BOT_NICK_UPDATED.address(), attemptedNick, extra);
     }
 
     @Handler
@@ -273,7 +272,7 @@ public class BotEventListener {
         final String botName = event.getClient().getNick();
 
         vertx.eventBus()
-                .<JsonObject>rxSend(FILENAME_RESOLVE, filenameResolveMessage)
+                .<JsonObject>rxSend(FILENAME_RESOLVE.address(), filenameResolveMessage)
                 .map(Message::body)
                 .flatMap(filenameAnswer -> {
                     final boolean isPassive = ctcpQuery.getString("transfer_type").equalsIgnoreCase("passive");
@@ -288,7 +287,7 @@ public class BotEventListener {
                             .put("token", ctcpQuery.getInteger("token"))
                             .put("bot", botName);
 
-                    return vertx.eventBus().<JsonObject>rxSend(BOT_DCC_INIT, botInitMessage);
+                    return vertx.eventBus().<JsonObject>rxSend(Address.DCC_INITIALIZE.address(), botInitMessage);
                 })
                 .map(Message::body)
                 .subscribe(reply -> {
@@ -313,7 +312,7 @@ public class BotEventListener {
                         },
                         throwable -> {
                             LOG.error("subscribe to verticle reply failed: {}", throwable.getMessage());
-                            botMessaging.notify(BOT_FAIL, botName, throwable);
+                            botMessaging.notify(BOT_FAILED.address(), botName, throwable);
                         }
                 );
     }

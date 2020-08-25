@@ -25,12 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.lxbluem.Addresses.ROUTE_ADD;
+import static com.lxbluem.Address.ROUTE_ADD;
 
 public class RouterVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(RouterVerticle.class);
 
-    private Map<String, AtomicInteger> verticleCounter = new HashMap<>();
+    private final Map<String, AtomicInteger> verticleCounter = new HashMap<>();
 
     @Override
     public void start(Future<Void> startFuture) {
@@ -55,7 +55,7 @@ public class RouterVerticle extends AbstractVerticle {
                     }
                 });
 
-        vertx.eventBus().consumer(ROUTE_ADD, message -> setupRouter(api, message));
+        vertx.eventBus().consumer(ROUTE_ADD.address(), message -> setupRouter(api, message));
     }
 
     private void unroute(Router router, Message<Object> message) {
@@ -76,18 +76,18 @@ public class RouterVerticle extends AbstractVerticle {
                 socket.write(returnMessage.encode());
             };
 
-            vertx.eventBus().consumer(Addresses.STATE, messageHandler);
-            vertx.eventBus().consumer(Addresses.REMOVED_STALE_BOTS, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_INIT, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_FAIL, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_DCC_INIT, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_DCC_START, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_DCC_PROGRESS, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_DCC_QUEUE, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_DCC_FINISH, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_NOTICE, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_UPDATE_NICK, messageHandler);
-            vertx.eventBus().consumer(Addresses.BOT_EXIT, messageHandler);
+            vertx.eventBus().consumer(Address.STATE.address(), messageHandler);
+            vertx.eventBus().consumer(Address.REMOVED_STALE_BOTS.address(), messageHandler);
+            vertx.eventBus().consumer(Address.BOT_INITIALIZED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.BOT_FAILED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.DCC_INITIALIZE.address(), messageHandler);
+            vertx.eventBus().consumer(Address.DCC_STARTED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.DCC_PROGRESSED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.DCC_QUEUED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.DCC_FINISHED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.BOT_NOTICE.address(), messageHandler);
+            vertx.eventBus().consumer(Address.BOT_NICK_UPDATED.address(), messageHandler);
+            vertx.eventBus().consumer(Address.BOT_EXITED.address(), messageHandler);
         });
     }
 

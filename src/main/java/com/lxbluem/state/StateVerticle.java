@@ -1,6 +1,7 @@
 package com.lxbluem.state;
 
 import com.lxbluem.AbstractRouteVerticle;
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.model.SerializedRequest;
 import com.lxbluem.state.domain.model.State;
@@ -17,7 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Address.*;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
 
@@ -37,20 +38,20 @@ public class StateVerticle extends AbstractRouteVerticle {
         promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished);
         promisedRegisterRouteWithHandler(GET, "/state", this::getState);
 
-        handle(BOT_INIT, this::init);
+        handle(BOT_INITIALIZED, this::init);
         handle(BOT_NOTICE, this::notice);
-        handle(BOT_UPDATE_NICK, this::renameBot);
-        handle(BOT_EXIT, this::exit);
-        handle(BOT_FAIL, this::fail);
-        handle(BOT_DCC_START, this::dccStart);
-        handle(BOT_DCC_PROGRESS, this::dccProgress);
-        handle(BOT_DCC_FINISH, this::dccFinish);
+        handle(BOT_NICK_UPDATED, this::renameBot);
+        handle(BOT_EXITED, this::exit);
+        handle(BOT_FAILED, this::fail);
+        handle(DCC_STARTED, this::dccStart);
+        handle(DCC_PROGRESSED, this::dccProgress);
+        handle(DCC_FINISHED, this::dccFinish);
     }
 
     private void clearFinished(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         List<String> bots = service.clearFinished();
-        vertx.eventBus().publish(REMOVED_STALE_BOTS, new JsonArray(bots));
-        result.complete(new JsonObject().put(REMOVED_STALE_BOTS, bots));
+        vertx.eventBus().publish(REMOVED_STALE_BOTS.address(), new JsonArray(bots));
+        result.complete(new JsonObject().put(REMOVED_STALE_BOTS.address(), bots));
     }
 
     private void getState(SerializedRequest serializedRequest, Promise<JsonObject> result) {
@@ -59,9 +60,9 @@ public class StateVerticle extends AbstractRouteVerticle {
         result.complete(entries);
     }
 
-    private void handle(String address, Action1<Message<JsonObject>> method) {
+    private void handle(Address address, Action1<Message<JsonObject>> method) {
         vertx.eventBus()
-                .<JsonObject>consumer(address)
+                .<JsonObject>consumer(address.address())
                 .toObservable()
                 .subscribe(method);
     }
@@ -79,7 +80,7 @@ public class StateVerticle extends AbstractRouteVerticle {
         JsonObject result = new JsonObject();
         state.forEach((key, value) -> result.put(key, JsonObject.mapFrom(value)));
 
-        vertx.eventBus().publish(STATE, result);
+        vertx.eventBus().publish(STATE.address(), result);
     }
 
     private void notice(Message<JsonObject> eventMessage) {

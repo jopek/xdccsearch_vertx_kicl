@@ -103,7 +103,7 @@ public class StateVerticleTest {
     public void initialise_state(TestContext context) {
 
         Async stateSent = context.async();
-        vertx.eventBus().<JsonObject>consumer(Address.STATE.getAddressValue(), m -> {
+        vertx.eventBus().<JsonObject>consumer(Address.STATE.address(), m -> {
             JsonObject body = m.body();
             context.verify(ignored -> assertEquals(expectedInitialState().encodePrettily(), body.encodePrettily()));
             stateSent.complete();
@@ -114,7 +114,7 @@ public class StateVerticleTest {
                 .put("bot", "Andy")
                 .put("timestamp", 123456L)
                 .put("pack", JsonObject.mapFrom(testPack()));
-        vertx.eventBus().publish(Address.BOT_INIT.getAddressValue(), init_message);
+        vertx.eventBus().publish(Address.BOT_INITIALIZED.address(), init_message);
 
         stateSent.await();
     }

@@ -45,7 +45,7 @@ public class EventBusBotMessaging implements BotMessaging {
     @Override
     public <T extends BotMessage> void notify(Address address, T message) {
         JsonObject messageObject = JsonObject.mapFrom(message);
-        publish(address.getAddressValue(), messageObject);
+        publish(address.address(), messageObject);
     }
 
     private void notify(String address, String botName, String message, JsonObject extra) {
@@ -65,7 +65,7 @@ public class EventBusBotMessaging implements BotMessaging {
     @Override
     public <T extends Serializable> void ask(Address address, T message, Consumer<Map<String, Object>> answerHandler) {
         JsonObject messageObject = JsonObject.mapFrom(message);
-        eventBus.<JsonObject>request(address.getAddressValue(), messageObject, event -> {
+        eventBus.<JsonObject>request(address.address(), messageObject, event -> {
             if (event.succeeded()) {
                 answerHandler.accept(event.result().body().getMap());
             }

@@ -74,7 +74,7 @@ public class BotServiceTest {
         botService.initializeBot(testPack());
 
         ArgumentCaptor<BotInitMessage> messageCaptor = ArgumentCaptor.forClass(BotInitMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_INIT), messageCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_INITIALIZED), messageCaptor.capture());
         verify(botPort).connect(any(BotConnectionDetails.class));
         verify(botPort).joinChannel(eq("#download"));
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -90,7 +90,7 @@ public class BotServiceTest {
         botService.initializeBot(testPack());
         verify(botPort).connect(any(BotConnectionDetails.class));
         verify(botPort).joinChannel(eq("#download"));
-        verify(botMessaging).notify(eq(Address.BOT_INIT), any(BotInitMessage.class));
+        verify(botMessaging).notify(eq(Address.BOT_INITIALIZED), any(BotInitMessage.class));
 
         DccBotState state = stateStorage.getBotStateByNick("Andy").get();
 
@@ -99,7 +99,7 @@ public class BotServiceTest {
 
         botService.manualExit("Andy");
         verify(botPort).terminate();
-        verify(botMessaging).notify(eq(Address.BOT_EXIT), any(BotExitMessage.class));
+        verify(botMessaging).notify(eq(Address.BOT_EXITED), any(BotExitMessage.class));
 
         state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
         verifyZeroInteractions(botPort, botMessaging);
@@ -117,7 +117,7 @@ public class BotServiceTest {
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
 
         ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_EXITED), messageSentCaptor.capture());
 
         BotExitMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
@@ -149,7 +149,7 @@ public class BotServiceTest {
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
 
         ArgumentCaptor<BotExitMessage> messageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXIT), messageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_EXITED), messageSentCaptor.capture());
         verifyNoMoreInteractions(botMessaging, botPort);
 
         BotExitMessage sentMesssage = messageSentCaptor.getValue();
@@ -205,9 +205,9 @@ public class BotServiceTest {
         botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
 
         ArgumentCaptor<BotFailMessage> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAIL), failMessageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_FAILED), failMessageSentCaptor.capture());
         ArgumentCaptor<BotExitMessage> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXIT), exitMessageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_EXITED), exitMessageSentCaptor.capture());
         verify(botPort).terminate();
 
         verifyNoMoreInteractions(botMessaging, botPort);
@@ -256,7 +256,7 @@ public class BotServiceTest {
         verify(botPort).changeNickname(eq("Randy"));
 
         ArgumentCaptor<BotRenameMessage> messageSentCaptor = ArgumentCaptor.forClass(BotRenameMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_UPDATE_NICK), messageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_NICK_UPDATED), messageSentCaptor.capture());
 
         BotRenameMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
@@ -361,7 +361,7 @@ public class BotServiceTest {
         assertEquals("bot state was altered in the notice message handler", botStateHash, botStateHashAfterMethod);
 
         ArgumentCaptor<BotFailMessage> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAIL), failMessageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_FAILED), failMessageSentCaptor.capture());
 
         BotFailMessage failMessage = failMessageSentCaptor.getValue();
         assertEquals("Andy", failMessage.getBot());
@@ -369,7 +369,7 @@ public class BotServiceTest {
         assertEquals(fixedInstant.toEpochMilli(), failMessage.getTimestamp());
 
         ArgumentCaptor<BotExitMessage> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXIT), exitMessageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.BOT_EXITED), exitMessageSentCaptor.capture());
         BotExitMessage exitMessage = exitMessageSentCaptor.getValue();
 
         assertEquals("Andy", exitMessage.getBot());
@@ -410,7 +410,7 @@ public class BotServiceTest {
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         ArgumentCaptor<BotDccQueueMessage> queueMessageSentCaptor = ArgumentCaptor.forClass(BotDccQueueMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_DCC_QUEUE), queueMessageSentCaptor.capture());
+        verify(botMessaging).notify(eq(Address.DCC_QUEUED), queueMessageSentCaptor.capture());
         BotDccQueueMessage sentQueueMesssage = queueMessageSentCaptor.getValue();
         assertEquals("Andy", sentQueueMesssage.getBot());
         assertEquals("queue for pack", sentQueueMesssage.getMessage());
@@ -449,7 +449,7 @@ public class BotServiceTest {
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
         BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNick);
-        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(query), consumerArgumentCaptor.capture());
+        verify(botMessaging).ask(eq(Address.DCC_INITIALIZE), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.emptyMap());
     }
@@ -471,7 +471,7 @@ public class BotServiceTest {
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
         BotDccInitQuery query = BotDccInitQuery.from(ctcpQuery, botNick);
-        verify(botMessaging).ask(eq(Address.BOT_DCC_INIT), eq(query), consumerArgumentCaptor.capture());
+        verify(botMessaging).ask(eq(Address.DCC_INITIALIZE), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.singletonMap("port", 12345));
 

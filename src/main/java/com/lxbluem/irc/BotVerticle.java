@@ -1,6 +1,7 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.AbstractRouteVerticle;
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.model.SerializedRequest;
@@ -23,7 +24,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.lxbluem.Addresses.*;
 import static io.vertx.core.http.HttpMethod.*;
 import static java.util.stream.Collectors.toMap;
 
@@ -41,9 +41,9 @@ public class BotVerticle extends AbstractRouteVerticle {
     public void start() {
         EventBus eventBus = vertx.eventBus();
 
-        eventBus.consumer(BOT_DCC_FINISH, this::handleDccFinished);
-        eventBus.consumer(BOT_FAIL, this::handleDccFinished);
-        eventBus.consumer(BOT_EXIT, this::handleExit);
+        eventBus.consumer(Address.DCC_FINISHED.address(), this::handleDccFinished);
+        eventBus.consumer(Address.BOT_FAILED.address(), this::handleDccFinished);
+        eventBus.consumer(Address.BOT_EXITED.address(), this::handleExit);
         promisedRegisterRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
         promisedRegisterRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
         promisedRegisterRouteWithHandler(GET, "/xfers", this::handleListTransfers);
@@ -70,7 +70,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         if (first.isPresent()) {
             Client client = first.get();
-            messaging.notify(BOT_EXIT, botname, "requested shutdown");
+            messaging.notify(Address.BOT_EXITED.address(), botname, "requested shutdown");
             String packNickName = packsByBot.get(client).getNickName();
             client.sendMessage(packNickName, "XDCC CANCEL");
             jsonObjectFuture.complete(new JsonObject().put("bot", client.getNick()));
@@ -104,7 +104,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         getClientStream(bot).forEach(ircClient -> {
             String msg = String.format("bot %s exiting because: %s", ircClient.getNick(), body.getString("message", "finished transfer"));
             vertx.setTimer(100, event -> {
-                messaging.notify(BOT_EXIT, bot, msg);
+                messaging.notify(Address.BOT_EXITED.address(), bot, msg);
                 ircClient.shutdown();
             });
         });
@@ -149,7 +149,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                         pack.getServerPort(),
                         exception.getMessage());
                 final JsonObject extra = JsonObject.mapFrom(pack).put("message", exception.getMessage());
-                messaging.notify(BOT_FAIL, botName, extra);
+                messaging.notify(Address.BOT_FAILED.address(), botName, extra);
             }
         });
 
@@ -160,7 +160,7 @@ public class BotVerticle extends AbstractRouteVerticle {
 
         packsByBot.put(client, pack);
         final JsonObject extra = new JsonObject().put("pack", JsonObject.mapFrom(pack));
-        messaging.notify(BOT_INIT, botName, extra);
+        messaging.notify(Address.BOT_INITIALIZED.address(), botName, extra);
 
         jsonObjectFuture.complete(extra.put("bot", botName));
     }

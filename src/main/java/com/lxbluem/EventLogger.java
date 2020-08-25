@@ -8,13 +8,13 @@ import org.slf4j.LoggerFactory;
 
 public class EventLogger extends AbstractVerticle {
 
-    private static Logger LOG = LoggerFactory.getLogger(EventLogger.class);
+    private static final Logger LOG = LoggerFactory.getLogger(EventLogger.class);
 
     @Override
     public void start() throws Exception {
         EventBus eventBus = vertx.eventBus();
 
-        eventBus.addInboundInterceptor(handler -> {
+        eventBus.addOutboundInterceptor(handler -> {
                     Message message = handler.message();
                     LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
                             message.address(),

@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.function.BiConsumer;
 
-import static com.lxbluem.Addresses.ROUTE_ADD;
-import static com.lxbluem.Addresses.ROUTE_REMOVE;
+import static com.lxbluem.Address.ROUTE_ADD;
+import static com.lxbluem.Address.ROUTE_REMOVE;
 import static java.lang.String.format;
 
 public class EventBusRouting {
@@ -38,7 +38,7 @@ public class EventBusRouting {
                 .target(target)
                 .build();
 
-        eventBus.publish(ROUTE_ADD, JsonObject.mapFrom(routerRegistryMessage));
+        eventBus.publish(ROUTE_ADD.address(), JsonObject.mapFrom(routerRegistryMessage));
 
         eventBus.consumer(target, message -> {
             SerializedRequest request = Json.decodeValue(message.body().toString(), SerializedRequest.class);
@@ -56,6 +56,6 @@ public class EventBusRouting {
         String verticleName = getClass().getSimpleName();
         JsonObject message = new JsonObject().put("target", verticleName);
 
-        eventBus.publish(ROUTE_REMOVE, message);
+        eventBus.publish(ROUTE_REMOVE.address(), message);
     }
 }

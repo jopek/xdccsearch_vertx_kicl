@@ -18,8 +18,8 @@ import rx.functions.Action1;
 
 import java.util.Map;
 
-import static com.lxbluem.Address.BOT_DCC_FAILED;
-import static com.lxbluem.Address.BOT_DCC_FINISH;
+import static com.lxbluem.Address.DCC_FAILED;
+import static com.lxbluem.Address.DCC_FINISHED;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
@@ -37,8 +37,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         promisedRegisterRouteWithHandler(DELETE, "/xfers/:botname", this::stopTransfer)
                 .setHandler(start);
 
-        handle(BOT_DCC_FINISH, this::dccFinished);
-        handle(BOT_DCC_FAILED, this::dccFailed);
+        handle(DCC_FINISHED, this::dccFinished);
+        handle(DCC_FAILED, this::dccFailed);
     }
 
     private void startTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
@@ -64,7 +64,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     private void handle(Address address, Action1<JsonObject> method) {
         vertx.eventBus()
-                .<JsonObject>consumer(address.getAddressValue())
+                .<JsonObject>consumer(address.address())
                 .toObservable()
                 .map(Message::body)
                 .subscribe(method);

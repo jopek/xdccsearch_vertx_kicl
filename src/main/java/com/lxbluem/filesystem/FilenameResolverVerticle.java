@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.lxbluem.Addresses.FILENAME_RESOLVE;
+import static com.lxbluem.Address.FILENAME_RESOLVE;
 
 public class FilenameResolverVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(FilenameResolverVerticle.class);
@@ -21,7 +21,7 @@ public class FilenameResolverVerticle extends AbstractVerticle {
     public void start() {
         FilenameResolver resolver = new FilenameResolver(vertx, PATH, new FilenameMapper());
 
-        vertx.eventBus().consumer(FILENAME_RESOLVE, handler -> {
+        vertx.eventBus().consumer(FILENAME_RESOLVE.address(), handler -> {
             JsonObject body = (JsonObject) handler.body();
             String requestedFilename = body.getString("filename");
             resolver.getFileNameForPackName(requestedFilename)

@@ -1,6 +1,5 @@
 package com.lxbluem;
 
-import com.lxbluem.model.RouterRegistryMessage;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -14,8 +13,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-import static com.lxbluem.Addresses.ROUTE_ADD;
-import static com.lxbluem.Addresses.ROUTE_REMOVE;
+import static com.lxbluem.Address.ROUTE_ADD;
+import static com.lxbluem.Address.ROUTE_REMOVE;
 import static java.lang.String.format;
 
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
@@ -32,7 +31,7 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
                 .put("path", route)
                 .put("target", target);
 
-        vertx.eventBus().publish(ROUTE_ADD, routerRegistryMessageJsonObject);
+        vertx.eventBus().publish(ROUTE_ADD.address(), routerRegistryMessageJsonObject);
 
         Promise<Void> consumerSetupCompletion = Promise.promise();
         vertx.eventBus()
@@ -58,6 +57,6 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
         String verticleName = getClass().getSimpleName();
         JsonObject message = new JsonObject().put("target", verticleName);
 
-        vertx.eventBus().publish(ROUTE_REMOVE, message);
+        vertx.eventBus().publish(ROUTE_REMOVE.address(), message);
     }
 }

@@ -29,7 +29,7 @@ public abstract class AbstractRouteVerticle extends AbstractVerticle {
         String target = format("%s:%s:%s", getClass().getSimpleName(), httpMethod, route);
         JsonObject routerRegistryMessageJsonObject = new JsonObject()
                 .put("method", httpMethod.name())
-                .put("route", route)
+                .put("path", route)
                 .put("target", target);
 
         vertx.eventBus().publish(ROUTE_ADD, routerRegistryMessageJsonObject);

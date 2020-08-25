@@ -11,6 +11,7 @@ import com.lxbluem.irc.usecase.ports.BotPort;
 import com.lxbluem.irc.usecase.ports.BotStorage;
 import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
 import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
+import com.lxbluem.irc.usecase.requestmodel.BotDccFailedMessage;
 import com.lxbluem.irc.usecase.requestmodel.BotDccFinishedMessage;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
@@ -49,7 +50,7 @@ public class NewBotVerticleTest {
     public void setUp(TestContext context) {
         vertx = Vertx.vertx();
 
-//        vertx.eventBus().addOutboundInterceptor(interceptor("out"));
+        vertx.eventBus().addOutboundInterceptor(interceptor("out"));
 //        vertx.eventBus().addInboundInterceptor(interceptor("in"));
 
         String botNickName = "Andy";
@@ -152,7 +153,7 @@ public class NewBotVerticleTest {
                     JsonObject body = (JsonObject) result.body();
                     System.out.println(body.encode());
                     context.assertEquals("Andy", body.getString("bot"));
-                    context.assertEquals("Andy exiting because DCC transfer finished", body.getString("message"));
+                    context.assertEquals("Bot Andy exiting because DCC transfer finished", body.getString("message"));
                     async.complete();
                 });
 
@@ -160,6 +161,30 @@ public class NewBotVerticleTest {
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFinishedMessage);
         vertx.eventBus()
                 .publish(Address.BOT_DCC_FINISH.getAddressValue(), dccFinishJsonObject);
+
+    }
+
+    @Test(timeout = 3_000)
+    public void stopTransfer_because_dcc_transfer_failed(TestContext context) {
+        vertx.eventBus()
+                .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    context.assertEquals("Andy", m.body().getString("bot"));
+                }));
+
+        Async exitAsync = context.async();
+        vertx.eventBus()
+                .consumer(Address.BOT_EXIT.getAddressValue(), result -> {
+                    JsonObject body = (JsonObject) result.body();
+                    System.out.println(body.encode());
+                    context.assertEquals("Andy", body.getString("bot"));
+                    context.assertEquals("Bot Andy exiting because no space on filesystem", body.getString("message"));
+                    exitAsync.complete();
+                });
+
+        BotDccFailedMessage botDccFailedMessage = new BotDccFailedMessage("Andy", Instant.now().toEpochMilli(), "no space on filesystem");
+        JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFailedMessage);
+        vertx.eventBus()
+                .publish(Address.BOT_DCC_FAILED.getAddressValue(), dccFinishJsonObject);
 
     }
 

@@ -1,6 +1,7 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.AbstractRouteVerticle;
+import com.lxbluem.Address;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.irc.usecase.BotService;
 import com.lxbluem.irc.usecase.requestmodel.BotDccFinishedMessage;
@@ -17,8 +18,8 @@ import rx.functions.Action1;
 
 import java.util.Map;
 
-import static com.lxbluem.Addresses.BOT_DCC_FINISH;
-import static com.lxbluem.Addresses.BOT_FAIL;
+import static com.lxbluem.Address.BOT_DCC_FAILED;
+import static com.lxbluem.Address.BOT_DCC_FINISH;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
@@ -37,7 +38,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
                 .setHandler(start);
 
         handle(BOT_DCC_FINISH, this::dccFinished);
-        handle(BOT_FAIL, this::botFailed);
+        handle(BOT_DCC_FAILED, this::dccFailed);
     }
 
     private void startTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
@@ -61,12 +62,17 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         }
     }
 
-    private void handle(String address, Action1<JsonObject> method) {
+    private void handle(Address address, Action1<JsonObject> method) {
         vertx.eventBus()
-                .<JsonObject>consumer(address)
+                .<JsonObject>consumer(address.getAddressValue())
                 .toObservable()
                 .map(Message::body)
                 .subscribe(method);
+    }
+
+    private void dccFailed(JsonObject eventMessage) {
+        BotFailMessage message = eventMessage.mapTo(BotFailMessage.class);
+        botService.exit(message.getBot(), message.getMessage());
     }
 
     private void dccFinished(JsonObject eventMessage) {

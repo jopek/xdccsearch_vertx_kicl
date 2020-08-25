@@ -24,7 +24,11 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.lxbluem.Addresses.*;
+import static com.lxbluem.Address.BOT_DCC_FAILED;
+import static com.lxbluem.Address.BOT_DCC_FINISH;
+import static com.lxbluem.Address.BOT_DCC_INIT;
+import static com.lxbluem.Address.BOT_DCC_PROGRESS;
+import static com.lxbluem.Address.BOT_DCC_START;
 
 public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;
@@ -38,6 +42,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         this.botMessaging = botMessaging;
     }
 
+    // TODO: add DCC_STOP command/event listener
     @Override
     public void start() throws Exception {
         EventBus eventBus = vertx.eventBus();
@@ -63,7 +68,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         );
 
         PublishSubject<Message<JsonObject>> initMessageSubject = PublishSubject.create();
-        eventBus.<JsonObject>consumer(BOT_DCC_INIT)
+        eventBus.<JsonObject>consumer(BOT_DCC_INIT.getAddressValue())
                 .toObservable()
                 .subscribe(initMessageSubject);
 
@@ -122,7 +127,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
             fileOutput.get().seek(0);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
-            botMessaging.notify(BOT_FAIL, botname, error);
+            botMessaging.notify(BOT_DCC_FAILED.getAddressValue(), botname, error);
             return;
         }
 
@@ -131,7 +136,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                     final JsonObject extra = new JsonObject()
                             .put("filenameOnDisk", filename)
                             .put("bytesTotal", filesize);
-                    botMessaging.notify(BOT_DCC_START, botname, extra);
+                    botMessaging.notify(BOT_DCC_START.getAddressValue(), botname, extra);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
@@ -182,20 +187,20 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 return;
 
             lastProgressAt[0] = nowInMillis;
-            botMessaging.notify(BOT_DCC_PROGRESS, botname, new JsonObject().put("bytes", bytesTransfered));
+            botMessaging.notify(BOT_DCC_PROGRESS.getAddressValue(), botname, new JsonObject().put("bytes", bytesTransfered));
         };
     }
 
     private Action1<Throwable> errorAction(String filename, String botname) {
         return error -> {
-            botMessaging.notify(BOT_FAIL, botname, error);
+            botMessaging.notify(BOT_DCC_FAILED.getAddressValue(), botname, error);
             LOG.error("transfer of {} failed {}", filename, error.getMessage());
         };
     }
 
     private Action0 completedAction(String filename, File file, RandomAccessFile fileOutput, String botname, NetSocket socket) {
         return () -> {
-            botMessaging.notify(BOT_DCC_FINISH, botname);
+            botMessaging.notify(BOT_DCC_FINISH.getAddressValue(), botname);
             LOG.info("transfer of {} finished", filename);
 
             try {

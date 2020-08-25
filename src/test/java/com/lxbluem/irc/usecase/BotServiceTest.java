@@ -121,7 +121,7 @@ public class BotServiceTest {
 
         BotExitMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("Andy exiting because requested shutdown", sentMesssage.getMessage());
+        assertEquals("Bot Andy exiting because requested shutdown", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
@@ -154,7 +154,7 @@ public class BotServiceTest {
 
         BotExitMessage sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("Andy exiting because failure", sentMesssage.getMessage());
+        assertEquals("Bot Andy exiting because failure", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
 
@@ -204,15 +204,19 @@ public class BotServiceTest {
 
         botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
 
-        ArgumentCaptor<BotFailMessage> messageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAIL), messageSentCaptor.capture());
+        ArgumentCaptor<BotFailMessage> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_FAIL), failMessageSentCaptor.capture());
+        ArgumentCaptor<BotExitMessage> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_EXIT), exitMessageSentCaptor.capture());
+        verify(botPort).terminate();
+
         verifyNoMoreInteractions(botMessaging, botPort);
 
-        assertEquals("bot keex not in channel #download", messageSentCaptor.getValue().getMessage());
+        assertEquals("bot keex not in channel #download", failMessageSentCaptor.getValue().getMessage());
+        assertEquals("Bot Andy exiting because bot keex not in channel #download", exitMessageSentCaptor.getValue().getMessage());
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
-        assertFalse(((DefaultDccBotState) dccBotState).isRemoteUserSeen());
+        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertFalse(botStorage.getBotByNick("Andy").isPresent());
     }
 
     @Test
@@ -356,14 +360,23 @@ public class BotServiceTest {
 
         assertEquals("bot state was altered in the notice message handler", botStateHash, botStateHashAfterMethod);
 
-        ArgumentCaptor<BotFailMessage> messageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAIL), messageSentCaptor.capture());
+        ArgumentCaptor<BotFailMessage> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_FAIL), failMessageSentCaptor.capture());
 
-        BotFailMessage sentMesssage = messageSentCaptor.getValue();
-        assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("connection refused", sentMesssage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+        BotFailMessage failMessage = failMessageSentCaptor.getValue();
+        assertEquals("Andy", failMessage.getBot());
+        assertEquals("connection refused", failMessage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), failMessage.getTimestamp());
 
+        ArgumentCaptor<BotExitMessage> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitMessage.class);
+        verify(botMessaging).notify(eq(Address.BOT_EXIT), exitMessageSentCaptor.capture());
+        BotExitMessage exitMessage = exitMessageSentCaptor.getValue();
+
+        assertEquals("Andy", exitMessage.getBot());
+        assertEquals("Bot Andy exiting because connection refused", exitMessage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), exitMessage.getTimestamp());
+
+        verify(botPort).terminate();
         verifyNoMoreInteractions(botMessaging, botPort);
     }
 

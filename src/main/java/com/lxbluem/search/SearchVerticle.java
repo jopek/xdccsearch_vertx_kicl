@@ -3,7 +3,7 @@ package com.lxbluem.search;
 import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.model.SerializedRequest;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.rxjava.core.Vertx;
@@ -23,22 +23,10 @@ public class SearchVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() {
-        String searchString = config().getString(START_SEARCH, "");
-        if (!searchString.isEmpty()) {
-            Future<JsonObject> future = Future.future();
-            future.setHandler(ar -> {
-                if(ar.succeeded()) {
-                    LOG.info(ar.result().encodePrettily());
-                }
-            });
-            doSearch(searchString, "0", future);
-        } else {
-            registerRouteWithHandler(GET, "/search", this::handleSearchRequest);
-        }
+        promisedRegisterRouteWithHandler(GET, "/search", this::handleSearchRequest);
     }
 
-
-    private void handleSearchRequest(SerializedRequest request, Future<JsonObject> responseHandler) {
+    private void handleSearchRequest(SerializedRequest request, Promise<JsonObject> responseHandler) {
         Map<String, String> params = request.getParams();
 
         String pageNum = params.get("pn");
@@ -55,7 +43,7 @@ public class SearchVerticle extends AbstractRouteVerticle {
         doSearch(query, pageNum, responseHandler);
     }
 
-    private void doSearch(String query, String pageNum, Future<JsonObject> responseHandler) {
+    private void doSearch(String query, String pageNum, Promise<JsonObject> responseHandler) {
         WebClientOptions clientOptions = new WebClientOptions()
                 .setFollowRedirects(true);
         WebClient client = WebClient.create(vertx, clientOptions);
@@ -77,11 +65,6 @@ public class SearchVerticle extends AbstractRouteVerticle {
     }
 
     public static void main(String[] args) {
-        DeploymentOptions options = new DeploymentOptions()
-                .setConfig(
-                        new JsonObject()
-                                .put(START_SEARCH, "muh")
-                );
-        Vertx.vertx().deployVerticle(SearchVerticle.class.getName(), options);
+        Vertx.vertx().deployVerticle(new SearchVerticle());
     }
 }

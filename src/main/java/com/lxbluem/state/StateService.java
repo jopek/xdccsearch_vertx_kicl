@@ -50,6 +50,7 @@ public class StateService {
                 .oldBotNames(new ArrayList<>())
                 .messages(new ArrayList<>())
                 .startedTimestamp(Instant.now(clock).toEpochMilli())
+                .filenameOnDisk("")
                 .build();
     }
 

@@ -21,34 +21,6 @@ import static java.lang.String.format;
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    protected Future<Void> registerRouteWithHandler(
-            HttpMethod httpMethod,
-            String route,
-            BiConsumer<SerializedRequest, Future<JsonObject>> requestHandler) {
-
-        String target = format("%s:%s:%s", getClass().getSimpleName(), httpMethod, route);
-        RouterRegistryMessage routerRegistryMessage = RouterRegistryMessage.builder()
-                .method(httpMethod.name())
-                .path(route)
-                .target(target)
-                .build();
-
-        vertx.eventBus().publish(ROUTE_ADD, JsonObject.mapFrom(routerRegistryMessage));
-
-        Promise<Void> promise = Promise.promise();
-        vertx.eventBus()
-                .consumer(target)
-                .handler(ebMessage -> {
-                    SerializedRequest request = Json.decodeValue(ebMessage.body().toString(), SerializedRequest.class);
-                    Future future = Future.future(ebMessage::reply)
-                            .onFailure(e -> ebMessage.fail(500, e.getCause().getMessage()));
-                    requestHandler.accept(request, future);
-                })
-                .completionHandler(c -> promise.complete())
-        ;
-        return promise.future();
-    }
-
     protected Future<Void> promisedRegisterRouteWithHandler(
             HttpMethod httpMethod,
             String route,

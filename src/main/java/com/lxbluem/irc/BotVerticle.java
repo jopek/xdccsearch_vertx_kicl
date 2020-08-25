@@ -4,7 +4,7 @@ import com.lxbluem.AbstractRouteVerticle;
 import com.lxbluem.domain.Pack;
 import com.lxbluem.domain.ports.BotMessaging;
 import com.lxbluem.model.SerializedRequest;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -44,9 +44,9 @@ public class BotVerticle extends AbstractRouteVerticle {
         eventBus.consumer(BOT_DCC_FINISH, this::handleDccFinished);
         eventBus.consumer(BOT_FAIL, this::handleDccFinished);
         eventBus.consumer(BOT_EXIT, this::handleExit);
-        registerRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
-        registerRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
-        registerRouteWithHandler(GET, "/xfers", this::handleListTransfers);
+        promisedRegisterRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
+        promisedRegisterRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
+        promisedRegisterRouteWithHandler(GET, "/xfers", this::handleListTransfers);
     }
 
     private void handleExit(Message<JsonObject> message) {
@@ -59,7 +59,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .forEach(client -> packsByBot.remove(client));
     }
 
-    private void handleStopTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+    private void handleStopTransfer(SerializedRequest serializedRequest, Promise<JsonObject> jsonObjectFuture) {
         String botname = serializedRequest.getParams().get("botname");
         if (botname == null || botname.isEmpty()) {
             jsonObjectFuture.fail("unspecified botname");
@@ -86,7 +86,7 @@ public class BotVerticle extends AbstractRouteVerticle {
                 .filter(pack -> pack.getNick().contentEquals(botname));
     }
 
-    private void handleListTransfers(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+    private void handleListTransfers(SerializedRequest serializedRequest, Promise<JsonObject> jsonObjectFuture) {
         Map<String, String> stringMap = packsByBot.entrySet()
                 .stream()
                 .collect(toMap(
@@ -110,7 +110,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         });
     }
 
-    private void handleStartTransfer(SerializedRequest serializedRequest, Future<JsonObject> jsonObjectFuture) {
+    private void handleStartTransfer(SerializedRequest serializedRequest, Promise<JsonObject> jsonObjectFuture) {
         Pack pack;
         try {
             pack = readPackInfo(serializedRequest.getBody());
@@ -135,7 +135,7 @@ public class BotVerticle extends AbstractRouteVerticle {
         return Json.decodeValue(requestBody, Pack.class);
     }
 
-    private void initializeTransfer(Pack pack, Future<JsonObject> jsonObjectFuture) {
+    private void initializeTransfer(Pack pack, Promise<JsonObject> jsonObjectFuture) {
         String nick = new RandomNameGenerator().getNick();
         Client client = getClient(pack, nick);
 
@@ -168,13 +168,15 @@ public class BotVerticle extends AbstractRouteVerticle {
     private Client getClient(Pack pack, String nick) {
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
         return Client.builder()
-                .serverHost(pack.getServerHostName())
-                .serverPort(pack.getServerPort())
+                .server()
+                .host(pack.getServerHostName())
+                .port(pack.getServerPort())
+                .secure(false)
+                .then()
                 .nick(nick)
                 .name("name_" + nick)
                 .user("user_" + nick)
                 .realName("realname_" + nick)
-                .secure(false)
 //                .inputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line))
 //                .outputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[O] " + line))
                 .build();

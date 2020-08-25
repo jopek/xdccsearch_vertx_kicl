@@ -8,7 +8,6 @@ import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.defaults.DefaultClient;
 import org.kitteh.irc.client.library.element.Channel;
-import org.kitteh.irc.client.library.element.ServerMessage;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
@@ -23,8 +22,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.joining;
 
 public class KitehIrcBot implements BotPort {
 
@@ -42,15 +39,16 @@ public class KitehIrcBot implements BotPort {
     @Override
     public void connect(BotConnectionDetails connectionDetails) {
         botName = connectionDetails.getBotNick();
-
         client = Client.builder()
-                .serverHost(connectionDetails.getServerHostName())
-                .serverPort(connectionDetails.getServerPort())
+                .server()
+                .host(connectionDetails.getServerHostName())
+                .port(connectionDetails.getServerPort())
+                .secure(false)
+                .then()
                 .nick(botName)
                 .name(connectionDetails.getName())
                 .user(connectionDetails.getUser())
                 .realName(connectionDetails.getRealName())
-                .secure(false)
                 .build();
 
         client.getEventManager().registerEventListener(this);
@@ -131,11 +129,7 @@ public class KitehIrcBot implements BotPort {
 
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
-        String serverMessages = event
-                .getOriginalMessages()
-                .stream()
-                .map(ServerMessage::getMessage)
-                .collect(joining("; "));
+        String serverMessages = event.getSource().getMessage();
         String attemptedNick = event.getAttemptedNick();
 
         botService.changeNick(attemptedNick, serverMessages);

@@ -239,11 +239,7 @@ public class BotEventListener {
 
     @Handler
     public void onNickRejected(NickRejectedEvent event) {
-        String serverMessages = event
-                .getOriginalMessages()
-                .stream()
-                .map(ServerMessage::getMessage)
-                .collect(joining("; "));
+        String serverMessages = event.getSource().getMessage();
         String attemptedNick = event.getAttemptedNick();
         String newNick = new RandomNameGenerator().getNick();
 

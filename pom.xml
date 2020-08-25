@@ -12,7 +12,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <vertx.version>3.8.4</vertx.version>
-        <kitteh.irc.client-lib.version>4.0.2</kitteh.irc.client-lib.version>
+        <kitteh.irc.client-lib.version>7.2.0</kitteh.irc.client-lib.version>
         <lombok.version>1.18.10</lombok.version>
         <main.verticle>Starter</main.verticle>
     </properties>

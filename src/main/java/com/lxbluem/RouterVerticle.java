@@ -145,10 +145,12 @@ public class RouterVerticle extends AbstractVerticle {
                             .subscribe(
                                     messageBody -> sendHttpResponse(rc.response(), messageBody),
                                     throwable -> {
-                                        LOG.warn("could not serve route {} -> {}", path, target, throwable.getCause());
+                                        LOG.warn("could not serve route {} -> {} ({})", path, target, throwable.getCause());
+                                        String reasonPhrase = throwable.getMessage().replaceAll("[\n\r]", "");
+                                        String statusMessage = String.format("unsuccessful: '%s'", reasonPhrase);
                                         rc.response()
                                                 .setStatusCode(400)
-                                                .setStatusMessage(String.format("unsuccessful: '%s'", throwable.getMessage()))
+                                                .setStatusMessage(statusMessage)
                                                 .end();
                                     }
                             );

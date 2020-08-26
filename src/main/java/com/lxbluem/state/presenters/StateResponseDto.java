@@ -1,16 +1,18 @@
-package com.lxbluem.state;
+package com.lxbluem.state.presenters;
 
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Getter
+//@Setter
+//@Builder
+@Data
 public class StateResponseDto  {
-    private final Map<String, StateResponseDto.StateEntry> map = new HashMap<>();
+    private final Map<String, StateResponseDto.StateEntry> map;
     @Data @Builder
     static class StateEntry {
         private long started;

@@ -5,8 +5,8 @@ import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.state.domain.StateService;
-import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.model.request.*;
+import com.lxbluem.state.presenters.StatePresenter;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -16,9 +16,7 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.lxbluem.common.infrastructure.Address.*;
@@ -129,40 +127,6 @@ public class StateVerticle extends AbstractRouteVerticle {
     private void fail(Message<JsonObject> eventMessage) {
         BotFailedEvent event = eventMessage.body().mapTo(BotFailedEvent.class);
         service.fail(new FailRequest(event.getBot(), "", event.getTimestamp()));
-    }
-
-    private static class StatePresenter implements Consumer<Map<String, State>> {
-        private final JsonObject bots = new JsonObject();
-        private final Clock clock;
-
-        private StatePresenter(Clock clock) {
-            this.clock = clock;
-        }
-
-        public JsonObject getStateDto() {
-            return bots;
-        }
-
-        @Override
-        public void accept(Map<String, State> stateMap) {
-            stateMap.forEach((botname, state) -> bots.put(botname, new JsonObject()
-                    .put("started", state.getStartedTimestamp())
-                    .put("duration", state.getEndedTimestamp() > 0
-                            ? state.getEndedTimestamp() - state.getStartedTimestamp()
-                            : Instant.now(clock).toEpochMilli() - state.getStartedTimestamp()
-                    )
-                    .put("timestamp", state.getTimestamp())
-                    .put("speed", state.getMovingAverage().average())
-                    .put("dccstate", state.getDccState())
-                    .put("botstate", state.getBotState())
-                    .put("messages", state.getMessages())
-                    .put("oldBotNames", state.getOldBotNames())
-                    .put("bot", botname)
-                    .put("filenameOnDisk", state.getFilenameOnDisk())
-                    .put("bytesTotal", state.getBytesTotal())
-                    .put("bytes", state.getBytes())
-                    .put("pack", JsonObject.mapFrom(state.getPack()))));
-        }
     }
 
     private static class RemovedBotNamesPresenter implements Consumer<List<String>> {

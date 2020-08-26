@@ -3,8 +3,8 @@ package com.lxbluem.common.adapter;
 import com.lxbluem.common.domain.events.Event;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.infrastructure.Address;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rxjava.core.eventbus.EventBus;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;

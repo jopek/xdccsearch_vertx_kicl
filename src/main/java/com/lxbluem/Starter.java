@@ -23,9 +23,9 @@ import com.lxbluem.state.domain.StateService;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.jackson.DatabindCodec;
-import io.vertx.rxjava.core.Vertx;
-import io.vertx.rxjava.core.eventbus.EventBus;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
@@ -74,7 +74,7 @@ public class Starter {
     }
 
     private static void deploy(Vertx vertx, AbstractVerticle verticle) {
-        vertx.getDelegate().deployVerticle(verticle, event -> logDeployment(verticle.getClass().getName(), event));
+        vertx.deployVerticle(verticle, event -> logDeployment(verticle.getClass().getName(), event));
     }
 
     private static void deploy(Vertx vertx, String verticleClassname, Handler<AsyncResult<String>> asyncResultHandler) {

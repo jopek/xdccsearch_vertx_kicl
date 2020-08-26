@@ -1,12 +1,12 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.Address;
-import com.lxbluem.domain.Pack;
-import com.lxbluem.irc.usecase.BotService;
-import com.lxbluem.irc.usecase.requestmodel.BotDccFinishedMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotFailMessage;
-import com.lxbluem.model.SerializedRequest;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.domain.events.BotFailedEvent;
+import com.lxbluem.common.domain.events.DccFinishedEvent;
+import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
+import com.lxbluem.common.infrastructure.Address;
+import com.lxbluem.common.infrastructure.SerializedRequest;
+import com.lxbluem.irc.domain.BotService;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -18,8 +18,8 @@ import rx.functions.Action1;
 
 import java.util.Map;
 
-import static com.lxbluem.Address.DCC_FAILED;
-import static com.lxbluem.Address.DCC_FINISHED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FAILED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
@@ -71,17 +71,17 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     }
 
     private void dccFailed(JsonObject eventMessage) {
-        BotFailMessage message = eventMessage.mapTo(BotFailMessage.class);
+        BotFailedEvent message = eventMessage.mapTo(BotFailedEvent.class);
         botService.exit(message.getBot(), message.getMessage());
     }
 
     private void dccFinished(JsonObject eventMessage) {
-        BotDccFinishedMessage message = eventMessage.mapTo(BotDccFinishedMessage.class);
+        DccFinishedEvent message = eventMessage.mapTo(DccFinishedEvent.class);
         botService.exit(message.getBot(), "DCC transfer finished");
     }
 
     private void botFailed(JsonObject eventMessage) {
-        BotFailMessage message = eventMessage.mapTo(BotFailMessage.class);
+        BotFailedEvent message = eventMessage.mapTo(BotFailedEvent.class);
         botService.exit(message.getBot(), message.getMessage());
     }
 }

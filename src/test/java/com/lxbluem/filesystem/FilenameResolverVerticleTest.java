@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.jayway.awaitility.Awaitility.await;
-import static com.lxbluem.Address.FILENAME_RESOLVE;
+import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

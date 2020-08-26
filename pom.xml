@@ -14,7 +14,7 @@
         <vertx.version>3.8.4</vertx.version>
         <kitteh.irc.client-lib.version>7.2.0</kitteh.irc.client-lib.version>
         <lombok.version>1.18.10</lombok.version>
-        <main.verticle>Starter</main.verticle>
+        <main.verticle>com.lxbluem.Starter</main.verticle>
     </properties>
 
     <dependencies>

@@ -14,7 +14,7 @@
 
     <!--<logger name="io.vertx.ext.web" level="TRACE"/>-->
 
-    <logger name="com.lxbluem.EventLogger" level="TRACE"/>
+    <logger name="com.lxbluem.eventlogger.EventLoggerVerticle" level="TRACE"/>
 
     <logger name="com.lxbluem" level="DEBUG"/>
 

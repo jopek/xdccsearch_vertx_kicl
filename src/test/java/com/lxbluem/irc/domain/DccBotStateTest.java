@@ -1,6 +1,9 @@
 package com.lxbluem.irc.domain;
 
-import com.lxbluem.domain.Pack;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.irc.domain.model.DccBotState;
+import com.lxbluem.irc.domain.model.DefaultDccBotState;
+import com.lxbluem.irc.domain.model.HookedDccBotState;
 import org.junit.Test;
 
 import java.util.Arrays;

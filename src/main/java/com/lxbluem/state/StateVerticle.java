@@ -1,9 +1,10 @@
 package com.lxbluem.state;
 
-import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.Address;
-import com.lxbluem.domain.Pack;
-import com.lxbluem.model.SerializedRequest;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
+import com.lxbluem.common.infrastructure.Address;
+import com.lxbluem.common.infrastructure.SerializedRequest;
+import com.lxbluem.state.domain.StateService;
 import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.model.request.*;
 import io.vertx.core.Promise;
@@ -17,15 +18,14 @@ import rx.functions.Action1;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
-import static com.lxbluem.Address.*;
+import static com.lxbluem.common.infrastructure.Address.*;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.GET;
 
 public class StateVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
-
-    static final int AVG_SIZE_SEC = 5;
 
     private final StateService service;
 
@@ -34,7 +34,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     @Override
-    public void start() throws Exception {
+    public void start() {
         promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished);
         promisedRegisterRouteWithHandler(GET, "/state", this::getState);
 
@@ -49,13 +49,17 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void clearFinished(SerializedRequest serializedRequest, Promise<JsonObject> result) {
-        List<String> bots = service.clearFinished();
-        vertx.eventBus().publish(REMOVED_STALE_BOTS.address(), new JsonArray(bots));
-        result.complete(new JsonObject().put(REMOVED_STALE_BOTS.address(), bots));
+
+        RemovedBotNamesPresenter presenter = new RemovedBotNamesPresenter();
+        service.clearFinished(presenter);
+        vertx.eventBus().publish(REMOVED_STALE_BOTS.address(), presenter.getBotList());
+        result.complete(new JsonObject().put(REMOVED_STALE_BOTS.address(), presenter.getBotList()));
     }
 
     private void getState(SerializedRequest serializedRequest, Promise<JsonObject> result) {
-        JsonObject entries = getStateEntriesJsonObject();
+        StatePresenter presenter = new StatePresenter();
+        service.getState(presenter);
+        JsonObject entries = presenter.getStateDto();
         LOG.debug("getState {}", entries);
         result.complete(entries);
     }
@@ -75,12 +79,10 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         service.init(new InitRequest(bot, timestamp, pack));
 
-        Map<String, State> state = service.getState();
-
-        JsonObject result = new JsonObject();
-        state.forEach((key, value) -> result.put(key, JsonObject.mapFrom(value)));
-
-        vertx.eventBus().publish(STATE.address(), result);
+        StatePresenter presenter = new StatePresenter();
+        service.getState(presenter);
+        JsonObject entries = presenter.getStateDto();
+        vertx.eventBus().publish(STATE.address(), entries);
     }
 
     private void notice(Message<JsonObject> eventMessage) {
@@ -139,11 +141,16 @@ public class StateVerticle extends AbstractRouteVerticle {
         service.fail(new FailRequest(bot, "", timestamp));
     }
 
-    private JsonObject getStateEntriesJsonObject() {
-        JsonObject bots = new JsonObject();
+    private static class StatePresenter implements Consumer<Map<String, State>> {
+        private final JsonObject bots = new JsonObject();
 
-        service.getState().forEach((botname, state) -> {
-            bots.put(botname, new JsonObject()
+        public JsonObject getStateDto() {
+            return bots;
+        }
+
+        @Override
+        public void accept(Map<String, State> stateMap) {
+            stateMap.forEach((botname, state) -> bots.put(botname, new JsonObject()
                     .put("started", state.getStartedTimestamp())
                     .put("duration", state.getEndedTimestamp() > 0
                             ? state.getEndedTimestamp() - state.getStartedTimestamp()
@@ -159,10 +166,20 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("filenameOnDisk", state.getFilenameOnDisk())
                     .put("bytesTotal", state.getBytesTotal())
                     .put("bytes", state.getBytes())
-                    .put("pack", JsonObject.mapFrom(state.getPack())));
-        });
-
-        return bots;
+                    .put("pack", JsonObject.mapFrom(state.getPack()))));
+        }
     }
 
+    private static class RemovedBotNamesPresenter implements Consumer<List<String>> {
+        private JsonArray bots = new JsonArray();
+
+        public JsonArray getBotList() {
+            return bots;
+        }
+
+        @Override
+        public void accept(List<String> botList) {
+            this.bots = new JsonArray(botList);
+        }
+    }
 }

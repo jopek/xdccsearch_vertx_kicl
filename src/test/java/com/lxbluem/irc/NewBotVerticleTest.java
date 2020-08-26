@@ -1,18 +1,15 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.Address;
-import com.lxbluem.adapter.EventBusBotMessaging;
-import com.lxbluem.domain.ports.BotMessaging;
-import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
-import com.lxbluem.irc.adapter.InMemoryBotStorage;
-import com.lxbluem.irc.usecase.BotFactory;
-import com.lxbluem.irc.usecase.BotService;
-import com.lxbluem.irc.usecase.ports.BotPort;
-import com.lxbluem.irc.usecase.ports.BotStorage;
-import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
-import com.lxbluem.irc.usecase.requestmodel.BotConnectionDetails;
-import com.lxbluem.irc.usecase.requestmodel.BotDccFailedMessage;
-import com.lxbluem.irc.usecase.requestmodel.BotDccFinishedMessage;
+import com.lxbluem.common.adapter.EventBusBotMessaging;
+import com.lxbluem.common.domain.events.DccFailedEvent;
+import com.lxbluem.common.domain.events.DccFinishedEvent;
+import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.infrastructure.Address;
+import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
+import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
+import com.lxbluem.irc.domain.ports.*;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -157,8 +154,8 @@ public class NewBotVerticleTest {
                     async.complete();
                 });
 
-        BotDccFinishedMessage botDccFinishedMessage = new BotDccFinishedMessage("Andy", Instant.now().toEpochMilli());
-        JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFinishedMessage);
+        DccFinishedEvent dccFinishedEvent = new DccFinishedEvent("Andy", Instant.now().toEpochMilli());
+        JsonObject dccFinishJsonObject = JsonObject.mapFrom(dccFinishedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_FINISHED.address(), dccFinishJsonObject);
 
@@ -181,8 +178,8 @@ public class NewBotVerticleTest {
                     exitAsync.complete();
                 });
 
-        BotDccFailedMessage botDccFailedMessage = new BotDccFailedMessage("Andy", Instant.now().toEpochMilli(), "no space on filesystem");
-        JsonObject dccFinishJsonObject = JsonObject.mapFrom(botDccFailedMessage);
+        DccFailedEvent dccFailedEvent = new DccFailedEvent("Andy", Instant.now().toEpochMilli(), "no space on filesystem");
+        JsonObject dccFinishJsonObject = JsonObject.mapFrom(dccFailedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_FAILED.address(), dccFinishJsonObject);
 

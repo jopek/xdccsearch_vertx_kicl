@@ -1,8 +1,9 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.Address;
-import com.lxbluem.domain.Pack;
-import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.infrastructure.Address;
+import com.lxbluem.irc.domain.ports.NameGenerator;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -28,7 +29,7 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.Address.*;
+import static com.lxbluem.common.infrastructure.Address.*;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toSet;
 
@@ -240,7 +241,7 @@ public class BotEventListener {
     public void onNickRejected(NickRejectedEvent event) {
         String serverMessages = event.getSource().getMessage();
         String attemptedNick = event.getAttemptedNick();
-        String newNick = new RandomNameGenerator().getNick();
+        String newNick = new NameGenerator.RandomNameGenerator().getNick();
 
         event.setNewNick(newNick);
 

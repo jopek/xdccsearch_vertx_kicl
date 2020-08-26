@@ -1,8 +1,7 @@
 package com.lxbluem.search;
 
-import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.model.SerializedRequest;
-import io.vertx.core.DeploymentOptions;
+import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
+import com.lxbluem.common.infrastructure.SerializedRequest;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;

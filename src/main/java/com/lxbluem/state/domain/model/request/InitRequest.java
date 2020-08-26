@@ -1,6 +1,6 @@
 package com.lxbluem.state.domain.model.request;
 
-import com.lxbluem.domain.Pack;
+import com.lxbluem.common.domain.Pack;
 import lombok.Data;
 
 @Data

@@ -1,10 +1,11 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.AbstractRouteVerticle;
-import com.lxbluem.Address;
-import com.lxbluem.domain.Pack;
-import com.lxbluem.domain.ports.BotMessaging;
-import com.lxbluem.model.SerializedRequest;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
+import com.lxbluem.common.infrastructure.Address;
+import com.lxbluem.common.infrastructure.SerializedRequest;
+import com.lxbluem.irc.domain.ports.NameGenerator;
 import io.vertx.core.Promise;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -136,7 +137,7 @@ public class BotVerticle extends AbstractRouteVerticle {
     }
 
     private void initializeTransfer(Pack pack, Promise<JsonObject> jsonObjectFuture) {
-        String nick = new RandomNameGenerator().getNick();
+        String nick = new NameGenerator.RandomNameGenerator().getNick();
         Client client = getClient(pack, nick);
 
         final String botName = client.getNick();

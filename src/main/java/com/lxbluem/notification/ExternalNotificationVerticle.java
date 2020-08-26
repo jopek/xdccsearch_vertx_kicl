@@ -10,7 +10,7 @@ import io.vertx.ext.web.client.WebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.lxbluem.Address.DCC_FINISHED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
 import static java.lang.String.format;
 
 public class ExternalNotificationVerticle extends AbstractVerticle {

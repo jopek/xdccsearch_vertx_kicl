@@ -1,8 +1,9 @@
 package com.lxbluem.state;
 
-import com.lxbluem.Address;
-import com.lxbluem.domain.Pack;
+import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.state.adapters.InMemoryStateRepository;
+import com.lxbluem.state.domain.StateService;
 import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.ports.StateRepository;
 import io.vertx.core.json.JsonArray;
@@ -34,7 +35,7 @@ public class StateVerticleTest {
     private Clock clock;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         vertx = Vertx.vertx();
         clock = Clock.fixed(Instant.parse("2020-01-30T18:00:00.00Z"), ZoneId.systemDefault());
         StateRepository stateRepository = new InMemoryStateRepository();
@@ -42,7 +43,7 @@ public class StateVerticleTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
     }
 
 
@@ -99,7 +100,7 @@ public class StateVerticleTest {
         map.forEach((k, v) -> jsonObject.put(k, JsonObject.mapFrom(v)));
     }
 
-    @Test(timeout = 0_000)
+    @Test(timeout = 3_000)
     public void initialise_state(TestContext context) {
 
         Async stateSent = context.async();
@@ -122,15 +123,18 @@ public class StateVerticleTest {
     private JsonObject expectedInitialState() {
         return new JsonObject()
                 .put("Andy", new JsonObject()
-                        .put("movingAverage", new JsonObject()
-                                .put("q", new JsonArray())
-                                .put("secondsToSave", 5))
-                        .put("dccState", "INIT")
-                        .put("oldBotNames", new JsonArray())
-                        .put("messages", new JsonArray())
+                        .put("started", Instant.now(clock).toEpochMilli())
+                        .put("duration", 0)
                         .put("timestamp", 123456)
-                        .put("endedTimestamp", 0)
-                        .put("startedTimestamp", Instant.now(clock).toEpochMilli())
+                        .put("speed", 0.0)
+                        .put("dccstate", "INIT")
+                        .put("botstate", "RUN")
+                        .put("messages", new JsonArray())
+                        .put("oldBotNames", new JsonArray())
+                        .put("bot", "Andy")
+                        .put("filenameOnDisk", "")
+                        .put("bytesTotal", 0)
+                        .put("bytes", 0)
                         .put("pack", new JsonObject()
                                 .put("pid", 0)
                                 .put("cname", "#download")
@@ -148,10 +152,6 @@ public class StateVerticleTest {
                                 .put("last", 0)
                                 .put("lastf", "")
                         )
-                        .put("filenameOnDisk", "")
-                        .put("bytesTotal", 0)
-                        .put("bytes", 0)
-                        .put("botState", "RUN")
-                        .put("botName", "Andy"));
+                );
     }
 }

@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.lxbluem.Address.FILENAME_RESOLVE;
+import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 
 public class FilenameResolverVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(FilenameResolverVerticle.class);

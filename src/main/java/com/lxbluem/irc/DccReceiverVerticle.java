@@ -1,6 +1,6 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.ports.BotMessaging;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -24,7 +24,7 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.lxbluem.Address.*;
+import static com.lxbluem.common.infrastructure.Address.*;
 
 public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;

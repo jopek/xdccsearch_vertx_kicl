@@ -1,21 +1,16 @@
 package com.lxbluem.state;
 
-import com.lxbluem.domain.Pack;
-import com.lxbluem.state.domain.model.BotState;
-import com.lxbluem.state.domain.model.DccState;
-import com.lxbluem.state.domain.model.MovingAverage;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Getter
 public class StateResponseDto  {
-    private Map<String, StateResponseDto.StateEntry> map=new HashMap<>();
+    private final Map<String, StateResponseDto.StateEntry> map = new HashMap<>();
     @Data @Builder
     static class StateEntry {
         private long started;

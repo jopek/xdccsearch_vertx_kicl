@@ -1,7 +1,9 @@
 package com.lxbluem.state.domain.model;
 
-import com.lxbluem.domain.Pack;
-import lombok.*;
+import com.lxbluem.common.domain.Pack;
+import lombok.Builder;
+import lombok.Data;
+import lombok.ToString;
 
 import java.util.List;
 

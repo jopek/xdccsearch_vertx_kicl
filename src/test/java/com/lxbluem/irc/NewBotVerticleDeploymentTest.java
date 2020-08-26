@@ -1,14 +1,11 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.adapter.EventBusBotMessaging;
-import com.lxbluem.domain.ports.BotMessaging;
-import com.lxbluem.irc.adapter.InMemoryBotStateStorage;
-import com.lxbluem.irc.adapter.InMemoryBotStorage;
-import com.lxbluem.irc.usecase.BotFactory;
-import com.lxbluem.irc.usecase.BotService;
-import com.lxbluem.irc.usecase.ports.BotPort;
-import com.lxbluem.irc.usecase.ports.BotStorage;
-import com.lxbluem.irc.usecase.ports.DccBotStateStorage;
+import com.lxbluem.common.adapter.EventBusBotMessaging;
+import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
+import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.ports.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;

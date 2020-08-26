@@ -39,7 +39,7 @@ public class StateVerticleTest {
         vertx = Vertx.vertx();
         clock = Clock.fixed(Instant.parse("2020-01-30T18:00:00.00Z"), ZoneId.systemDefault());
         StateRepository stateRepository = new InMemoryStateRepository();
-        verticle = new StateVerticle(new StateService(stateRepository, clock));
+        verticle = new StateVerticle(new StateService(stateRepository, clock), clock);
     }
 
     @After

@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +29,11 @@ public class StateVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
 
     private final StateService service;
+    private final Clock clock;
 
-    public StateVerticle(StateService service) {
+    public StateVerticle(StateService service, Clock clock) {
         this.service = service;
+        this.clock = clock;
     }
 
     @Override
@@ -49,7 +52,6 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void clearFinished(SerializedRequest serializedRequest, Promise<JsonObject> result) {
-
         RemovedBotNamesPresenter presenter = new RemovedBotNamesPresenter();
         service.clearFinished(presenter);
         vertx.eventBus().publish(REMOVED_STALE_BOTS.address(), presenter.getBotList());
@@ -57,7 +59,7 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void getState(SerializedRequest serializedRequest, Promise<JsonObject> result) {
-        StatePresenter presenter = new StatePresenter();
+        StatePresenter presenter = new StatePresenter(clock);
         service.getState(presenter);
         JsonObject entries = presenter.getStateDto();
         LOG.debug("getState {}", entries);
@@ -79,7 +81,7 @@ public class StateVerticle extends AbstractRouteVerticle {
 
         service.init(new InitRequest(bot, timestamp, pack));
 
-        StatePresenter presenter = new StatePresenter();
+        StatePresenter presenter = new StatePresenter(clock);
         service.getState(presenter);
         JsonObject entries = presenter.getStateDto();
         vertx.eventBus().publish(STATE.address(), entries);
@@ -143,6 +145,11 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private static class StatePresenter implements Consumer<Map<String, State>> {
         private final JsonObject bots = new JsonObject();
+        private final Clock clock;
+
+        private StatePresenter(Clock clock) {
+            this.clock = clock;
+        }
 
         public JsonObject getStateDto() {
             return bots;
@@ -154,7 +161,7 @@ public class StateVerticle extends AbstractRouteVerticle {
                     .put("started", state.getStartedTimestamp())
                     .put("duration", state.getEndedTimestamp() > 0
                             ? state.getEndedTimestamp() - state.getStartedTimestamp()
-                            : Instant.now().toEpochMilli() - state.getStartedTimestamp()
+                            : Instant.now(clock).toEpochMilli() - state.getStartedTimestamp()
                     )
                     .put("timestamp", state.getTimestamp())
                     .put("speed", state.getMovingAverage().average())

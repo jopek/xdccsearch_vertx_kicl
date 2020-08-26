@@ -58,7 +58,7 @@ public class Starter {
 
         deploy(vertx, RouterVerticle.class.getName(), event -> {
             logDeployment(RouterVerticle.class.getName(), event);
-            deploy(vertx, new StateVerticle(stateService));
+            deploy(vertx, new StateVerticle(stateService, clock));
             deploy(vertx, SearchVerticle.class.getName());
 //            deploy(vertx, new BotVerticle(botMessaging));
             deploy(vertx, new NewBotVerticle(botService));

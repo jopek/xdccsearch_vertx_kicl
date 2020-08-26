@@ -1,6 +1,6 @@
 package com.lxbluem.state;
 
-import com.lxbluem.common.domain.Pack;
+import com.lxbluem.common.domain.events.*;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
@@ -74,12 +74,10 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void init(Message<JsonObject> eventMessage) {
-        JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        Pack pack = body.getJsonObject("pack").mapTo(Pack.class);
-        long timestamp = body.getLong("timestamp");
+        BotInitializedEvent event = eventMessage.body().mapTo(BotInitializedEvent.class);
+        InitRequest initRequest = new InitRequest(event.getBot(), event.getTimestamp(), event.getPack());
 
-        service.init(new InitRequest(bot, timestamp, pack));
+        service.init(initRequest);
 
         StatePresenter presenter = new StatePresenter(clock);
         service.getState(presenter);
@@ -88,28 +86,20 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void notice(Message<JsonObject> eventMessage) {
-        JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        String message = body.getString("message");
-        long timestamp = body.getLong("timestamp");
-        service.noticeMessage(new NoticeMessageRequest(bot, message, timestamp));
+        BotNoticeEvent event = eventMessage.body().mapTo(BotNoticeEvent.class);
+        service.noticeMessage(new NoticeMessageRequest(event.getBot(), event.getMessage(), event.getTimestamp()));
     }
 
     private void renameBot(Message<JsonObject> eventMessage) {
-        JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        String newBot = body.getString("renameto");
-        String message = body.getString("message");
-        long timestamp = body.getLong("timestamp");
-        service.renameBot(new RenameBotRequest(bot, newBot, message, timestamp));
+        BotRenamedEvent event = eventMessage.body().mapTo(BotRenamedEvent.class);
+        RenameBotRequest renameBotRequest = new RenameBotRequest(event.getBot(), event.getRenameto(), event.getMessage(), event.getTimestamp());
+        service.renameBot(renameBotRequest);
     }
 
     private void exit(Message<JsonObject> eventMessage) {
-        JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        String message = body.getString("message");
-        long timestamp = body.getLong("timestamp");
-        service.exit(new ExitRequest(bot, message, timestamp));
+        BotExitedEvent event = eventMessage.body().mapTo(BotExitedEvent.class);
+        ExitRequest exitRequest = new ExitRequest(event.getBot(), event.getMessage(), event.getTimestamp());
+        service.exit(exitRequest);
     }
 
     private void dccStart(Message<JsonObject> eventMessage) {
@@ -137,10 +127,8 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     private void fail(Message<JsonObject> eventMessage) {
-        JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        long timestamp = body.getLong("timestamp");
-        service.fail(new FailRequest(bot, "", timestamp));
+        BotFailedEvent event = eventMessage.body().mapTo(BotFailedEvent.class);
+        service.fail(new FailRequest(event.getBot(), "", event.getTimestamp()));
     }
 
     private static class StatePresenter implements Consumer<Map<String, State>> {

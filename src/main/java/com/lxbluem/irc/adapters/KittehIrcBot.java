@@ -3,7 +3,7 @@ package com.lxbluem.irc.adapters;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
-import com.lxbluem.irc.domain.ports.BotPort;
+import com.lxbluem.irc.domain.ports.IrcBot;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.defaults.DefaultClient;
@@ -24,14 +24,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class KitehIrcBot implements BotPort {
+public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
     private final BotService botService;
     private Client client;
     private String botName;
 
-    public KitehIrcBot(BotService botService) {
+    public KittehIrcBot(BotService botService) {
         this.botService = botService;
         client = new DefaultClient();
         isDebugging = true;

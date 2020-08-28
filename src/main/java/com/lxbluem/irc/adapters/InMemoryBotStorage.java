@@ -1,20 +1,20 @@
 package com.lxbluem.irc.adapters;
 
-import com.lxbluem.irc.domain.ports.BotPort;
 import com.lxbluem.irc.domain.ports.BotStorage;
+import com.lxbluem.irc.domain.ports.IrcBot;
 
 import java.util.*;
 
 public class InMemoryBotStorage implements BotStorage {
-    private final Map<String, BotPort> bots = new HashMap<>();
+    private final Map<String, IrcBot> bots = new HashMap<>();
 
     @Override
-    public Optional<BotPort> getBotByNick(String botNick) {
+    public Optional<IrcBot> getBotByNick(String botNick) {
         return Optional.ofNullable(bots.get(botNick));
     }
 
     @Override
-    public void save(String botNick, BotPort bot) {
+    public void save(String botNick, IrcBot bot) {
         bots.put(botNick, bot);
     }
 

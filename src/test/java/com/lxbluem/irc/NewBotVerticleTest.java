@@ -36,7 +36,7 @@ import static org.mockito.Mockito.verify;
 public class NewBotVerticleTest {
 
     private Vertx vertx;
-    private BotPort mockBot;
+    private IrcBot mockBot;
     private final String startAddress = "NewBotVerticle:POST:/xfers";
     private final String stopAddress = "NewBotVerticle:DELETE:/xfers/:botname";
     private final JsonObject startMessage = new JsonObject()
@@ -57,7 +57,7 @@ public class NewBotVerticleTest {
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
         DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
-        mockBot = mock(BotPort.class);
+        mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
         BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
         NewBotVerticle verticle = new NewBotVerticle(botService);

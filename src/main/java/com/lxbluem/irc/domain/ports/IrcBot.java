@@ -4,7 +4,7 @@ import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 
 import java.util.Collection;
 
-public interface BotPort {
+public interface IrcBot {
     void connect(BotConnectionDetails connectionDetails);
 
     void joinChannel(Collection<String> channelNames);

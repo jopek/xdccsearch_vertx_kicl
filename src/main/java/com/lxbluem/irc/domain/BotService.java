@@ -51,7 +51,7 @@ public class BotService {
     public String initializeBot(Pack pack) {
         String botNickName = nameGenerator.getNick();
 
-        BotPort bot = botFactory.createNewInstance(this);
+        IrcBot bot = botFactory.createNewInstance(this);
         botStorage.save(botNickName, bot);
 
         BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNickName);
@@ -79,7 +79,7 @@ public class BotService {
     }
 
     private Runnable dccRequestHook(String botNickName, Pack pack) {
-        Consumer<BotPort> botRequestFn = bot -> {
+        Consumer<IrcBot> botRequestFn = bot -> {
             bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
@@ -96,7 +96,7 @@ public class BotService {
     }
 
     public void exit(String botNickName, String reason) {
-        BotPort bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         bot.terminate();
         botStorage.removeBot(botNickName);
@@ -127,7 +127,7 @@ public class BotService {
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
-        BotPort bot = botStorage.getBotByNick(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
+        IrcBot bot = botStorage.getBotByNick(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
         stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
             Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
             Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
@@ -136,13 +136,13 @@ public class BotService {
     }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {
-        BotPort bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         bot.registerNickname(botNickName);
     }
 
     public void changeNick(String botNickName, String serverMessages) {
-        BotPort bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         String newBotNickName = nameGenerator.getNick();
         bot.changeNickname(newBotNickName);
@@ -156,7 +156,7 @@ public class BotService {
     }
 
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
-        BotPort bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
         Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
@@ -216,7 +216,7 @@ public class BotService {
             return;
         }
 
-        BotPort botPort = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
         Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
@@ -237,7 +237,7 @@ public class BotService {
                     ctcpQuery.getToken()
             );
 
-            botPort.sendCtcpMessage(nickName, dccSendRequest);
+            bot.sendCtcpMessage(nickName, dccSendRequest);
         };
 
         Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {

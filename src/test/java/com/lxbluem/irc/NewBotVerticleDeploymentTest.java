@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 public class NewBotVerticleDeploymentTest {
 
     private Vertx vertx;
-    private BotPort mockBot;
+    private IrcBot mockBot;
     private NewBotVerticle verticle;
 
     @Before
@@ -40,7 +40,7 @@ public class NewBotVerticleDeploymentTest {
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
         DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
-        mockBot = mock(BotPort.class);
+        mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
         BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
         verticle = new NewBotVerticle(botService);

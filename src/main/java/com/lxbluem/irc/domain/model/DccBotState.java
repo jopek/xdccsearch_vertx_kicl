@@ -9,7 +9,7 @@ import java.util.Set;
 public interface DccBotState {
     void joinedChannel(String channelName);
 
-    void channelReferences(String channelName, Set<String> referencedChannelNames);
+    Set<String> channelReferences(String channelName, Set<String> referencedChannelNames);
 
     void channelNickList(String channelName, List<String> channelNickList);
 
@@ -29,8 +29,8 @@ public interface DccBotState {
         return new DefaultDccBotState(pack);
     }
 
-    static DccBotState createHookedDccBotState(Pack pack, Callback execution) {
-        return new HookedDccBotState(pack, execution);
+    static DccBotState createHookedDccBotState(Pack pack, Runnable requestHook) {
+        return new HookedDccBotState(pack, requestHook);
     }
 
     interface Callback {

@@ -18,6 +18,7 @@ import org.kitteh.irc.client.library.event.user.PrivateCtcpQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
 
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -60,6 +61,12 @@ public class KitehIrcBot implements BotPort {
         }
 
         client.connect();
+    }
+
+    @Override
+    public void joinChannel(Collection<String> channelNames) {
+        String[] channels = channelNames.toArray(new String[0]);
+        joinChannel(channels);
     }
 
     @Override

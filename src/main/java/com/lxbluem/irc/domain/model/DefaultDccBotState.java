@@ -6,9 +6,11 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 @AllArgsConstructor
@@ -20,6 +22,7 @@ public class DefaultDccBotState implements DccBotState {
     private final String remoteUser;
     private boolean remoteUserSeen;
     private boolean packRequested;
+    private boolean channelReferencesSet;
     private boolean nickRegistryRequired;
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
@@ -41,9 +44,18 @@ public class DefaultDccBotState implements DccBotState {
     }
 
     @Override
-    public void channelReferences(String channelName, Set<String> referencedChannelNames) {
-        if (channelName.equalsIgnoreCase(mainChannelName))
-            this.referencedChannelNames.addAll(referencedChannelNames);
+    public Set<String> channelReferences(String channelName, Set<String> newRefs) {
+        if (channelName.equalsIgnoreCase(mainChannelName)) {
+            Set<String> channels = newRefs.stream()
+                    .map(String::toLowerCase)
+                    .filter(v -> !referencedChannelNames.contains(v))
+                    .filter(v -> !joinedChannels.contains(v))
+                    .collect(Collectors.toSet());
+            referencedChannelNames.addAll(channels);
+            channelReferencesSet = true;
+            return channels;
+        }
+        return Collections.emptySet();
     }
 
     @Override
@@ -64,6 +76,8 @@ public class DefaultDccBotState implements DccBotState {
         boolean main = joinedChannels.contains(mainChannelName);
         boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);
         boolean allChannelsJoined = main && allAdditional;
+
+        if (!channelReferencesSet) return false;
 
         return remoteUserSeen && allChannelsJoined && !nickRegistryRequired
                 || remoteUserSeen && allChannelsJoined && nickRegistered;

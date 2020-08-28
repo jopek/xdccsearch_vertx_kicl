@@ -2,10 +2,14 @@ package com.lxbluem.irc.domain.ports;
 
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 
+import java.util.Collection;
+
 public interface BotPort {
     void connect(BotConnectionDetails connectionDetails);
 
-    void joinChannel(String... channelName);
+    void joinChannel(Collection<String> channelNames);
+
+    void joinChannel(String... channelNames);
 
     void registerNickname(String botName);
 

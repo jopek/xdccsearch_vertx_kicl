@@ -42,6 +42,8 @@ public class BotServiceTest {
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
 
     @Captor
+    private ArgumentCaptor<Collection<String>> stringCollectionCaptor;
+    @Captor
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
 
@@ -227,11 +229,10 @@ public class BotServiceTest {
 
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
 
-        HashSet<String> channelReferences = new HashSet<>(asList("#room", "#voice"));
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
-
-        assertEquals(channelReferences, ((DefaultDccBotState) dccBotState).getReferencedChannelNames());
+        verify(botPort).joinChannel(stringCollectionCaptor.capture());
+        Collection<String> channelsToJoin = stringCollectionCaptor.getValue();
+        assertEquals(2, channelsToJoin.size());
+        assertTrue(channelsToJoin.containsAll(Arrays.asList("#voice", "#room")));
         verifyNoMoreInteractions(botMessaging, botPort);
     }
 
@@ -323,6 +324,7 @@ public class BotServiceTest {
         botState.nickRegistryRequired();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
+        botState.channelReferences(pack.getChannelName(), new HashSet<>(Arrays.asList()));
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 
@@ -338,6 +340,72 @@ public class BotServiceTest {
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
+        verifyNoMoreInteractions(botMessaging, botPort);
+    }
+
+    @Test
+    public void notice_message_handler_more_channels_required() {
+        String botNick = "Andy";
+        String remoteNick = "Zombie";
+        String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
+
+        Pack pack = testPack();
+
+        botService.initializeBot(pack);
+        reset(botMessaging, botPort);
+
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+
+        botState.joinedChannel(pack.getChannelName());
+        botState.channelReferences(pack.getChannelName(), new HashSet<>(Arrays.asList()));
+
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+
+        verify(botPort, never()).registerNickname(botNick);
+        verify(botPort).joinChannel(new HashSet<>(Collections.singletonList("#zw-chat")));
+
+        verifyNoMoreInteractions(botMessaging, botPort);
+    }
+
+    @Test
+    public void notice_message_handler_more_channels_required_after_request() {
+        String botNick = "Andy";
+        String remoteNick = "Zombie";
+        String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
+
+        Pack pack = testPack();
+
+        botService.initializeBot(pack);
+        reset(botMessaging, botPort);
+
+        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
+        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+
+        String packChannelName = pack.getChannelName();
+        botState.joinedChannel(packChannelName);
+        botState.channelNickList(packChannelName, Collections.singletonList(pack.getNickName()));
+
+        botState.channelReferences(packChannelName, new HashSet<>(Arrays.asList("#someChannel")));
+        botState.joinedChannel("#someChannel");
+        verify(botPort).requestDccPack(eq("keex"), eq(5));
+        ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
+        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
+        BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
+        assertEquals("", sentMesssage.getRemoteNick());
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
+
+        assertTrue(botState.canRequestPack());
+
+        botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
+
+        verify(botPort, never()).registerNickname(botNick);
+        verify(botPort).joinChannel(stringCollectionCaptor.capture());
+        assertEquals(1, stringCollectionCaptor.getValue().size());
+        assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
+
+        assertFalse(botState.canRequestPack());
         verifyNoMoreInteractions(botMessaging, botPort);
     }
 
@@ -396,6 +464,7 @@ public class BotServiceTest {
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
+        botState.channelReferences(pack.getChannelName(), new HashSet<>());
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 

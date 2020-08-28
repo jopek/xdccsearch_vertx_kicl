@@ -8,7 +8,9 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -86,6 +88,48 @@ public class DccBotStateTest {
         dccDccBotStateGate.joinedChannel("#3");
 
         assertTrue(atomicBoolean.get());
+    }
+
+    @Test
+    public void setTests() {
+        Set<Integer> set1;
+        Set<Integer> set2;
+
+        set1 = new HashSet<>();
+        set2 = new HashSet<>(Arrays.asList(2, 3));
+        assertTrue(notConainedInFirst(set1, set2).containsAll(Arrays.asList(2, 3)));
+        set1 = new HashSet<>(Arrays.asList(1));
+        set2 = new HashSet<>(Arrays.asList(2, 3));
+        assertTrue(notConainedInFirst(set1, set2).containsAll(Arrays.asList(2, 3)));
+        set1 = new HashSet<>(Arrays.asList(1, 2));
+        set2 = new HashSet<>(Arrays.asList(2, 3));
+        assertTrue(notConainedInFirst(set1, set2).containsAll(Arrays.asList(3)));
+        set1 = new HashSet<>(Arrays.asList(1, 2, 3));
+        set2 = new HashSet<>(Arrays.asList(2, 3));
+        assertTrue(notConainedInFirst(set1, set2).isEmpty());
+    }
+
+    private Set<Integer> notConainedInFirst(Set<Integer> set1, Set<Integer> set2) {
+        return set2.stream().filter(v -> !set1.contains(v)).collect(Collectors.toSet());
+    }
+
+    @Test
+    public void channelJoin_hook_executed_each_channelRef_change() {
+        Pack pack = getPack();
+        DccBotState dccDccBotStateGate = new HookedDccBotState(pack, () -> {
+        });
+
+        Set<String> channelsAdded;
+
+        dccDccBotStateGate.joinedChannel("#1");
+
+        channelsAdded = dccDccBotStateGate.channelReferences("#1", new HashSet<>(Arrays.asList("#2", "#3")));
+        assertEquals(2, channelsAdded.size());
+        assertTrue(channelsAdded.containsAll(Arrays.asList("#2", "#3")));
+
+        channelsAdded = dccDccBotStateGate.channelReferences("#1", new HashSet<>(Arrays.asList("#3", "#4")));
+        assertEquals(1, channelsAdded.size());
+        assertTrue(channelsAdded.containsAll(Arrays.asList("#4")));
     }
 
     @Test

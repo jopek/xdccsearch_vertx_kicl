@@ -4,22 +4,30 @@ import com.lxbluem.common.domain.Pack;
 import lombok.EqualsAndHashCode;
 
 import java.util.List;
+import java.util.Set;
 
 @EqualsAndHashCode(callSuper = true)
 public class HookedDccBotState extends DefaultDccBotState {
-    private final Callback canRequestHook;
+    private final Runnable requestHook;
 
-    public HookedDccBotState(Pack pack, Callback canRequestHook) {
+    public HookedDccBotState(Pack pack, Runnable requestHook) {
         super(pack);
-        this.canRequestHook = canRequestHook;
+        this.requestHook = requestHook;
+    }
+
+    @Override
+    public Set<String> channelReferences(String channelName, Set<String> newRefs) {
+        Set<String> references = super.channelReferences(channelName, newRefs);
+        if (canRequestPack())
+            requestHook.run();
+        return references;
     }
 
     @Override
     public void joinedChannel(String channelName) {
         super.joinedChannel(channelName);
-
         if (canRequestPack())
-            canRequestHook.execute();
+            requestHook.run();
     }
 
     @Override
@@ -27,7 +35,7 @@ public class HookedDccBotState extends DefaultDccBotState {
         super.channelNickList(channelName, channelNickList);
 
         if (canRequestPack())
-            canRequestHook.execute();
+            requestHook.run();
     }
 
     @Override
@@ -35,7 +43,7 @@ public class HookedDccBotState extends DefaultDccBotState {
         super.nickRegistered();
 
         if (canRequestPack())
-            canRequestHook.execute();
+            requestHook.run();
     }
 
 }

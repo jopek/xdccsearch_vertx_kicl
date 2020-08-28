@@ -58,8 +58,8 @@ public class BotService {
         bot.connect(botConnectionDetails);
         bot.joinChannel(pack.getChannelName());
 
-        DccBotState.Callback execution = dccRequestHook(botNickName, pack);
-        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, execution);
+        Runnable requestHook = dccRequestHook(botNickName, pack);
+        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, requestHook);
         stateStorage.save(botNickName, dccBotState);
 
         botMessaging.notify(BOT_INITIALIZED, new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
@@ -78,7 +78,7 @@ public class BotService {
                 .build();
     }
 
-    private DccBotState.Callback dccRequestHook(String botNickName, Pack pack) {
+    private Runnable dccRequestHook(String botNickName, Pack pack) {
         Consumer<BotPort> botRequestFn = bot -> {
             bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
@@ -127,10 +127,11 @@ public class BotService {
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
+        BotPort bot = botStorage.getBotByNick(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
         stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
             Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
-
-            botState.channelReferences(channelName, mentionedChannels);
+            Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
+            bot.joinChannel(channelReferences);
         });
     }
 
@@ -169,6 +170,14 @@ public class BotService {
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
             botMessaging.notify(DCC_QUEUED, new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
+            return;
+        }
+
+        String channelName = botState.getPack().getChannelName();
+        if (lowerCaseNoticeMessage.contains(channelName.toLowerCase())) {
+            Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(noticeMessage);
+            Set<String> references = botState.channelReferences(channelName, mentionedChannels);
+            bot.joinChannel(references);
             return;
         }
 

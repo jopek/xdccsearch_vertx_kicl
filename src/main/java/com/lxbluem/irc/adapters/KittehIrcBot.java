@@ -71,7 +71,8 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void joinChannel(String... channelNames) {
-        client.addChannel(channelNames);
+        if (channelNames.length > 0)
+            client.addChannel(channelNames);
     }
 
     @Override

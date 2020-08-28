@@ -1,5 +1,7 @@
 package com.lxbluem.common.adapter;
 
+import com.lxbluem.common.domain.events.BotEvent;
+import com.lxbluem.common.domain.events.DummyEvent;
 import com.lxbluem.common.domain.events.Event;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
@@ -19,14 +21,22 @@ public class EventbusEventDispatcher implements EventDispatcher {
     public EventbusEventDispatcher(EventBus eventBus) {
         this.eventBus = eventBus;
         Arrays.stream(Address.values())
-                .filter(address -> !address.getEventClass().equals(Event.class))
+                .filter(
+                        address -> !Arrays.asList(
+                                Event.class,
+                                BotEvent.class,
+                                DummyEvent.class
+                        ).contains(address.getEventClass())
+                )
                 .forEach(address -> routingTable.put(address.getEventClass(), address.address()));
     }
 
     @Override
     public <T extends Event> void dispatch(T event) {
         JsonObject message = JsonObject.mapFrom(event);
-        String address = Optional.ofNullable(routingTable.get(event.getClass())).orElseThrow(RouteForEventNotFound::new);
+        String routingAddress = routingTable.get(event.getClass());
+        String address = Optional.ofNullable(routingAddress)
+                .orElseThrow(RouteForEventNotFound::new);
         eventBus.publish(address, message);
     }
 }

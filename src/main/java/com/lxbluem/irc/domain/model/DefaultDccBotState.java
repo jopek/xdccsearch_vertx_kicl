@@ -30,7 +30,7 @@ public class DefaultDccBotState implements DccBotState {
 
     public DefaultDccBotState(Pack pack) {
         this.pack = pack;
-        mainChannelName = pack.getChannelName();
+        mainChannelName = pack.getChannelName().toLowerCase();
         remoteUser = pack.getNickName();
 
         if (remoteUser == null) {

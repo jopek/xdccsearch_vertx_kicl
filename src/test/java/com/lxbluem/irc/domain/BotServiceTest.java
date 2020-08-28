@@ -237,6 +237,18 @@ public class BotServiceTest {
     }
 
     @Test
+    public void channel_topic__no_other_channels_referenced() {
+        botService.initializeBot(testPack());
+        reset(botMessaging, ircBot);
+
+        botService.channelTopic("Andy", "#download", "lalalal");
+
+        verify(ircBot).joinChannel(stringCollectionCaptor.capture());
+        assertTrue(stringCollectionCaptor.getValue().isEmpty());
+        verifyNoMoreInteractions(botMessaging, ircBot);
+    }
+
+    @Test
     public void message_of_the_day() {
         botService.initializeBot(testPack());
         reset(botMessaging, ircBot);

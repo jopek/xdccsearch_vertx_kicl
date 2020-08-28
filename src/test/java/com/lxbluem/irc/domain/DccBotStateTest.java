@@ -21,11 +21,26 @@ public class DccBotStateTest {
         Pack pack = getPack();
 
         DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        dccDccBotStateGate.channelReferences("#1", channelReferences);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
         dccDccBotStateGate.joinedChannel("#2");
+        dccDccBotStateGate.joinedChannel("#3");
+
+        assertTrue(dccDccBotStateGate.canRequestPack());
+    }
+
+    @Test
+    public void allConditionsMet_different_caseInsensitive() {
+        Pack pack = getPack();
+
+        DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
+        dccDccBotStateGate.joinedChannel("#MainChannel");
+        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#SecOndArY", "#3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.joinedChannel("#secondary");
         dccDccBotStateGate.joinedChannel("#3");
 
         assertTrue(dccDccBotStateGate.canRequestPack());
@@ -36,10 +51,10 @@ public class DccBotStateTest {
         Pack pack = getPack();
 
         DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        dccDccBotStateGate.channelReferences("#1", channelReferences);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
         dccDccBotStateGate.joinedChannel("#2");
 
         assertFalse(dccDccBotStateGate.canRequestPack());
@@ -50,7 +65,7 @@ public class DccBotStateTest {
         Pack pack = getPack();
 
         DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
 
         assertFalse(dccDccBotStateGate.canRequestPack());
     }
@@ -60,11 +75,11 @@ public class DccBotStateTest {
         Pack pack = getPack();
 
         DccBotState dccDccBotStateGate = DccBotState.createDccBotState(pack);
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
         dccDccBotStateGate.nickRegistryRequired();
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        dccDccBotStateGate.channelReferences("#1", channelReferences);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
         dccDccBotStateGate.joinedChannel("#2");
         dccDccBotStateGate.joinedChannel("#3");
 
@@ -80,10 +95,10 @@ public class DccBotStateTest {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
         DccBotState dccDccBotStateGate = new HookedDccBotState(pack, () -> atomicBoolean.set(true));
 
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        dccDccBotStateGate.channelReferences("#1", channelReferences);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
         dccDccBotStateGate.joinedChannel("#2");
         dccDccBotStateGate.joinedChannel("#3");
 
@@ -121,13 +136,13 @@ public class DccBotStateTest {
 
         Set<String> channelsAdded;
 
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
 
-        channelsAdded = dccDccBotStateGate.channelReferences("#1", new HashSet<>(Arrays.asList("#2", "#3")));
+        channelsAdded = dccDccBotStateGate.channelReferences("#MainChannel", new HashSet<>(Arrays.asList("#2", "#3")));
         assertEquals(2, channelsAdded.size());
         assertTrue(channelsAdded.containsAll(Arrays.asList("#2", "#3")));
 
-        channelsAdded = dccDccBotStateGate.channelReferences("#1", new HashSet<>(Arrays.asList("#3", "#4")));
+        channelsAdded = dccDccBotStateGate.channelReferences("#MainChannel", new HashSet<>(Arrays.asList("#3", "#4")));
         assertEquals(1, channelsAdded.size());
         assertTrue(channelsAdded.containsAll(Arrays.asList("#4")));
     }
@@ -138,10 +153,10 @@ public class DccBotStateTest {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
         DccBotState dccDccBotStateGate = new HookedDccBotState(pack, () -> atomicBoolean.set(true));
 
-        dccDccBotStateGate.joinedChannel("#1");
+        dccDccBotStateGate.joinedChannel("#MainChannel");
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        dccDccBotStateGate.channelReferences("#1", channelReferences);
-        dccDccBotStateGate.channelNickList("#1", Arrays.asList("user1", "user2", "user3"));
+        dccDccBotStateGate.channelReferences("#MainChannel", channelReferences);
+        dccDccBotStateGate.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
         dccDccBotStateGate.nickRegistryRequired();
         dccDccBotStateGate.joinedChannel("#2");
         dccDccBotStateGate.joinedChannel("#3");
@@ -156,10 +171,10 @@ public class DccBotStateTest {
     public void missingRemoteBotUser() {
         Pack pack = getPack();
         DccBotState workflow = new DefaultDccBotState(pack);
-        workflow.joinedChannel("#1");
+        workflow.joinedChannel("#MainChannel");
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        workflow.channelReferences("#1", channelReferences);
-        workflow.channelNickList("#1", Arrays.asList("user2", "user3"));
+        workflow.channelReferences("#MainChannel", channelReferences);
+        workflow.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
         workflow.joinedChannel("#2");
         workflow.joinedChannel("#3");
 
@@ -171,12 +186,12 @@ public class DccBotStateTest {
         Pack pack = getPack();
         DccBotState workflow = new DefaultDccBotState(pack);
         int initialHash = workflow.hashCode();
-        workflow.joinedChannel("#1");
+        workflow.joinedChannel("#MainChannel");
         int afterJoinedHash = workflow.hashCode();
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        workflow.channelReferences("#1", channelReferences);
+        workflow.channelReferences("#MainChannel", channelReferences);
         int afterChannelRefsHash = workflow.hashCode();
-        workflow.channelNickList("#1", Arrays.asList("user2", "user3"));
+        workflow.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
         int afterChannelNickListHash = workflow.hashCode();
         workflow.joinedChannel("#2");
         workflow.joinedChannel("#3");
@@ -194,12 +209,12 @@ public class DccBotStateTest {
         DccBotState workflow = new HookedDccBotState(pack, () -> {
         });
         int initialHash = workflow.hashCode();
-        workflow.joinedChannel("#1");
+        workflow.joinedChannel("#MainChannel");
         int afterJoinedHash = workflow.hashCode();
         HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        workflow.channelReferences("#1", channelReferences);
+        workflow.channelReferences("#MainChannel", channelReferences);
         int afterChannelRefsHash = workflow.hashCode();
-        workflow.channelNickList("#1", Arrays.asList("user2", "user3"));
+        workflow.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
         int afterChannelNickListHash = workflow.hashCode();
         workflow.joinedChannel("#2");
         workflow.joinedChannel("#3");
@@ -224,7 +239,7 @@ public class DccBotStateTest {
                 .networkName("nn")
                 .serverHostName("192.168.99.100")
                 .serverPort(6667)
-                .channelName("#1")
+                .channelName("#MainChannel")
                 .build();
     }
 }

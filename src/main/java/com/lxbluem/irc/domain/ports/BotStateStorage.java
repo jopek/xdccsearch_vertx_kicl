@@ -5,9 +5,9 @@ import com.lxbluem.irc.domain.model.BotState;
 import java.util.Optional;
 
 public interface BotStateStorage {
-    Optional<BotState> getBotStateByNick(String botNickName);
+    Optional<BotState> get(String botNickName);
 
     BotState save(String botNickName, BotState botState);
 
-    BotState removeBotState(String botNickName);
+    BotState remove(String botNickName);
 }

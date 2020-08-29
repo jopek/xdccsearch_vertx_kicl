@@ -11,7 +11,7 @@ public class InMemoryBotStateStorage implements BotStateStorage {
     private final Map<String, BotState> botStates = new HashMap<>();
 
     @Override
-    public Optional<BotState> getBotStateByNick(String botNickName) {
+    public Optional<BotState> get(String botNickName) {
         return Optional.ofNullable(botStates.get(botNickName));
     }
 
@@ -21,7 +21,7 @@ public class InMemoryBotStateStorage implements BotStateStorage {
     }
 
     @Override
-    public BotState removeBotState(String botNickName) {
+    public BotState remove(String botNickName) {
         return botStates.remove(botNickName);
     }
 }

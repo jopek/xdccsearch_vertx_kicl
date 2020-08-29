@@ -91,7 +91,7 @@ public class BotService {
             eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), "", noticeMessage));
         };
 
-        return () -> botStorage.getBotByNick(botNickName)
+        return () -> botStorage.get(botNickName)
                 .ifPresent(botRequestFn);
     }
 
@@ -100,25 +100,25 @@ public class BotService {
     }
 
     public void exit(String botNickName, String reason) {
-        IrcBot bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         bot.terminate();
-        botStorage.removeBot(botNickName);
-        stateStorage.removeBotState(botNickName);
+        botStorage.remove(botNickName);
+        stateStorage.remove(botNickName);
 
         String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
         eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
     }
 
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
-        stateStorage.getBotStateByNick(botNickName)
+        stateStorage.get(botNickName)
                 .ifPresent(botState ->
                         botState.joinedChannel(channelName)
                 );
     }
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
-        stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
+        stateStorage.get(botNickName).ifPresent(botState -> {
             botState.channelNickList(channelName, usersInChannel);
             if (!botState.hasSeenRemoteUser()) {
                 String remoteUser = botState.getPack().getNickName();
@@ -130,8 +130,8 @@ public class BotService {
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
-        IrcBot bot = botStorage.getBotByNick(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
-        stateStorage.getBotStateByNick(botNickName).ifPresent(botState -> {
+        IrcBot bot = botStorage.get(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
+        stateStorage.get(botNickName).ifPresent(botState -> {
             Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
             Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
             bot.joinChannel(channelReferences);
@@ -139,13 +139,13 @@ public class BotService {
     }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {
-        IrcBot bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         bot.registerNickname(botNickName);
     }
 
     public void changeNick(String botNickName, String serverMessages) {
-        IrcBot bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
         String newBotNickName = nameGenerator.getNick();
         bot.changeNickname(newBotNickName);
@@ -159,10 +159,10 @@ public class BotService {
     }
 
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
-        IrcBot bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
-        Optional<BotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        Optional<BotState> optionalDccBotState = stateStorage.get(botNickName);
         if (!optionalDccBotState.isPresent())
             return;
         BotState botState = optionalDccBotState.get();
@@ -219,10 +219,10 @@ public class BotService {
             return;
         }
 
-        IrcBot bot = botStorage.getBotByNick(botNickName)
+        IrcBot bot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
-        Optional<BotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        Optional<BotState> optionalDccBotState = stateStorage.get(botNickName);
         if (!optionalDccBotState.isPresent())
             return;
         BotState botState = optionalDccBotState.get();

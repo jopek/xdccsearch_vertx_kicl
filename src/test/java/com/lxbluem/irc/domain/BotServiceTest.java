@@ -74,8 +74,8 @@ public class BotServiceTest {
 
     @Test
     public void initialize_service_for_bot() {
-        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
-        assertFalse(botStorage.getBotByNick("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
+        assertFalse(botStorage.get("Andy").isPresent());
 
         botService.initializeBot(testPack());
 
@@ -93,9 +93,9 @@ public class BotServiceTest {
         assertEquals(BotInitializedEvent.class, dispatchedEvents.get(0).getClass());
         assertEquals(testPack(), ((BotInitializedEvent) dispatchedEvents.get(0)).getPack());
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        assertTrue(botStorage.getBotByNick("Andy").isPresent());
-        assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").get().getPack());
+        assertTrue(stateStorage.get("Andy").isPresent());
+        assertTrue(botStorage.get("Andy").isPresent());
+        assertEquals(testPack(), stateStorage.get("Andy").get().getPack());
     }
 
     @Test
@@ -105,7 +105,7 @@ public class BotServiceTest {
         verify(ircBot).joinChannel(eq("#download"));
         verify(eventDispatcher).dispatch(any(BotInitializedEvent.class));
 
-        BotState state = stateStorage.getBotStateByNick("Andy").get();
+        BotState state = stateStorage.get("Andy").get();
 
         state.joinedChannel("#download");
         state.channelReferences("#download", new HashSet<String>());
@@ -127,8 +127,8 @@ public class BotServiceTest {
         botService.manualExit("Andy");
         verify(ircBot).terminate();
 
-        assertFalse(botStorage.getBotByNick("Andy").isPresent());
-        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertFalse(botStorage.get("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
 
         ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
         verify(eventDispatcher).dispatch(messageSentCaptor.capture());
@@ -139,7 +139,7 @@ public class BotServiceTest {
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("Bot Andy exiting because requested shutdown", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
-        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
@@ -160,8 +160,8 @@ public class BotServiceTest {
         botService.exit("Andy", "failure");
         verify(ircBot).terminate();
 
-        assertFalse(botStorage.getBotByNick("Andy").isPresent());
-        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
+        assertFalse(botStorage.get("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
 
         ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
         verify(eventDispatcher).dispatch(messageSentCaptor.capture());
@@ -181,8 +181,8 @@ public class BotServiceTest {
         botService.onRequestedChannelJoinComplete("Andy", "#download");
         verifyNoMoreInteractions(botMessaging, ircBot);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
         Set<String> joinedChannels = botState.getJoinedChannels();
         List<String> expectedJoinedChannels = Collections.singletonList("#download");
         assertTrue(joinedChannels.containsAll(expectedJoinedChannels));
@@ -207,8 +207,8 @@ public class BotServiceTest {
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
         verifyNoMoreInteractions(botMessaging, ircBot);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
         assertTrue(botState.isRemoteUserSeen());
     }
 
@@ -233,8 +233,8 @@ public class BotServiceTest {
         BotExitedEvent exitedEvent = (BotExitedEvent) eventList.get(1);
         assertEquals("Bot Andy exiting because bot keex not in channel #download", exitedEvent.getMessage());
 
-        assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
-        assertFalse(botStorage.getBotByNick("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
+        assertFalse(botStorage.get("Andy").isPresent());
     }
 
     @Test
@@ -345,8 +345,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, ircBot, eventDispatcher);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
 
         botState.nickRegistryRequired();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
@@ -381,8 +381,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, ircBot, eventDispatcher);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
 
         botState.joinedChannel(pack.getChannelName());
         botState.channelReferences(pack.getChannelName(), new HashSet<>(Arrays.asList()));
@@ -406,8 +406,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, ircBot, eventDispatcher);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
 
         String packChannelName = pack.getChannelName();
         botState.joinedChannel(packChannelName);
@@ -447,8 +447,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, ircBot, eventDispatcher);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
         int botStateHash = botState.hashCode();
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
@@ -485,8 +485,8 @@ public class BotServiceTest {
         botService.initializeBot(pack);
         reset(botMessaging, ircBot, eventDispatcher);
 
-        assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
         botState.channelReferences(pack.getChannelName(), new HashSet<>());

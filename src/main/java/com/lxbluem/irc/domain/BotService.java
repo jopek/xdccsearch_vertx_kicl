@@ -5,7 +5,7 @@ import com.lxbluem.common.domain.events.*;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
-import com.lxbluem.irc.domain.model.DccBotState;
+import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
@@ -23,12 +23,13 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.lxbluem.common.infrastructure.Address.*;
+import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
+import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 import static java.lang.String.format;
 
 public class BotService {
     private final BotStorage botStorage;
-    private final DccBotStateStorage stateStorage;
+    private final BotStateStorage stateStorage;
     private final BotMessaging botMessaging;
     private final EventDispatcher eventDispatcher;
     private final BotFactory botFactory;
@@ -37,7 +38,7 @@ public class BotService {
 
     public BotService(
             BotStorage botStorage,
-            DccBotStateStorage stateStorage,
+            BotStateStorage stateStorage,
             BotMessaging botMessaging,
             EventDispatcher eventDispatcher,
             BotFactory botFactory,
@@ -63,8 +64,8 @@ public class BotService {
         bot.joinChannel(pack.getChannelName());
 
         Runnable requestHook = dccRequestHook(botNickName, pack);
-        DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, requestHook);
-        stateStorage.save(botNickName, dccBotState);
+        BotState botState = new BotState(pack, requestHook);
+        stateStorage.save(botNickName, botState);
 
         eventDispatcher.dispatch(new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
 
@@ -161,10 +162,10 @@ public class BotService {
         IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
-        Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        Optional<BotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
         if (!optionalDccBotState.isPresent())
             return;
-        DccBotState botState = optionalDccBotState.get();
+        BotState botState = optionalDccBotState.get();
 
         if (remoteName.toLowerCase().startsWith("ls"))
             return;
@@ -221,10 +222,10 @@ public class BotService {
         IrcBot bot = botStorage.getBotByNick(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
 
-        Optional<DccBotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
+        Optional<BotState> optionalDccBotState = stateStorage.getBotStateByNick(botNickName);
         if (!optionalDccBotState.isPresent())
             return;
-        DccBotState botState = optionalDccBotState.get();
+        BotState botState = optionalDccBotState.get();
 
         AtomicReference<String> resolvedFilename = new AtomicReference<>("");
 

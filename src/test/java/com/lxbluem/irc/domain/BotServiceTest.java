@@ -8,14 +8,12 @@ import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
-import com.lxbluem.irc.domain.model.DccBotState;
-import com.lxbluem.irc.domain.model.DefaultDccBotState;
+import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.ports.*;
-import io.netty.util.collection.CharObjectHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +34,7 @@ import static org.mockito.Mockito.*;
 @RunWith(MockitoJUnitRunner.class)
 public class BotServiceTest {
 
-    private DccBotStateStorage stateStorage;
+    private BotStateStorage stateStorage;
     private BotService botService;
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
@@ -107,7 +105,7 @@ public class BotServiceTest {
         verify(ircBot).joinChannel(eq("#download"));
         verify(eventDispatcher).dispatch(any(BotInitializedEvent.class));
 
-        DccBotState state = stateStorage.getBotStateByNick("Andy").get();
+        BotState state = stateStorage.getBotStateByNick("Andy").get();
 
         state.joinedChannel("#download");
         state.channelReferences("#download", new HashSet<String>());
@@ -184,8 +182,8 @@ public class BotServiceTest {
         verifyNoMoreInteractions(botMessaging, ircBot);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
-        Set<String> joinedChannels = ((DefaultDccBotState) dccBotState).getJoinedChannels();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        Set<String> joinedChannels = botState.getJoinedChannels();
         List<String> expectedJoinedChannels = Collections.singletonList("#download");
         assertTrue(joinedChannels.containsAll(expectedJoinedChannels));
     }
@@ -210,8 +208,8 @@ public class BotServiceTest {
         verifyNoMoreInteractions(botMessaging, ircBot);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState dccBotState = stateStorage.getBotStateByNick("Andy").get();
-        assertTrue(((DefaultDccBotState) dccBotState).isRemoteUserSeen());
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
+        assertTrue(botState.isRemoteUserSeen());
     }
 
     @Test
@@ -348,7 +346,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
 
         botState.nickRegistryRequired();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
@@ -384,7 +382,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
 
         botState.joinedChannel(pack.getChannelName());
         botState.channelReferences(pack.getChannelName(), new HashSet<>(Arrays.asList()));
@@ -409,7 +407,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
 
         String packChannelName = pack.getChannelName();
         botState.joinedChannel(packChannelName);
@@ -450,7 +448,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
         int botStateHash = botState.hashCode();
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
@@ -488,7 +486,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
-        DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
+        BotState botState = stateStorage.getBotStateByNick("Andy").get();
         botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
         botState.channelReferences(pack.getChannelName(), new HashSet<>());

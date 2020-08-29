@@ -40,7 +40,7 @@ public class NewBotVerticleDeploymentTest {
         Clock clock = Clock.systemDefaultZone();
         BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
-        DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
+        BotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
         EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());

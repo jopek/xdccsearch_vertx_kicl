@@ -14,8 +14,8 @@ import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.IrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.ports.BotFactory;
+import com.lxbluem.irc.domain.ports.BotStateStorage;
 import com.lxbluem.irc.domain.ports.BotStorage;
-import com.lxbluem.irc.domain.ports.DccBotStateStorage;
 import com.lxbluem.irc.domain.ports.NameGenerator;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
@@ -49,12 +49,12 @@ public class Starter {
         StateService stateService = new StateService(new InMemoryStateRepository(), clock);
 
         BotStorage botStorage = new InMemoryBotStorage();
-        DccBotStateStorage dccBotStateStorage = new InMemoryBotStateStorage();
+        BotStateStorage botStateStorage = new InMemoryBotStateStorage();
         BotFactory botFactory = new IrcBotFactory();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         BotService botService = new BotService(
                 botStorage,
-                dccBotStateStorage,
+                botStateStorage,
                 botMessaging,
                 eventDispatcher,
                 botFactory,

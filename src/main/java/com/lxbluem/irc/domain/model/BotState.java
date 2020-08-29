@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode
-public class DefaultDccBotState implements DccBotState {
+public class BotState {
     private final Pack pack;
     private final String mainChannelName;
     private final String remoteUser;
@@ -27,23 +27,23 @@ public class DefaultDccBotState implements DccBotState {
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
     private final Set<String> joinedChannels = new HashSet<>();
+    private final Runnable requestHook;
 
-    public DefaultDccBotState(Pack pack) {
+    public BotState(Pack pack, Runnable requestHook) {
         this.pack = pack;
         mainChannelName = pack.getChannelName().toLowerCase();
         remoteUser = pack.getNickName();
+        this.requestHook = requestHook;
 
         if (remoteUser == null) {
             throw new IllegalArgumentException("remote user bot cannot be null");
         }
     }
 
-    @Override
     public void joinedChannel(String channelName) {
         joinedChannels.add(channelName.toLowerCase());
     }
 
-    @Override
     public Set<String> channelReferences(String channelName, Set<String> newRefs) {
         if (channelName.equalsIgnoreCase(mainChannelName)) {
             Set<String> channels = newRefs.stream()
@@ -58,20 +58,20 @@ public class DefaultDccBotState implements DccBotState {
         return Collections.emptySet();
     }
 
-    @Override
     public void channelNickList(String channelName, List<String> channelNickList) {
-        if (!channelName.equalsIgnoreCase(mainChannelName))
-            return;
+        if (channelName.equalsIgnoreCase(mainChannelName))
+            remoteUserSeen = channelNickList.stream().anyMatch(nick -> nick.equalsIgnoreCase(remoteUser));
 
-        remoteUserSeen = channelNickList.stream().anyMatch(nick -> nick.equalsIgnoreCase(remoteUser));
+        if (canRequestPack()) {
+            System.out.printf("channelNickList: %s REQUESTING\n", channelName);
+            requestHook.run();
+        }
     }
 
-    @Override
     public boolean hasSeenRemoteUser() {
         return remoteUserSeen;
     }
 
-    @Override
     public boolean canRequestPack() {
         boolean main = joinedChannels.contains(mainChannelName);
         boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);
@@ -83,22 +83,23 @@ public class DefaultDccBotState implements DccBotState {
                 || remoteUserSeen && allChannelsJoined && nickRegistered;
     }
 
-    @Override
     public boolean hasRequestedPack() {
         return false;
     }
 
-    @Override
     public void nickRegistryRequired() {
         this.nickRegistryRequired = true;
     }
 
-    @Override
     public void nickRegistered() {
         this.nickRegistered = true;
+
+        if (canRequestPack()) {
+            System.out.print("nickRegistered REQUESTING\n");
+            requestHook.run();
+        }
     }
 
-    @Override
     public Pack getPack() {
         return pack;
     }

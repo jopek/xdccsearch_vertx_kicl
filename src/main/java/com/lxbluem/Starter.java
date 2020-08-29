@@ -2,7 +2,9 @@ package com.lxbluem;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.lxbluem.common.adapter.EventBusBotMessaging;
+import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.eventlogger.EventLoggerVerticle;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
@@ -41,6 +43,7 @@ public class Starter {
         EventBus eventBus = vertx.eventBus();
         Clock clock = Clock.systemDefaultZone();
 
+        EventDispatcher eventDispatcher = new EventbusEventDispatcher(eventBus);
         BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock);
 
         StateService stateService = new StateService(new InMemoryStateRepository(), clock);
@@ -49,7 +52,15 @@ public class Starter {
         DccBotStateStorage dccBotStateStorage = new InMemoryBotStateStorage();
         BotFactory botFactory = new IrcBotFactory();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
-        BotService botService = new BotService(botStorage, dccBotStateStorage, botMessaging, botFactory, clock, nameGenerator);
+        BotService botService = new BotService(
+                botStorage,
+                dccBotStateStorage,
+                botMessaging,
+                eventDispatcher,
+                botFactory,
+                clock,
+                nameGenerator
+        );
 
         deploy(vertx, EventLoggerVerticle.class.getName());
         deploy(vertx, new DccReceiverVerticle(botMessaging));

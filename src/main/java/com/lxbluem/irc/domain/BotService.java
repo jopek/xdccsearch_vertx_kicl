@@ -3,6 +3,7 @@ package com.lxbluem.irc.domain;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.*;
 import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.DccBotState;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
@@ -29,6 +30,7 @@ public class BotService {
     private final BotStorage botStorage;
     private final DccBotStateStorage stateStorage;
     private final BotMessaging botMessaging;
+    private final EventDispatcher eventDispatcher;
     private final BotFactory botFactory;
     private final Clock clock;
     private final NameGenerator nameGenerator;
@@ -37,12 +39,14 @@ public class BotService {
             BotStorage botStorage,
             DccBotStateStorage stateStorage,
             BotMessaging botMessaging,
+            EventDispatcher eventDispatcher,
             BotFactory botFactory,
             Clock clock,
             NameGenerator nameGenerator) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
+        this.eventDispatcher = eventDispatcher;
         this.botFactory = botFactory;
         this.clock = clock;
         this.nameGenerator = nameGenerator;
@@ -62,7 +66,7 @@ public class BotService {
         DccBotState dccBotState = DccBotState.createHookedDccBotState(pack, requestHook);
         stateStorage.save(botNickName, dccBotState);
 
-        botMessaging.notify(BOT_INITIALIZED, new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
+        eventDispatcher.dispatch(new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
 
         return botNickName;
     }
@@ -83,8 +87,7 @@ public class BotService {
             bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotNoticeEvent message = new BotNoticeEvent(botNickName, nowEpochMillis(), "", noticeMessage);
-            botMessaging.notify(BOT_NOTICE, message);
+            eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), "", noticeMessage));
         };
 
         return () -> botStorage.getBotByNick(botNickName)
@@ -103,8 +106,7 @@ public class BotService {
         stateStorage.removeBotState(botNickName);
 
         String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
-        BotExitedEvent requested_shutdown = new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage);
-        botMessaging.notify(BOT_EXITED, requested_shutdown);
+        eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
     }
 
     public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
@@ -152,7 +154,7 @@ public class BotService {
                 .serverMessages(serverMessages)
                 .timestamp(nowEpochMillis())
                 .build();
-        botMessaging.notify(BOT_NICK_UPDATED, renameMessage);
+        eventDispatcher.dispatch(renameMessage);
     }
 
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
@@ -169,7 +171,7 @@ public class BotService {
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            botMessaging.notify(DCC_QUEUED, new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
+            eventDispatcher.dispatch(new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
             return;
         }
 
@@ -208,7 +210,7 @@ public class BotService {
         }
 
         BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, noticeMessage);
-        botMessaging.notify(BOT_NOTICE, botNoticeEvent);
+        eventDispatcher.dispatch(botNoticeEvent);
     }
 
     public void handleCtcpQuery(String botNickName, DccCtcpQuery ctcpQuery, long localIp) {
@@ -251,7 +253,7 @@ public class BotService {
     }
 
     private void botFailed(BotFailedEvent message) {
-        botMessaging.notify(BOT_FAILED, message);
+        eventDispatcher.dispatch(message);
         exit(message.getBot(), message.getMessage());
     }
 

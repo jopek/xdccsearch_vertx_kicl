@@ -1,9 +1,11 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.common.adapter.EventBusBotMessaging;
+import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.events.DccFailedEvent;
 import com.lxbluem.common.domain.events.DccFinishedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
@@ -59,7 +61,8 @@ public class NewBotVerticleTest {
         DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
-        BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
+        EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
+        BotService botService = new BotService(botStorage, stateStorage, botMessaging, /*eventDispatcher,*/ eventDispatcher, botFactory, clock, nameGenerator);
         NewBotVerticle verticle = new NewBotVerticle(botService);
         vertx.deployVerticle(verticle, context.asyncAssertSuccess());
     }

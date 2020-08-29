@@ -3,6 +3,7 @@ package com.lxbluem.irc.domain;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.*;
 import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
@@ -14,6 +15,7 @@ import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.ports.*;
+import io.netty.util.collection.CharObjectHashMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,6 +39,7 @@ public class BotServiceTest {
     private DccBotStateStorage stateStorage;
     private BotService botService;
     private BotMessaging botMessaging;
+    private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
     private BotStorage botStorage;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
@@ -56,13 +59,15 @@ public class BotServiceTest {
         stateStorage = new InMemoryBotStateStorage();
         botStorage = new InMemoryBotStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
-
         when(nameGenerator.getNick()).thenReturn("Andy");
+
+        eventDispatcher = mock(EventDispatcher.class);
 
         botService = new BotService(
                 botStorage,
                 stateStorage,
                 botMessaging,
+                eventDispatcher,
                 botFactory,
                 clock,
                 nameGenerator
@@ -76,13 +81,20 @@ public class BotServiceTest {
 
         botService.initializeBot(testPack());
 
-        ArgumentCaptor<BotInitializedEvent> messageCaptor = ArgumentCaptor.forClass(BotInitializedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_INITIALIZED), messageCaptor.capture());
-        verify(botPort).connect(any(BotConnectionDetails.class));
-        verify(botPort).joinChannel(eq("#download"));
-        verifyNoMoreInteractions(botMessaging, botPort);
+        ArgumentCaptor<Event> messageCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(eventDispatcher).dispatch(messageCaptor.capture());
+        verify(ircBot).connect(any(BotConnectionDetails.class));
+        verify(ircBot).joinChannel(eq("#download"));
 
-        assertEquals(testPack(), messageCaptor.getValue().getPack());
+        verifyNoMoreInteractions(botMessaging, ircBot);
+
+        List<Event> dispatchedEvents = messageCaptor.getAllValues();
+        assertEquals(testPack(), ((BotInitializedEvent) dispatchedEvents.get(0)).getPack());
+
+        assertEquals(1, dispatchedEvents.size());
+        assertEquals(BotInitializedEvent.class, dispatchedEvents.get(0).getClass());
+        assertEquals(testPack(), ((BotInitializedEvent) dispatchedEvents.get(0)).getPack());
+
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         assertTrue(botStorage.getBotByNick("Andy").isPresent());
         assertEquals(testPack(), stateStorage.getBotStateByNick("Andy").get().getPack());
@@ -93,7 +105,7 @@ public class BotServiceTest {
         botService.initializeBot(testPack());
         verify(ircBot).connect(any(BotConnectionDetails.class));
         verify(ircBot).joinChannel(eq("#download"));
-        verify(botMessaging).notify(eq(Address.BOT_INITIALIZED), any(BotInitializedEvent.class));
+        verify(eventDispatcher).dispatch(any(BotInitializedEvent.class));
 
         DccBotState state = stateStorage.getBotStateByNick("Andy").get();
 
@@ -102,16 +114,17 @@ public class BotServiceTest {
 
         botService.manualExit("Andy");
         verify(ircBot).terminate();
-        verify(botMessaging).notify(eq(Address.BOT_EXITED), any(BotExitedEvent.class));
+        verify(eventDispatcher, times(2)).dispatch(any(BotExitedEvent.class));
+
+        verifyZeroInteractions(ircBot, botMessaging, eventDispatcher);
 
         state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
-        verifyZeroInteractions(ircBot, botMessaging);
     }
 
     @Test
     public void terminte_bot_manually() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.manualExit("Andy");
         verify(ircBot).terminate();
@@ -120,16 +133,15 @@ public class BotServiceTest {
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
 
         ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXITED), messageSentCaptor.capture());
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
 
         BotExitedEvent sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("Bot Andy exiting because requested shutdown", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
-
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
-        verifyNoMoreInteractions(botMessaging, ircBot);
-
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
@@ -138,12 +150,14 @@ public class BotServiceTest {
     public void terminte_bot_manually_for_missing_bot() {
         botService.manualExit("Andy");
         verify(ircBot).terminate();
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
     public void terminte_bot() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.exit("Andy", "failure");
         verify(ircBot).terminate();
@@ -152,7 +166,7 @@ public class BotServiceTest {
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
 
         ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXITED), messageSentCaptor.capture());
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
         verifyNoMoreInteractions(botMessaging, ircBot);
 
         BotExitedEvent sentMesssage = messageSentCaptor.getValue();
@@ -164,7 +178,7 @@ public class BotServiceTest {
     @Test
     public void mark_channel_joined() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.onRequestedChannelJoinComplete("Andy", "#download");
         verifyNoMoreInteractions(botMessaging, ircBot);
@@ -190,7 +204,7 @@ public class BotServiceTest {
     @Test
     public void users_in_channel() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
         verifyNoMoreInteractions(botMessaging, ircBot);
@@ -203,20 +217,23 @@ public class BotServiceTest {
     @Test
     public void users_in_channel__remoteUser_of_target_channel_missing() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
 
-        ArgumentCaptor<BotFailedEvent> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAILED), failMessageSentCaptor.capture());
-        ArgumentCaptor<BotExitedEvent> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXITED), exitMessageSentCaptor.capture());
+        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
+        verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
+        List<BotEvent> eventList = messageSentCaptor.getAllValues();
+
         verify(ircBot).terminate();
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
 
-        assertEquals("bot keex not in channel #download", failMessageSentCaptor.getValue().getMessage());
-        assertEquals("Bot Andy exiting because bot keex not in channel #download", exitMessageSentCaptor.getValue().getMessage());
+        BotFailedEvent failedEvent = (BotFailedEvent) eventList.get(0);
+        assertEquals("bot keex not in channel #download", failedEvent.getMessage());
+
+        BotExitedEvent exitedEvent = (BotExitedEvent) eventList.get(1);
+        assertEquals("Bot Andy exiting because bot keex not in channel #download", exitedEvent.getMessage());
 
         assertFalse(stateStorage.getBotStateByNick("Andy").isPresent());
         assertFalse(botStorage.getBotByNick("Andy").isPresent());
@@ -225,7 +242,7 @@ public class BotServiceTest {
     @Test
     public void channel_topic() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
 
@@ -233,36 +250,36 @@ public class BotServiceTest {
         Collection<String> channelsToJoin = stringCollectionCaptor.getValue();
         assertEquals(2, channelsToJoin.size());
         assertTrue(channelsToJoin.containsAll(Arrays.asList("#voice", "#room")));
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
     public void channel_topic__no_other_channels_referenced() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.channelTopic("Andy", "#download", "lalalal");
 
         verify(ircBot).joinChannel(stringCollectionCaptor.capture());
         assertTrue(stringCollectionCaptor.getValue().isEmpty());
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
     public void message_of_the_day() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.messageOfTheDay("Andy", asList("message of the", "dayyyyyy", "in multiple strings"));
 
         verify(ircBot).registerNickname("Andy");
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
     public void register_new_nick_when_rejected() {
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         when(nameGenerator.getNick()).thenReturn("Randy");
         botService.changeNick("Andy", "something happened; serverMessages; more serverMessages");
@@ -270,7 +287,7 @@ public class BotServiceTest {
         verify(ircBot).changeNickname(eq("Randy"));
 
         ArgumentCaptor<BotRenamedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotRenamedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_NICK_UPDATED), messageSentCaptor.capture());
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
 
         BotRenamedEvent sentMesssage = messageSentCaptor.getValue();
         assertEquals("Andy", sentMesssage.getBot());
@@ -278,7 +295,7 @@ public class BotServiceTest {
         assertEquals("Randy", sentMesssage.getRenameto());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -289,18 +306,18 @@ public class BotServiceTest {
         String noticeMessage = "lalala";
 
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 
         ArgumentCaptor<BotNoticeEvent> captor = ArgumentCaptor.forClass(BotNoticeEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_NOTICE), captor.capture());
+        verify(eventDispatcher).dispatch(captor.capture());
 
         BotNoticeEvent botNoticeEvent = captor.getValue();
         assertEquals("someDude", botNoticeEvent.getRemoteNick());
         assertEquals("lalala", botNoticeEvent.getMessage());
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -311,12 +328,12 @@ public class BotServiceTest {
         String noticeMessage = "your nickname is not registered. to register it, use";
 
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
         verify(ircBot).registerNickname(botNick);
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -328,7 +345,7 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.initializeBot(pack);
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
@@ -344,7 +361,7 @@ public class BotServiceTest {
         verify(ircBot).requestDccPack("keex", 5);
 
         ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
 
         BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
         assertEquals("", sentMesssage.getRemoteNick());
@@ -352,7 +369,7 @@ public class BotServiceTest {
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -364,7 +381,7 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.initializeBot(pack);
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
@@ -377,7 +394,7 @@ public class BotServiceTest {
         verify(ircBot, never()).registerNickname(botNick);
         verify(ircBot).joinChannel(new HashSet<>(Collections.singletonList("#zw-chat")));
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -389,7 +406,7 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.initializeBot(pack);
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
@@ -402,7 +419,7 @@ public class BotServiceTest {
         botState.joinedChannel("#someChannel");
         verify(ircBot).requestDccPack(eq("keex"), eq(5));
         ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
         BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
         assertEquals("", sentMesssage.getRemoteNick());
         assertEquals("Andy", sentMesssage.getBot());
@@ -418,7 +435,7 @@ public class BotServiceTest {
         assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
 
         assertFalse(botState.canRequestPack());
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -430,7 +447,7 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.initializeBot(pack);
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
@@ -441,24 +458,22 @@ public class BotServiceTest {
 
         assertEquals("bot state was altered in the notice message handler", botStateHash, botStateHashAfterMethod);
 
-        ArgumentCaptor<BotFailedEvent> failMessageSentCaptor = ArgumentCaptor.forClass(BotFailedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_FAILED), failMessageSentCaptor.capture());
+        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
+        verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
+        List<BotEvent> eventList = messageSentCaptor.getAllValues();
 
-        BotFailedEvent failMessage = failMessageSentCaptor.getValue();
+        BotFailedEvent failMessage = (BotFailedEvent) eventList.get(0);
         assertEquals("Andy", failMessage.getBot());
         assertEquals("connection refused", failMessage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), failMessage.getTimestamp());
 
-        ArgumentCaptor<BotExitedEvent> exitMessageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_EXITED), exitMessageSentCaptor.capture());
-        BotExitedEvent exitMessage = exitMessageSentCaptor.getValue();
-
+        BotExitedEvent exitMessage = (BotExitedEvent) eventList.get(1);
         assertEquals("Andy", exitMessage.getBot());
         assertEquals("Bot Andy exiting because connection refused", exitMessage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), exitMessage.getTimestamp());
 
         verify(ircBot).terminate();
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -470,7 +485,7 @@ public class BotServiceTest {
         Pack pack = testPack();
 
         botService.initializeBot(pack);
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.getBotStateByNick("Andy").isPresent());
         DccBotState botState = stateStorage.getBotStateByNick("Andy").get();
@@ -482,23 +497,22 @@ public class BotServiceTest {
 
         verify(ircBot, times(1)).requestDccPack("keex", 5);
 
-        ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
-        verify(botMessaging).notify(eq(Address.BOT_NOTICE), messageSentCaptor.capture());
+        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
+        verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
+        List<BotEvent> eventList = messageSentCaptor.getAllValues();
 
-        BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
+        BotNoticeEvent sentMesssage = (BotNoticeEvent) eventList.get(0);
         assertEquals("", sentMesssage.getRemoteNick());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
-        ArgumentCaptor<DccQueuedEvent> queueMessageSentCaptor = ArgumentCaptor.forClass(DccQueuedEvent.class);
-        verify(botMessaging).notify(eq(Address.DCC_QUEUED), queueMessageSentCaptor.capture());
-        DccQueuedEvent sentQueueMesssage = queueMessageSentCaptor.getValue();
+        DccQueuedEvent sentQueueMesssage = (DccQueuedEvent) eventList.get(1);
         assertEquals("Andy", sentQueueMesssage.getBot());
         assertEquals("queue for pack", sentQueueMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentQueueMesssage.getTimestamp());
 
-        verifyNoMoreInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -507,11 +521,11 @@ public class BotServiceTest {
         String incoming_message = "crrrrrap";
 
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
-        verifyZeroInteractions(botMessaging, ircBot);
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -522,7 +536,7 @@ public class BotServiceTest {
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
 
@@ -534,6 +548,8 @@ public class BotServiceTest {
         verify(botMessaging).ask(eq(Address.DCC_INITIALIZE), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.emptyMap());
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
@@ -543,7 +559,7 @@ public class BotServiceTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
 
         botService.initializeBot(testPack());
-        reset(botMessaging, ircBot);
+        reset(botMessaging, ircBot, eventDispatcher);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
         botService.handleCtcpQuery(botNick, ctcpQuery, 3232260865L);
@@ -558,5 +574,7 @@ public class BotServiceTest {
         dccInitConsumer.accept(Collections.singletonMap("port", 12345));
 
         verify(ircBot).sendCtcpMessage("keex", "DCC SEND test1._x0x_.bin 3232260865 12345 6 1");
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 }

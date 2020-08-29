@@ -1,6 +1,7 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.common.adapter.EventBusBotMessaging;
+import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
@@ -42,7 +43,8 @@ public class NewBotVerticleDeploymentTest {
         DccBotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
-        BotService botService = new BotService(botStorage, stateStorage, botMessaging, botFactory, clock, nameGenerator);
+        EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
+        BotService botService = new BotService(botStorage, stateStorage, botMessaging, /*eventDispatcher,*/ eventDispatcher, botFactory, clock, nameGenerator);
         verticle = new NewBotVerticle(botService);
     }
 
@@ -56,13 +58,13 @@ public class NewBotVerticleDeploymentTest {
         }
         Iterator<ExpectedRouteRegistry> expectedIterator = Arrays.asList(
                 new ExpectedRouteRegistry("/xfers", "NewBotVerticle:POST:/xfers", "POST"),
-                new ExpectedRouteRegistry("/xfers", "NewBotVerticle:DELETE:/xfers/:botname", "DELETE")
+                new ExpectedRouteRegistry("/xfers/:botname", "NewBotVerticle:DELETE:/xfers/:botname", "DELETE")
         ).iterator();
 
-        Async botConnect = context.async();
+        Async botConnect = context.async(2);
         vertx.eventBus()
                 .<JsonObject>consumer("route", m -> {
-                    botConnect.complete();
+                    botConnect.countDown();
                     JsonObject body = m.body();
                     ExpectedRouteRegistry expected = expectedIterator.next();
                     context.assertEquals(expected.getPath(), body.getString("path"));

@@ -7,6 +7,7 @@ import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.state.domain.StateService;
 import com.lxbluem.state.domain.model.request.*;
 import com.lxbluem.state.presenters.StatePresenter;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -35,9 +36,12 @@ public class StateVerticle extends AbstractRouteVerticle {
     }
 
     @Override
-    public void start() {
-        promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished);
-        promisedRegisterRouteWithHandler(GET, "/state", this::getState);
+    public void start(Promise<Void> start) {
+        CompositeFuture.all(
+                promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished),
+                promisedRegisterRouteWithHandler(GET, "/state", this::getState)
+        )
+                .onComplete(unused -> start.complete());
 
         handle(BOT_INITIALIZED, this::init);
         handle(BOT_NOTICE, this::notice);

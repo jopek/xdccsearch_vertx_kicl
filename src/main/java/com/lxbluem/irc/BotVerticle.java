@@ -45,9 +45,9 @@ public class BotVerticle extends AbstractRouteVerticle {
         eventBus.consumer(Address.DCC_FINISHED.address(), this::handleDccFinished);
         eventBus.consumer(Address.BOT_FAILED.address(), this::handleDccFinished);
         eventBus.consumer(Address.BOT_EXITED.address(), this::handleExit);
-        promisedRegisterRouteWithHandler(POST, "/xfers", this::handleStartTransfer);
-        promisedRegisterRouteWithHandler(DELETE, "/xfers/:botname", this::handleStopTransfer);
-        promisedRegisterRouteWithHandler(GET, "/xfers", this::handleListTransfers);
+        registerRoute(POST, "/xfers", this::handleStartTransfer);
+        registerRoute(DELETE, "/xfers/:botname", this::handleStopTransfer);
+        registerRoute(GET, "/xfers", this::handleListTransfers);
     }
 
     private void handleExit(Message<JsonObject> message) {

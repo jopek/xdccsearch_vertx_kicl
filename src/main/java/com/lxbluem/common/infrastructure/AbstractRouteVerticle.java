@@ -19,7 +19,7 @@ import static java.lang.String.format;
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    protected Future<Void> promisedRegisterRouteWithHandler(
+    protected Future<Void> registerRoute(
             HttpMethod httpMethod,
             String route,
             BiConsumer<SerializedRequest, Promise<JsonObject>> requestHandler) {

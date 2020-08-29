@@ -33,8 +33,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start(Future<Void> start) {
-        promisedRegisterRouteWithHandler(POST, "/xfers", this::startTransfer);
-        promisedRegisterRouteWithHandler(DELETE, "/xfers/:botname", this::stopTransfer)
+        registerRoute(POST, "/xfers", this::startTransfer);
+        registerRoute(DELETE, "/xfers/:botname", this::stopTransfer)
                 .setHandler(start);
 
         handle(DCC_FINISHED, this::dccFinished);

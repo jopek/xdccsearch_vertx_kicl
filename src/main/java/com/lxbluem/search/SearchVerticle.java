@@ -22,7 +22,7 @@ public class SearchVerticle extends AbstractRouteVerticle {
 
     @Override
     public void start() {
-        promisedRegisterRouteWithHandler(GET, "/search", this::handleSearchRequest);
+        registerRoute(GET, "/search", this::handleSearchRequest);
     }
 
     private void handleSearchRequest(SerializedRequest request, Promise<JsonObject> responseHandler) {

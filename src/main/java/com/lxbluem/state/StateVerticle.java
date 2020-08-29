@@ -38,8 +38,8 @@ public class StateVerticle extends AbstractRouteVerticle {
     @Override
     public void start(Promise<Void> start) {
         CompositeFuture.all(
-                promisedRegisterRouteWithHandler(DELETE, "/state", this::clearFinished),
-                promisedRegisterRouteWithHandler(GET, "/state", this::getState)
+                registerRoute(DELETE, "/state", this::clearFinished),
+                registerRoute(GET, "/state", this::getState)
         )
                 .onComplete(unused -> start.complete());
 

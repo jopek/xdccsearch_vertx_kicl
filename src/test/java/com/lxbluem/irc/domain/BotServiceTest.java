@@ -415,6 +415,7 @@ public class BotServiceTest {
 
         botState.channelReferences(packChannelName, new HashSet<>(Arrays.asList("#someChannel")));
         botState.joinedChannel("#someChannel");
+        botState.channelNickList("#someChannel", Arrays.asList("user1", "user2"));
         verify(ircBot).requestDccPack(eq("keex"), eq(5));
         ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
         verify(eventDispatcher).dispatch(messageSentCaptor.capture());
@@ -487,9 +488,9 @@ public class BotServiceTest {
 
         assertTrue(stateStorage.get("Andy").isPresent());
         BotState botState = stateStorage.get("Andy").get();
-        botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
         botState.joinedChannel(pack.getChannelName());
         botState.channelReferences(pack.getChannelName(), new HashSet<>());
+        botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 

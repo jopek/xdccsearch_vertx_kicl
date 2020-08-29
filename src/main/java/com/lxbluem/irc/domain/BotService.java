@@ -230,6 +230,8 @@ public class BotService {
 
         Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
             int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
+            if (passiveDccSocketPort == 0)
+                return;
             String nickName = botState.getPack().getNickName();
             String dccSendRequest = format("DCC SEND %s %d %d %d %d",
                     resolvedFilename.get(),

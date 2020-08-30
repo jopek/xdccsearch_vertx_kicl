@@ -12,7 +12,7 @@ public enum Address {
     DCC_REQUESTING("bot.notice", BotDccPackRequestedEvent.class),
     DCC_STARTED("bot.dcc.start", DummyEvent.class),
     DCC_PROGRESSED("bot.dcc.progress", DummyEvent.class),
-    DCC_QUEUED("bot.dcc.queue", DccQueuedEvent.class),
+    BOT_QUEUED("bot.dcc.queue", DccQueuedEvent.class),
     DCC_FINISHED("bot.dcc.finish", DummyEvent.class),
     DCC_FAILED("bot.dcc.failed", DummyEvent.class),
     DCC_TERMINATE("bot.dcc.terminate", DummyEvent.class),

@@ -205,7 +205,7 @@ public class BotEventListener {
 
         final String noticeMessageLowerCase = noticeMessage.toLowerCase();
         if (noticeMessageLowerCase.contains("queue for pack") || noticeMessageLowerCase.contains("you already have that item queued")) {
-            botMessaging.notify(Address.DCC_QUEUED.address(), botName, noticeMessage);
+            botMessaging.notify(Address.BOT_QUEUED.address(), botName, noticeMessage);
             return;
         }
 

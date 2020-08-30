@@ -88,7 +88,8 @@ public class BotService {
             bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), "", noticeMessage));
+            BotDccPackRequestedEvent event = new BotDccPackRequestedEvent(botNickName, nowEpochMillis(), noticeMessage, pack.getNickName(), pack.getPackNumber());
+            eventDispatcher.dispatch(event);
         };
 
         return () -> botStorage.get(botNickName)

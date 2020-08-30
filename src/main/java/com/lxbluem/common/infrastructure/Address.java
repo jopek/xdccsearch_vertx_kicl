@@ -9,7 +9,7 @@ public enum Address {
     BOT_JOIN("bot.join", DummyEvent.class),
     BOT_FAILED("bot.fail", BotFailedEvent.class),
     DCC_INITIALIZE("bot.dcc.init", DummyEvent.class),
-    DCC_REQUESTING("bot.dcc.request", DummyEvent.class),
+    DCC_REQUESTING("bot.notice", BotDccPackRequestedEvent.class),
     DCC_STARTED("bot.dcc.start", DummyEvent.class),
     DCC_PROGRESSED("bot.dcc.progress", DummyEvent.class),
     DCC_QUEUED("bot.dcc.queue", DccQueuedEvent.class),

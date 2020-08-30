@@ -366,14 +366,14 @@ public class BotServiceTest {
         verify(ircBot, never()).registerNickname(botNick);
         verify(ircBot).requestDccPack("keex", 5);
 
-        ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
+        ArgumentCaptor<BotDccPackRequestedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotDccPackRequestedEvent.class);
         verify(eventDispatcher).dispatch(messageSentCaptor.capture());
 
-        BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
-        assertEquals("", sentMesssage.getRemoteNick());
+        BotDccPackRequestedEvent sentMesssage = messageSentCaptor.getValue();
+        assertEquals("keex", sentMesssage.getRemoteNickName());
+        assertEquals(5, sentMesssage.getPackNumber());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
@@ -421,10 +421,11 @@ public class BotServiceTest {
 
         verify(ircBot).requestDccPack(eq("keex"), eq(5));
 
-        ArgumentCaptor<BotNoticeEvent> messageSentCaptor = ArgumentCaptor.forClass(BotNoticeEvent.class);
+        ArgumentCaptor<BotDccPackRequestedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotDccPackRequestedEvent.class);
         verify(eventDispatcher).dispatch(messageSentCaptor.capture());
-        BotNoticeEvent sentMesssage = messageSentCaptor.getValue();
-        assertEquals("", sentMesssage.getRemoteNick());
+        BotDccPackRequestedEvent sentMesssage = messageSentCaptor.getValue();
+        assertEquals("keex", sentMesssage.getRemoteNickName());
+        assertEquals(5, sentMesssage.getPackNumber());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
 
@@ -504,8 +505,8 @@ public class BotServiceTest {
         verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
         List<BotEvent> eventList = messageSentCaptor.getAllValues();
 
-        BotNoticeEvent sentMesssage = (BotNoticeEvent) eventList.get(0);
-        assertEquals("", sentMesssage.getRemoteNick());
+        BotDccPackRequestedEvent sentMesssage = (BotDccPackRequestedEvent) eventList.get(0);
+        assertEquals("keex", sentMesssage.getRemoteNickName());
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());

@@ -109,7 +109,9 @@ public class StateVerticleTest {
             context.verify(ignored -> assertEquals(expectedInitialState().encodePrettily(), body.encodePrettily()));
             stateSent.complete();
         });
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
+        Async deploymentComplete = context.async();
+        vertx.deployVerticle(verticle, context.asyncAssertSuccess(result -> deploymentComplete.complete()));
+        deploymentComplete.await();
 
         JsonObject init_message = new JsonObject()
                 .put("bot", "Andy")

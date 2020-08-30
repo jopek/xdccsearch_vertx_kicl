@@ -110,13 +110,6 @@ public class BotService {
         eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
     }
 
-    public void onRequestedChannelJoinComplete(String botNickName, String channelName) {
-        stateStorage.get(botNickName)
-                .ifPresent(botState ->
-                        botState.joinedChannel(channelName)
-                );
-    }
-
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
         stateStorage.get(botNickName).ifPresent(botState -> {
             botState.channelNickList(channelName, usersInChannel);

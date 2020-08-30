@@ -19,16 +19,16 @@ public class BotStateTest {
     public void allConditionsMet() {
         Pack pack = getPack();
 
-        BotState botState = new BotState(pack, () -> {
-        });
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        Runnable runnable = () -> {
+        };
+        BotState botState = new BotState(pack, runnable);
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.joinedChannel("#2");
-        botState.joinedChannel("#3");
+        botState.channelReferences("#2", Arrays.asList());
+        botState.channelNickList("#2", Arrays.asList("user1", "user2", "user3"));
+        botState.channelNickList("#3", Arrays.asList("userd", "usere"));
 
-        assertTrue(botState.canRequestPack());
+        assertTrue(botState.hasRequestedPack());
     }
 
     @Test
@@ -37,14 +37,14 @@ public class BotStateTest {
 
         BotState botState = new BotState(pack, () -> {
         });
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#SecOndArY", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        botState.channelReferences("#MainChannel", Arrays.asList("#SecOndArY", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.joinedChannel("#secondary");
-        botState.joinedChannel("#3");
+        botState.channelReferences("#secondary", Arrays.asList("#irrelevant"));
+        botState.channelNickList("#secondary", Arrays.asList("dude"));
+        botState.channelReferences("#3", Arrays.asList("#unusedChannel"));
+        botState.channelNickList("#3", Arrays.asList("dude2"));
 
-        assertTrue(botState.canRequestPack());
+        assertTrue(botState.hasRequestedPack());
     }
 
     @Test
@@ -53,13 +53,11 @@ public class BotStateTest {
 
         BotState botState = new BotState(pack, () -> {
         });
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.joinedChannel("#2");
 
         assertFalse(botState.canRequestPack());
+        assertFalse(botState.hasRequestedPack());
     }
 
     @Test
@@ -79,13 +77,13 @@ public class BotStateTest {
 
         BotState botState = new BotState(pack, () -> {
         });
-        botState.joinedChannel("#MainChannel");
         botState.nickRegistryRequired();
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.joinedChannel("#2");
-        botState.joinedChannel("#3");
+        botState.channelReferences("#2", Arrays.asList("#irrelevant"));
+        botState.channelNickList("#2", Arrays.asList());
+        botState.channelReferences("#3", Arrays.asList("#irrelevant"));
+        botState.channelNickList("#3", Arrays.asList());
 
         assertFalse(botState.hasRequestedPack());
 
@@ -99,13 +97,9 @@ public class BotStateTest {
         AtomicBoolean atomicBoolean = new AtomicBoolean();
         BotState botState = new BotState(pack, () -> atomicBoolean.set(true));
 
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.joinedChannel("#2");
         botState.channelNickList("#2", Arrays.asList("userX", "userY", "userZ"));
-        botState.joinedChannel("#3");
         botState.channelNickList("#3", Arrays.asList("userA", "userZ"));
 
         assertTrue(atomicBoolean.get());
@@ -135,44 +129,17 @@ public class BotStateTest {
     }
 
     @Test
-    public void allConditionsMet_with_ExecHook_and_nickregistry() {
-        Pack pack = getPack();
-        AtomicBoolean atomicBoolean = new AtomicBoolean();
-        BotState botState = new BotState(pack, () -> atomicBoolean.set(true));
-
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
-        botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
-        botState.nickRegistryRequired();
-        botState.joinedChannel("#2");
-        botState.joinedChannel("#3");
-
-        assertFalse(atomicBoolean.get());
-
-        botState.nickRegistered();
-        assertTrue(atomicBoolean.get());
-    }
-
-    @Test
     public void request_only_once() {
         Pack pack = getPack();
         AtomicInteger atomicInteger = new AtomicInteger();
         BotState botState = new BotState(pack, atomicInteger::incrementAndGet);
 
-        botState.joinedChannel("#MainChannel");
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
+        botState.channelReferences("#MainChannel", Arrays.asList("#2"));
+        botState.channelReferences("#MainChannel", Arrays.asList("#3"));
 
-        // e.g. via topic
-        HashSet<String> channelReferences1 = new HashSet<>(Arrays.asList("#2"));
-        botState.channelReferences("#MainChannel", channelReferences1);
-        botState.joinedChannel("#2");
-
-        // e.g. via private notice
-        HashSet<String> channelReferences2 = new HashSet<>(Arrays.asList("#3"));
-        botState.channelReferences("#MainChannel", channelReferences2);
-        botState.joinedChannel("#3");
-        botState.channelNickList("#3", Arrays.asList("user1", "user2", "user3"));
+        botState.channelNickList("#2", Arrays.asList("user1"));
+        botState.channelNickList("#3", Arrays.asList("user2", "user3"));
 
         botState.nickRegistered();
         assertEquals(1, atomicInteger.get());
@@ -200,60 +167,41 @@ public class BotStateTest {
         Pack pack = getPack();
         BotState botState = new BotState(pack, () -> {
         });
-        botState.joinedChannel("#MainChannel");
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        botState.channelReferences("#MainChannel", channelReferences);
+        botState.channelReferences("#MainChannel", Arrays.asList());
         botState.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
-        botState.joinedChannel("#2");
-        botState.joinedChannel("#3");
 
+        assertFalse(botState.canRequestPack());
         assertFalse(botState.hasRequestedPack());
     }
 
     @Test
     public void hashcodes_DefaultDccBotState() {
         Pack pack = getPack();
-        BotState workflow = new BotState(pack, () -> {
+        BotState botState = new BotState(pack, () -> {
         });
-        int initialHash = workflow.hashCode();
-        workflow.joinedChannel("#MainChannel");
-        int afterJoinedHash = workflow.hashCode();
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        workflow.channelReferences("#MainChannel", channelReferences);
-        int afterChannelRefsHash = workflow.hashCode();
-        workflow.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
-        int afterChannelNickListHash = workflow.hashCode();
-        workflow.joinedChannel("#2");
-        workflow.joinedChannel("#3");
-        int afterJoinedHash2 = workflow.hashCode();
+        int initialHash = botState.hashCode();
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
+        int afterChannelRefsHash = botState.hashCode();
+        botState.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
+        int afterChannelNickListHash = botState.hashCode();
 
-        assertNotEquals(initialHash, afterJoinedHash);
         assertNotEquals(initialHash, afterChannelNickListHash);
         assertNotEquals(initialHash, afterChannelRefsHash);
-        assertNotEquals(initialHash, afterJoinedHash2);
     }
 
     @Test
     public void hashcodes_HookedDccBotState() {
         Pack pack = getPack();
-        BotState workflow = new BotState(pack, () -> {
+        BotState botState = new BotState(pack, () -> {
         });
-        int initialHash = workflow.hashCode();
-        workflow.joinedChannel("#MainChannel");
-        int afterJoinedHash = workflow.hashCode();
-        HashSet<String> channelReferences = new HashSet<>(Arrays.asList("#2", "#3"));
-        workflow.channelReferences("#MainChannel", channelReferences);
-        int afterChannelRefsHash = workflow.hashCode();
-        workflow.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
-        int afterChannelNickListHash = workflow.hashCode();
-        workflow.joinedChannel("#2");
-        workflow.joinedChannel("#3");
-        int afterJoinedHash2 = workflow.hashCode();
+        int initialHash = botState.hashCode();
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
+        int afterChannelRefsHash = botState.hashCode();
+        botState.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
+        int afterChannelNickListHash = botState.hashCode();
 
-        assertNotEquals(initialHash, afterJoinedHash);
         assertNotEquals(initialHash, afterChannelNickListHash);
         assertNotEquals(initialHash, afterChannelRefsHash);
-        assertNotEquals(initialHash, afterJoinedHash2);
     }
 
     @Test(expected = RuntimeException.class)

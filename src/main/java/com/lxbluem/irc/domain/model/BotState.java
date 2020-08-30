@@ -40,10 +40,6 @@ public class BotState {
         }
     }
 
-    public void joinedChannel(String channelName) {
-        joinedChannels.add(channelName.toLowerCase());
-    }
-
     public Set<String> channelReferences(String channelName, Collection<String> channelNames) {
         //IMPLICITLY JOINED - Join event does not always get fired
         joinedChannels.add(channelName.toLowerCase());

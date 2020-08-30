@@ -335,6 +335,31 @@ public class BotServiceTest {
     }
 
     @Test
+    public void notice_message_handler_account_register_nick() {
+        String botNick = "Andy";
+        String numericCommandMessage = "You need to be identified to a registered account to join this channel";
+
+        Pack pack = testPack();
+        botService.initializeBot(pack);
+        reset(botMessaging, ircBot, eventDispatcher);
+
+        assertTrue(stateStorage.get("Andy").isPresent());
+        BotState botState = stateStorage.get("Andy").get();
+
+        botState.channelReferences("#download", Arrays.asList("#2", "#mg-lounge"));
+        botState.channelNickList("#download", Arrays.asList("keex"));
+
+        botState.channelReferences("#2", Collections.emptyList());
+
+        botService.channelRequiresAccountRegistry(botNick, "#mg-lounge", numericCommandMessage);
+
+        verify(ircBot).requestDccPack("keex", 5);
+        verify(eventDispatcher).dispatch(any(BotNoticeEvent.class));
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+    }
+
+    @Test
     public void notice_message_handler_nickserv_registered_nick_request() {
         String botNick = "Andy";
         String remoteNick = "nickserv";
@@ -424,7 +449,8 @@ public class BotServiceTest {
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("requesting pack #5 from keex", sentMesssage.getMessage());
 
-        assertTrue(botState.canRequestPack());
+        assertTrue(botState.hasRequestedPack());
+        assertFalse(botState.canRequestPack());
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
 

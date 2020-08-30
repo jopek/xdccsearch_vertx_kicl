@@ -11,17 +11,15 @@ import org.kitteh.irc.client.library.element.Channel;
 import org.kitteh.irc.client.library.element.User;
 import org.kitteh.irc.client.library.event.channel.ChannelTopicEvent;
 import org.kitteh.irc.client.library.event.channel.ChannelUsersUpdatedEvent;
-import org.kitteh.irc.client.library.event.channel.RequestedChannelJoinCompleteEvent;
 import org.kitteh.irc.client.library.event.client.ClientReceiveMotdEvent;
+import org.kitteh.irc.client.library.event.client.ClientReceiveNumericEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCtcpQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
+import org.kitteh.irc.client.library.feature.filter.NumericFilter;
 
 import java.text.SimpleDateFormat;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class KittehIrcBot implements IrcBot {
@@ -56,7 +54,13 @@ public class KittehIrcBot implements IrcBot {
 
         if (isDebugging) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            client.setInputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line));
+            client.setInputListener(line -> {
+                if (line.contains(" PRIVMSG #")) return;
+                if (line.contains(" 352 ")) return;
+                if (line.contains(" 353 ")) return;
+                if (line.contains(" 354 ")) return;
+                System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line);
+            });
             client.setOutputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[O] " + line));
         }
 
@@ -71,13 +75,14 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void joinChannel(String... channelNames) {
+        System.out.println("JOIN CHANNELS: " + Arrays.stream(channelNames).collect(Collectors.joining(", ")));
         if (channelNames.length > 0)
             client.addChannel(channelNames);
     }
 
     @Override
     public void registerNickname(String nick) {
-        client.sendMessage("nickserv", String.format("register %s %s", "password", "email"));
+        client.sendMessage("nickserv", String.format("register %s %s", "password", "email@gmail.com"));
     }
 
     @Override
@@ -98,12 +103,6 @@ public class KittehIrcBot implements IrcBot {
     @Override
     public void terminate() {
         client.shutdown();
-    }
-
-
-    @Handler
-    public void channelJoined(RequestedChannelJoinCompleteEvent event) {
-        botService.onRequestedChannelJoinComplete(botName, event.getChannel().getName());
     }
 
     @Handler
@@ -133,6 +132,26 @@ public class KittehIrcBot implements IrcBot {
                 .orElse("");
         String botname = event.getClient().getNick();
         botService.channelTopic(botname, channelName, topic);
+    }
+
+    @NumericFilter(474)
+    @Handler
+    public void onBanFromChannel(ClientReceiveNumericEvent event) {
+        System.out.printf("BANNED: BOT:%s EVENT:%s\n", botName, event);
+        List<String> parameters = event.getParameters();
+        String message = parameters.get(2);
+        botService.exit(botName, message);
+    }
+
+    @NumericFilter(477)
+    @Handler
+    public void onAccountNeededJoinChannel(ClientReceiveNumericEvent event) {
+        System.out.printf("CHANNEL NEEDS REGISTRATION:%s EVENT:%s\n", botName, event);
+        List<String> parameters = event.getParameters();
+        String botNickName = parameters.get(0);
+        String attemptedChannel = parameters.get(1);
+        String message = parameters.get(2);
+        botService.channelRequiresAccountRegistry(botNickName, attemptedChannel, message);
     }
 
     @Handler

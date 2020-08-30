@@ -6,10 +6,7 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
@@ -27,13 +24,16 @@ public class BotState {
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
     private final Set<String> joinedChannels = new HashSet<>();
-    private final Runnable requestHook;
+    private final Runnable decoratedRequestHook;
 
     public BotState(Pack pack, Runnable requestHook) {
         this.pack = pack;
         mainChannelName = pack.getChannelName().toLowerCase();
         remoteUser = pack.getNickName();
-        this.requestHook = requestHook;
+        decoratedRequestHook = () -> {
+            requestHook.run();
+            packRequested = true;
+        };
 
         if (remoteUser == null) {
             throw new IllegalArgumentException("remote user bot cannot be null");
@@ -44,9 +44,12 @@ public class BotState {
         joinedChannels.add(channelName.toLowerCase());
     }
 
-    public Set<String> channelReferences(String channelName, Set<String> newRefs) {
+    public Set<String> channelReferences(String channelName, Collection<String> channelNames) {
+        //IMPLICITLY JOINED - Join event does not always get fired
+        joinedChannels.add(channelName.toLowerCase());
+
         if (channelName.equalsIgnoreCase(mainChannelName)) {
-            Set<String> channels = newRefs.stream()
+            Set<String> channels = channelNames.stream()
                     .map(String::toLowerCase)
                     .filter(v -> !referencedChannelNames.contains(v))
                     .filter(v -> !joinedChannels.contains(v))
@@ -59,12 +62,15 @@ public class BotState {
     }
 
     public void channelNickList(String channelName, List<String> channelNickList) {
+        //IMPLICITLY JOINED - get nick list only possible when joined
+        joinedChannels.add(channelName.toLowerCase());
+
         if (channelName.equalsIgnoreCase(mainChannelName))
             remoteUserSeen = channelNickList.stream().anyMatch(nick -> nick.equalsIgnoreCase(remoteUser));
 
         if (canRequestPack()) {
             System.out.printf("channelNickList: %s REQUESTING\n", channelName);
-            requestHook.run();
+            decoratedRequestHook.run();
         }
     }
 
@@ -78,13 +84,14 @@ public class BotState {
         boolean allChannelsJoined = main && allAdditional;
 
         if (!channelReferencesSet) return false;
+        if (packRequested) return false;
 
         return remoteUserSeen && allChannelsJoined && !nickRegistryRequired
                 || remoteUserSeen && allChannelsJoined && nickRegistered;
     }
 
     public boolean hasRequestedPack() {
-        return false;
+        return packRequested;
     }
 
     public void nickRegistryRequired() {
@@ -95,8 +102,7 @@ public class BotState {
         this.nickRegistered = true;
 
         if (canRequestPack()) {
-            System.out.print("nickRegistered REQUESTING\n");
-            requestHook.run();
+            decoratedRequestHook.run();
         }
     }
 
@@ -104,4 +110,10 @@ public class BotState {
         return pack;
     }
 
+    public void removeReferencedChannel(String channelName) {
+        referencedChannelNames.remove(channelName);
+        if (canRequestPack()) {
+            decoratedRequestHook.run();
+        }
+    }
 }

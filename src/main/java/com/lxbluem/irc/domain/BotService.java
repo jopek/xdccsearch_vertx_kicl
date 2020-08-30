@@ -255,6 +255,15 @@ public class BotService {
         botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
     }
 
+    public void channelRequiresAccountRegistry(String botNickName, String channelName, String message) {
+        BotState botState = stateStorage.get(botNickName)
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
+
+        if (message.toLowerCase().contains("registered account to join")) {
+            botState.removeReferencedChannel(channelName);
+        }
+    }
+
     private void botFailed(BotFailedEvent message) {
         eventDispatcher.dispatch(message);
         exit(message.getBot(), message.getMessage());

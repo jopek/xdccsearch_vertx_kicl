@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -86,10 +87,10 @@ public class BotStateTest {
         botState.joinedChannel("#2");
         botState.joinedChannel("#3");
 
-        assertFalse(botState.canRequestPack());
+        assertFalse(botState.hasRequestedPack());
 
         botState.nickRegistered();
-        assertTrue(botState.canRequestPack());
+        assertTrue(botState.hasRequestedPack());
     }
 
     @Test
@@ -154,6 +155,47 @@ public class BotStateTest {
     }
 
     @Test
+    public void request_only_once() {
+        Pack pack = getPack();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BotState botState = new BotState(pack, atomicInteger::incrementAndGet);
+
+        botState.joinedChannel("#MainChannel");
+        botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
+
+        // e.g. via topic
+        HashSet<String> channelReferences1 = new HashSet<>(Arrays.asList("#2"));
+        botState.channelReferences("#MainChannel", channelReferences1);
+        botState.joinedChannel("#2");
+
+        // e.g. via private notice
+        HashSet<String> channelReferences2 = new HashSet<>(Arrays.asList("#3"));
+        botState.channelReferences("#MainChannel", channelReferences2);
+        botState.joinedChannel("#3");
+        botState.channelNickList("#3", Arrays.asList("user1", "user2", "user3"));
+
+        botState.nickRegistered();
+        assertEquals(1, atomicInteger.get());
+    }
+
+    @Test
+    public void remove_channel_joined() {
+        Pack pack = getPack();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BotState botState = new BotState(pack, atomicInteger::incrementAndGet);
+
+        botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
+        botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
+
+        botState.channelNickList("#2", Arrays.asList("user1", "user2", "user3"));
+        botState.channelReferences("#2", Arrays.asList("#2", "#3"));
+
+        botState.removeReferencedChannel("#3");
+
+        assertEquals(1, atomicInteger.get());
+    }
+
+    @Test
     public void missingRemoteBotUser() {
         Pack pack = getPack();
         BotState botState = new BotState(pack, () -> {
@@ -165,7 +207,7 @@ public class BotStateTest {
         botState.joinedChannel("#2");
         botState.joinedChannel("#3");
 
-        assertFalse(botState.canRequestPack());
+        assertFalse(botState.hasRequestedPack());
     }
 
     @Test

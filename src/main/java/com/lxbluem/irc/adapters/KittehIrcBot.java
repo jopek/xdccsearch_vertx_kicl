@@ -1,9 +1,11 @@
 package com.lxbluem.irc.adapters;
 
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.ports.IrcBot;
+import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;
 import org.kitteh.irc.client.library.defaults.DefaultClient;
@@ -22,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
@@ -75,7 +78,7 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void joinChannel(String... channelNames) {
-        System.out.println("JOIN CHANNELS: " + Arrays.stream(channelNames).collect(Collectors.joining(", ")));
+        System.out.println("JOIN CHANNELS: " + String.join(", ", channelNames));
         if (channelNames.length > 0)
             client.addChannel(channelNames);
     }
@@ -102,7 +105,19 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void terminate() {
-        client.shutdown();
+//        client.shutdown();
+        TimerTask delayedTermination = new TimerTask() {
+            @Override
+            public void run() {
+                client.shutdown();
+            }
+        };
+        new Timer().schedule(delayedTermination, 5000);
+    }
+
+    @Override
+    public void cancelDcc(String remoteBotName) {
+        client.sendMessage(remoteBotName, "xdcc cancel");
     }
 
     @Handler
@@ -127,7 +142,7 @@ public class KittehIrcBot implements IrcBot {
     public void onChannelTopic(ChannelTopicEvent event) {
         String channelName = event.getChannel().getName();
         String topic = event
-                .getTopic()
+                .getNewTopic()
                 .getValue()
                 .orElse("");
         String botname = event.getClient().getNick();

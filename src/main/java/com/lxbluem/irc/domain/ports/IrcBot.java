@@ -20,4 +20,6 @@ public interface IrcBot {
     void sendCtcpMessage(String remoteBotName, String message);
 
     void terminate();
+
+    void cancelDcc(String remoteBotName);
 }

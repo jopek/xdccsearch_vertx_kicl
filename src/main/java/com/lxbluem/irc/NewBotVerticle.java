@@ -11,7 +11,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.rxjava.core.eventbus.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.functions.Action1;
@@ -64,10 +63,13 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     private void handle(Address address, Action1<JsonObject> method) {
         vertx.eventBus()
-                .<JsonObject>consumer(address.address())
-                .toObservable()
-                .map(Message::body)
-                .subscribe(method);
+                .<JsonObject>consumer(address.address(), event -> {
+                    try {
+                        method.call(event.body());
+                    } catch (Throwable t) {
+                        event.fail(500, t.getMessage());
+                    }
+                });
     }
 
     private void dccFailed(JsonObject eventMessage) {

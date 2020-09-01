@@ -1,6 +1,7 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.irc.domain.exception.DccTerminatedException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -39,7 +40,6 @@ public class DccReceiverVerticle extends AbstractVerticle {
         this.botMessaging = botMessaging;
     }
 
-    // TODO: add DCC_STOP command/event listener
     @Override
     public void start() {
         EventBus eventBus = vertx.eventBus();
@@ -65,9 +65,17 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 error -> LOG.error("{}", error.getMessage())
         );
 
-        Observable<JsonObject> map = eventBus.<JsonObject>consumer(DCC_TERMINATE.address())
-                .toObservable()
-                .map(Message::body);
+        Observable<Message<JsonObject>> botExited = eventBus.<JsonObject>consumer(BOT_EXITED.address())
+                .toObservable();
+
+        Observable<Message<JsonObject>> botFailed = eventBus.<JsonObject>consumer(BOT_FAILED.address())
+                .toObservable();
+
+        Observable<String> terminationForBot =
+                botExited.mergeWith(botFailed)
+                .map(Message::body)
+                .map(jso -> jso.getString("bot"))
+                .doOnNext(botNickName -> LOG.info("about to terminate DCC connection for {}", botNickName));
 
         eventBus.<JsonObject>consumer(DCC_INITIALIZE.address())
                 .toObservable()
@@ -88,7 +96,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
                     });
                 })
                 .subscribe(messageConnection ->
-                        subscribeTo(messageConnection.initMessage, messageConnection.netSocketSingle)
+                        subscribeTo(messageConnection.initMessage, messageConnection.netSocketSingle, terminationForBot)
                 );
     }
 
@@ -113,7 +121,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
         return netClient.rxConnect(port, host);
     }
 
-    private void subscribeTo(JsonObject message, Single<NetSocket> socketObservable) {
+    private void subscribeTo(JsonObject message, Single<NetSocket> socketObservable, Observable<String> terminationForBotRequest) {
         String filename = message.getString("filename");
         String botname = message.getString("bot");
         long filesize = message.getLong("size", 0L);
@@ -142,7 +150,12 @@ public class DccReceiverVerticle extends AbstractVerticle {
                     final long[] totalBytesValue = {filesize};
                     final long[] lastProgressAt = {0};
 
+                    Observable<String> terminationFilter = terminationForBotRequest.filter(botname::equalsIgnoreCase)
+                            .map(botToTerminate -> {
+                                throw new DccTerminatedException(botToTerminate);
+                            });
                     socket.toObservable()
+                            .takeUntil(terminationFilter)
                             .subscribe(
                                     bufferReceivedAction(fileOutput.get(), botname, socket, outBuffer, bytesTransferredValue, totalBytesValue, lastProgressAt),
                                     errorAction(filename, botname),
@@ -191,8 +204,12 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     private Action1<Throwable> errorAction(String filename, String botname) {
         return error -> {
-            botMessaging.notify(DCC_FAILED.address(), botname, error);
-            LOG.error("transfer of {} failed {}", filename, error.getMessage());
+            if (error instanceof DccTerminatedException) {
+                botMessaging.notify(DCC_TERMINATED.address(), botname, error);
+            } else {
+                botMessaging.notify(DCC_FAILED.address(), botname, error);
+            }
+            LOG.error("transfer of {} failed: {}", filename, error.getMessage());
         };
     }
 

@@ -110,6 +110,7 @@ public class BotServiceTest {
         state.channelReferences("#download", Arrays.asList());
 
         botService.manualExit("Andy");
+        verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
         verify(eventDispatcher, times(2)).dispatch(any(BotExitedEvent.class));
 
@@ -124,6 +125,7 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.manualExit("Andy");
+        verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
 
         assertFalse(botStorage.get("Andy").isPresent());
@@ -144,7 +146,7 @@ public class BotServiceTest {
     }
 
     @Test(expected = BotNotFoundException.class)
-    public void terminte_bot_manually_for_missing_bot() {
+    public void terminate_bot_manually_for_missing_bot() {
         botService.manualExit("Andy");
         verify(ircBot).terminate();
 
@@ -152,11 +154,12 @@ public class BotServiceTest {
     }
 
     @Test
-    public void terminte_bot() {
+    public void terminate_bot() {
         botService.initializeBot(testPack());
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.exit("Andy", "failure");
+        verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
 
         assertFalse(botStorage.get("Andy").isPresent());
@@ -209,6 +212,7 @@ public class BotServiceTest {
         verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
         List<BotEvent> eventList = messageSentCaptor.getAllValues();
 
+        verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
@@ -479,6 +483,7 @@ public class BotServiceTest {
         assertEquals("Bot Andy exiting because connection refused", exitMessage.getMessage());
         assertEquals(fixedInstant.toEpochMilli(), exitMessage.getTimestamp());
 
+        verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }

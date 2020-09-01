@@ -15,7 +15,7 @@ public enum Address {
     BOT_QUEUED("bot.dcc.queue", DccQueuedEvent.class),
     DCC_FINISHED("bot.dcc.finish", DummyEvent.class),
     DCC_FAILED("bot.dcc.failed", DummyEvent.class),
-    DCC_TERMINATE("bot.dcc.terminate", DummyEvent.class),
+    DCC_TERMINATED("bot.dcc.terminate", DummyEvent.class),
     FILENAME_RESOLVE("filename.resolve", DummyEvent.class),
     BOT_NOTICE("bot.notice", BotNoticeEvent.class),
     BOT_NICK_UPDATED("bot.nick", BotRenamedEvent.class),

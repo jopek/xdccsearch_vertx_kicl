@@ -16,7 +16,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -97,18 +96,28 @@ public class BotService {
     }
 
     public void manualExit(String botNickName) {
-        exit(botNickName, "requested shutdown");
+        botStorage.get(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
+        commonExit(botNickName, "requested shutdown");
     }
 
     public void exit(String botNickName, String reason) {
-        IrcBot bot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-        bot.terminate();
+        botStorage.get(botNickName).ifPresent(bot -> commonExit(botNickName, reason));
+    }
+
+    private void commonExit(String botNickName, String reason) {
+        botStorage.get(botNickName).ifPresent(ircBot -> {
+            stateStorage.get(botNickName).ifPresent(state ->
+                    ircBot.cancelDcc(state.getPack().getNickName())
+            );
+
+            ircBot.terminate();
+        });
         botStorage.remove(botNickName);
         stateStorage.remove(botNickName);
 
         String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
         eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
+
     }
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
@@ -124,138 +133,129 @@ public class BotService {
     }
 
     public void channelTopic(String botNickName, String channelName, String topic) {
-        IrcBot bot = botStorage.get(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
-        stateStorage.get(botNickName).ifPresent(botState -> {
-            Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
-            Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
-            bot.joinChannel(channelReferences);
-        });
+        botStorage.get(botNickName).ifPresent(bot ->
+                stateStorage.get(botNickName).ifPresent(botState -> {
+                    Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
+                    Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
+                    bot.joinChannel(channelReferences);
+                })
+        );
     }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {
-        IrcBot bot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-        bot.registerNickname(botNickName);
+        botStorage.get(botNickName).ifPresent(bot ->
+                bot.registerNickname(botNickName)
+        );
     }
 
     public void changeNick(String botNickName, String serverMessages) {
-        IrcBot bot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-        String newBotNickName = nameGenerator.getNick();
-        bot.changeNickname(newBotNickName);
-        BotRenamedEvent renameMessage = BotRenamedEvent.builder()
-                .attemptedBotName(botNickName)
-                .renameto(newBotNickName)
-                .serverMessages(serverMessages)
-                .timestamp(nowEpochMillis())
-                .build();
-        eventDispatcher.dispatch(renameMessage);
+        botStorage.get(botNickName).ifPresent(bot -> {
+            String newBotNickName = nameGenerator.getNick();
+            bot.changeNickname(newBotNickName);
+            BotRenamedEvent renameMessage = BotRenamedEvent.builder()
+                    .attemptedBotName(botNickName)
+                    .renameto(newBotNickName)
+                    .serverMessages(serverMessages)
+                    .timestamp(nowEpochMillis())
+                    .build();
+            eventDispatcher.dispatch(renameMessage);
+        });
     }
 
     public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
-        IrcBot bot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
+        botStorage.get(botNickName).ifPresent(bot ->
+                stateStorage.get(botNickName).ifPresent(botState -> {
+                    if (remoteName.toLowerCase().startsWith("ls"))
+                        return;
 
-        Optional<BotState> optionalDccBotState = stateStorage.get(botNickName);
-        if (!optionalDccBotState.isPresent())
-            return;
-        BotState botState = optionalDccBotState.get();
+                    String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
+                    if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
+                        eventDispatcher.dispatch(new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
+                        return;
+                    }
 
-        if (remoteName.toLowerCase().startsWith("ls"))
-            return;
+                    String channelName = botState.getPack().getChannelName();
+                    if (lowerCaseNoticeMessage.contains(channelName.toLowerCase())) {
+                        Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(noticeMessage);
+                        Set<String> references = botState.channelReferences(channelName, mentionedChannels);
+                        bot.joinChannel(references);
+                        return;
+                    }
 
-        String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
-        if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            eventDispatcher.dispatch(new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
-            return;
-        }
+                    if (remoteName.equalsIgnoreCase("nickserv")) {
+                        if (lowerCaseNoticeMessage.contains("your nickname is not registered. to register it, use")) {
+                            botState.nickRegistryRequired();
+                            bot.registerNickname(botNickName);
+                            return;
+                        }
 
-        String channelName = botState.getPack().getChannelName();
-        if (lowerCaseNoticeMessage.contains(channelName.toLowerCase())) {
-            Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(noticeMessage);
-            Set<String> references = botState.channelReferences(channelName, mentionedChannels);
-            bot.joinChannel(references);
-            return;
-        }
+                        Pattern pattern = Pattern.compile("nickname .* registered", Pattern.CASE_INSENSITIVE);
+                        Matcher matcher = pattern.matcher(noticeMessage);
 
-        if (remoteName.equalsIgnoreCase("nickserv")) {
-            if (lowerCaseNoticeMessage.contains("your nickname is not registered. to register it, use")) {
-                botState.nickRegistryRequired();
-                bot.registerNickname(botNickName);
-                return;
-            }
+                        if (matcher.find()) {
+                            botState.nickRegistered();
+                            return;
+                        }
+                        return;
+                    }
 
-            Pattern pattern = Pattern.compile("nickname .* registered", Pattern.CASE_INSENSITIVE);
-            Matcher matcher = pattern.matcher(noticeMessage);
+                    if (lowerCaseNoticeMessage.contains("download connection failed")
+                            || lowerCaseNoticeMessage.contains("connection refused")
+                            || lowerCaseNoticeMessage.contains("you already requested that pack")
+                    ) {
+                        BotFailedEvent noticeFailMessage = new BotFailedEvent(botNickName, nowEpochMillis(), noticeMessage);
+                        botFailed(noticeFailMessage);
+                        return;
+                    }
 
-            if (matcher.find()) {
-                botState.nickRegistered();
-                return;
-            }
-            return;
-        }
-
-        if (lowerCaseNoticeMessage.contains("download connection failed")
-                || lowerCaseNoticeMessage.contains("connection refused")
-                || lowerCaseNoticeMessage.contains("you already requested that pack")
-        ) {
-            BotFailedEvent noticeFailMessage = new BotFailedEvent(botNickName, nowEpochMillis(), noticeMessage);
-            botFailed(noticeFailMessage);
-            return;
-        }
-
-        BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, noticeMessage);
-        eventDispatcher.dispatch(botNoticeEvent);
+                    BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, noticeMessage);
+                    eventDispatcher.dispatch(botNoticeEvent);
+                }));
     }
+
 
     public void handleCtcpQuery(String botNickName, DccCtcpQuery ctcpQuery, long localIp) {
         if (!ctcpQuery.isValid()) {
             return;
         }
+        botStorage.get(botNickName).ifPresent(bot ->
+                stateStorage.get(botNickName).ifPresent(botState -> {
 
-        IrcBot bot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
+                    AtomicReference<String> resolvedFilename = new AtomicReference<>("");
 
-        Optional<BotState> optionalDccBotState = stateStorage.get(botNickName);
-        if (!optionalDccBotState.isPresent())
-            return;
-        BotState botState = optionalDccBotState.get();
+                    Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
+                        int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
+                        if (passiveDccSocketPort == 0)
+                            return;
+                        String nickName = botState.getPack().getNickName();
+                        String dccSendRequest = format("DCC SEND %s %d %d %d %d",
+                                resolvedFilename.get(),
+                                localIp,
+                                passiveDccSocketPort,
+                                ctcpQuery.getSize(),
+                                ctcpQuery.getToken()
+                        );
 
-        AtomicReference<String> resolvedFilename = new AtomicReference<>("");
+                        bot.sendCtcpMessage(nickName, dccSendRequest);
+                    };
 
-        Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
-            int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
-            if (passiveDccSocketPort == 0)
-                return;
-            String nickName = botState.getPack().getNickName();
-            String dccSendRequest = format("DCC SEND %s %d %d %d %d",
-                    resolvedFilename.get(),
-                    localIp,
-                    passiveDccSocketPort,
-                    ctcpQuery.getSize(),
-                    ctcpQuery.getToken()
-            );
+                    Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
+                        String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
+                        resolvedFilename.set(filenameAnswer);
+                        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNickName);
+                        botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
+                    };
 
-            bot.sendCtcpMessage(nickName, dccSendRequest);
-        };
-
-        Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
-            String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
-            resolvedFilename.set(filenameAnswer);
-            DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNickName);
-            botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
-        };
-
-        botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
+                    botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
+                }));
     }
 
     public void channelRequiresAccountRegistry(String botNickName, String channelName, String message) {
-        BotState botState = stateStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-
-        if (message.toLowerCase().contains("registered account to join")) {
-            botState.removeReferencedChannel(channelName);
-        }
+        stateStorage.get(botNickName).ifPresent(botState -> {
+            if (message.toLowerCase().contains("registered account to join")) {
+                botState.removeReferencedChannel(channelName);
+            }
+        });
     }
 
     private void botFailed(BotFailedEvent message) {

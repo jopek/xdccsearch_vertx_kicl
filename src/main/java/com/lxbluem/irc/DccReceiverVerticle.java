@@ -14,6 +14,7 @@ import io.vertx.rxjava.core.net.NetSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
+import rx.Single;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.subjects.PublishSubject;
@@ -40,7 +41,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     // TODO: add DCC_STOP command/event listener
     @Override
-    public void start() throws Exception {
+    public void start() {
         EventBus eventBus = vertx.eventBus();
 
         final int bufferSize = 1 << 18;
@@ -48,14 +49,15 @@ public class DccReceiverVerticle extends AbstractVerticle {
         netServer = vertx.createNetServer(new NetServerOptions().setReceiveBufferSize(bufferSize));
 
         PublishSubject<NetSocket> serverSocketSubject = PublishSubject.create();
+        Action1<NetSocket> logConnection = netSocket -> LOG.info("SOCKET connect stream : l:{}:{} r:{}:{}",
+                netSocket.remoteAddress().host(),
+                netSocket.remoteAddress().port(),
+                netSocket.localAddress().host(),
+                netSocket.localAddress().port()
+        );
         netServer.connectStream()
                 .toObservable()
-                .doOnNext(netSocket -> LOG.info("SOCKET connect stream : l:{}:{} r:{}:{}",
-                        netSocket.remoteAddress().host(),
-                        netSocket.remoteAddress().port(),
-                        netSocket.localAddress().host(),
-                        netSocket.localAddress().port()
-                ))
+                .doOnNext(logConnection)
                 .subscribe(serverSocketSubject);
 
         netServer.rxListen(PORT).subscribe(
@@ -63,12 +65,12 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 error -> LOG.error("{}", error.getMessage())
         );
 
-        PublishSubject<Message<JsonObject>> initMessageSubject = PublishSubject.create();
+        Observable<JsonObject> map = eventBus.<JsonObject>consumer(DCC_TERMINATE.address())
+                .toObservable()
+                .map(Message::body);
+
         eventBus.<JsonObject>consumer(DCC_INITIALIZE.address())
                 .toObservable()
-                .subscribe(initMessageSubject);
-
-        initMessageSubject
                 .doOnNext(this::replyToSender)
                 .map(Message::body)
                 .groupBy(this::isPassiveTransfer)
@@ -77,16 +79,16 @@ public class DccReceiverVerticle extends AbstractVerticle {
                     if (group.getKey())
                         return group.sample(serverSocketSubject)
                                 .withLatestFrom(serverSocketSubject, (initMessage, netSocket) ->
-                                        new InitMessageConnection(initMessage, Observable.just(netSocket)));
+                                        new InitMessageConnection(initMessage, Single.just(netSocket)));
 
                     // is active
                     return group.map(initMessage -> {
-                        Observable<NetSocket> netSocketObservable = getActiveTransferClient(initMessage);
-                        return new InitMessageConnection(initMessage, netSocketObservable);
+                        Single<NetSocket> netSocketSingle = getActiveTransferClient(initMessage);
+                        return new InitMessageConnection(initMessage, netSocketSingle);
                     });
                 })
                 .subscribe(messageConnection ->
-                        subscribeTo(messageConnection.initMessage, messageConnection.netSocketObservable)
+                        subscribeTo(messageConnection.initMessage, messageConnection.netSocketSingle)
                 );
     }
 
@@ -105,13 +107,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
         return event.getBoolean("passive", false);
     }
 
-    private Observable<NetSocket> getActiveTransferClient(JsonObject message) {
+    private Single<NetSocket> getActiveTransferClient(JsonObject message) {
         String host = message.getString("ip");
         Integer port = message.getInteger("port");
-        return netClient.rxConnect(port, host).toObservable();
+        return netClient.rxConnect(port, host);
     }
 
-    private void subscribeTo(JsonObject message, Observable<NetSocket> socketObservable) {
+    private void subscribeTo(JsonObject message, Single<NetSocket> socketObservable) {
         String filename = message.getString("filename");
         String botname = message.getString("bot");
         long filesize = message.getLong("size", 0L);
@@ -218,11 +220,11 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
     private static class InitMessageConnection {
         private final JsonObject initMessage;
-        private final Observable<NetSocket> netSocketObservable;
+        private final Single<NetSocket> netSocketSingle;
 
-        InitMessageConnection(JsonObject initMessage, Observable<NetSocket> netSocketObservable) {
+        InitMessageConnection(JsonObject initMessage, Single<NetSocket> netSocketSingle) {
             this.initMessage = initMessage;
-            this.netSocketObservable = netSocketObservable;
+            this.netSocketSingle = netSocketSingle;
         }
     }
 }

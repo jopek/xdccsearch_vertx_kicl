@@ -19,7 +19,6 @@ public class BotState {
     private final String remoteUser;
     private boolean remoteUserSeen;
     private boolean packRequested;
-    private boolean channelReferencesSet;
     private boolean nickRegistryRequired;
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
@@ -51,7 +50,6 @@ public class BotState {
                     .filter(v -> !joinedChannels.contains(v))
                     .collect(Collectors.toSet());
             referencedChannelNames.addAll(channels);
-            channelReferencesSet = true;
             return channels;
         }
         return Collections.emptySet();
@@ -65,7 +63,6 @@ public class BotState {
             remoteUserSeen = channelNickList.stream().anyMatch(nick -> nick.equalsIgnoreCase(remoteUser));
 
         if (canRequestPack()) {
-            System.out.printf("channelNickList: %s REQUESTING\n", channelName);
             decoratedRequestHook.run();
         }
     }
@@ -79,7 +76,6 @@ public class BotState {
         boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);
         boolean allChannelsJoined = main && allAdditional;
 
-        if (!channelReferencesSet) return false;
         if (packRequested) return false;
 
         return remoteUserSeen && allChannelsJoined && !nickRegistryRequired

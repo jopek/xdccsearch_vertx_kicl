@@ -189,6 +189,8 @@ public class BotServiceTest {
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
+
+        verify(ircBot).requestDccPack(eq("keex"), eq(5));
         verifyNoMoreInteractions(botMessaging, ircBot);
 
         assertTrue(stateStorage.get("Andy").isPresent());

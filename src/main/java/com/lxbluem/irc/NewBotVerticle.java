@@ -80,8 +80,4 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         botService.exit(message.getBot(), "DCC transfer finished");
     }
 
-    private void botFailed(JsonObject eventMessage) {
-        BotFailedEvent message = eventMessage.mapTo(BotFailedEvent.class);
-        botService.exit(message.getBot(), message.getMessage());
-    }
 }

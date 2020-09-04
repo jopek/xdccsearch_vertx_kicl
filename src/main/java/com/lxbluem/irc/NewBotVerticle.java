@@ -7,6 +7,8 @@ import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -24,9 +26,11 @@ import static io.vertx.core.http.HttpMethod.POST;
 
 public class NewBotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(NewBotVerticle.class);
+    private final InitializeBot initializeBot;
     private final BotService botService;
 
-    public NewBotVerticle(BotService botService) {
+    public NewBotVerticle(InitializeBot initializeBot, BotService botService) {
+        this.initializeBot = initializeBot;
         this.botService = botService;
     }
 
@@ -43,7 +47,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     private void startTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         try {
             Pack pack = Json.decodeValue(serializedRequest.getBody(), Pack.class);
-            String botNickName = botService.initializeBot(pack);
+            String botNickName = initializeBot.handle(new InitializeBotCommand(pack));
             result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);

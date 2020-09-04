@@ -6,7 +6,9 @@ import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.ports.*;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -44,8 +46,24 @@ public class NewBotVerticleDeploymentTest {
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = ignored -> mockBot;
         EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
-        BotService botService = new BotService(botStorage, stateStorage, botMessaging, /*eventDispatcher,*/ eventDispatcher, botFactory, clock, nameGenerator);
-        verticle = new NewBotVerticle(botService);
+        BotService botService = new BotService(
+                botStorage,
+                stateStorage,
+                botMessaging,
+                eventDispatcher,
+                clock,
+                nameGenerator
+        );
+        InitializeBot initializeBot = new InitializeBotImpl(
+                botStorage,
+                stateStorage,
+                eventDispatcher,
+                clock,
+                nameGenerator,
+                botFactory,
+                botService
+        );
+        verticle = new NewBotVerticle(initializeBot, botService);
     }
 
     @Test(timeout = 30_000)

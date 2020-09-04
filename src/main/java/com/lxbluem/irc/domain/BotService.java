@@ -1,12 +1,9 @@
 package com.lxbluem.irc.domain;
 
-import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.*;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
-import com.lxbluem.irc.domain.model.BotState;
-import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
@@ -31,7 +28,6 @@ public class BotService {
     private final BotStateStorage stateStorage;
     private final BotMessaging botMessaging;
     private final EventDispatcher eventDispatcher;
-    private final BotFactory botFactory;
     private final Clock clock;
     private final NameGenerator nameGenerator;
 
@@ -40,59 +36,14 @@ public class BotService {
             BotStateStorage stateStorage,
             BotMessaging botMessaging,
             EventDispatcher eventDispatcher,
-            BotFactory botFactory,
             Clock clock,
             NameGenerator nameGenerator) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
         this.eventDispatcher = eventDispatcher;
-        this.botFactory = botFactory;
         this.clock = clock;
         this.nameGenerator = nameGenerator;
-    }
-
-    public String initializeBot(Pack pack) {
-        String botNickName = nameGenerator.getNick();
-
-        IrcBot bot = botFactory.createNewInstance(this);
-        botStorage.save(botNickName, bot);
-
-        BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNickName);
-        bot.connect(botConnectionDetails);
-        bot.joinChannel(pack.getChannelName());
-
-        Runnable requestHook = dccRequestHook(botNickName, pack);
-        BotState botState = new BotState(pack, requestHook);
-        stateStorage.save(botNickName, botState);
-
-        eventDispatcher.dispatch(new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
-
-        return botNickName;
-    }
-
-    private BotConnectionDetails connectionDetailsFromPack(Pack pack, String botNickName) {
-        return BotConnectionDetails.builder()
-                .botNick(botNickName)
-                .name("name_" + botNickName)
-                .user("user_" + botNickName)
-                .realName("realname_" + botNickName)
-                .serverHostName(pack.getServerHostName())
-                .serverPort(pack.getServerPort())
-                .build();
-    }
-
-    private Runnable dccRequestHook(String botNickName, Pack pack) {
-        Consumer<IrcBot> botRequestFn = bot -> {
-            bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
-
-            String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotDccPackRequestedEvent event = new BotDccPackRequestedEvent(botNickName, nowEpochMillis(), noticeMessage, pack.getNickName(), pack.getPackNumber());
-            eventDispatcher.dispatch(event);
-        };
-
-        return () -> botStorage.get(botNickName)
-                .ifPresent(botRequestFn);
     }
 
     public void manualExit(String botNickName) {

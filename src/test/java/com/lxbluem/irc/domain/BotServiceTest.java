@@ -8,12 +8,11 @@ import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
+import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.model.BotState;
-import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
-import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
-import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
-import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
+import com.lxbluem.irc.domain.model.request.*;
 import com.lxbluem.irc.domain.ports.*;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
@@ -47,6 +47,8 @@ public class BotServiceTest {
     @Captor
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
+    private InitializeBot initializeBot;
+    private AtomicInteger requestHookExecuted;
 
 
     @Before
@@ -66,10 +68,17 @@ public class BotServiceTest {
                 stateStorage,
                 botMessaging,
                 eventDispatcher,
-                botFactory,
                 clock,
                 nameGenerator
         );
+        initializeBot = new InitializeBotImpl(
+                botStorage,
+                stateStorage,
+                eventDispatcher,
+                clock,
+                nameGenerator,
+                botFactory,
+                botService);
     }
 
     @Test
@@ -77,7 +86,7 @@ public class BotServiceTest {
         assertFalse(stateStorage.get("Andy").isPresent());
         assertFalse(botStorage.get("Andy").isPresent());
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
 
         ArgumentCaptor<Event> messageCaptor = ArgumentCaptor.forClass(Event.class);
         verify(eventDispatcher).dispatch(messageCaptor.capture());
@@ -100,7 +109,7 @@ public class BotServiceTest {
 
     @Test
     public void exit_before_executing() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         verify(ircBot).connect(any(BotConnectionDetails.class));
         verify(ircBot).joinChannel(eq("#download"));
         verify(eventDispatcher).dispatch(any(BotInitializedEvent.class));
@@ -121,7 +130,7 @@ public class BotServiceTest {
 
     @Test
     public void terminte_bot_manually() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.manualExit("Andy");
@@ -155,7 +164,7 @@ public class BotServiceTest {
 
     @Test
     public void terminate_bot() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.exit("Andy", "failure");
@@ -188,7 +197,7 @@ public class BotServiceTest {
 
     @Test
     public void users_in_channel() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
@@ -203,7 +212,7 @@ public class BotServiceTest {
 
     @Test
     public void users_in_channel__remoteUser_of_target_channel_missing() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
@@ -229,7 +238,7 @@ public class BotServiceTest {
 
     @Test
     public void channel_topic() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
@@ -243,7 +252,7 @@ public class BotServiceTest {
 
     @Test
     public void channel_topic__no_other_channels_referenced() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.channelTopic("Andy", "#download", "lalalal");
@@ -255,7 +264,7 @@ public class BotServiceTest {
 
     @Test
     public void message_of_the_day() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.messageOfTheDay("Andy", asList("message of the", "dayyyyyy", "in multiple strings"));
@@ -266,7 +275,7 @@ public class BotServiceTest {
 
     @Test
     public void register_new_nick_when_rejected() {
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         when(nameGenerator.getNick()).thenReturn("Randy");
@@ -293,7 +302,7 @@ public class BotServiceTest {
         String remoteNick = "someDude";
         String noticeMessage = "lalala";
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
@@ -315,7 +324,7 @@ public class BotServiceTest {
         String remoteNick = "nickserv";
         String noticeMessage = "your nickname is not registered. to register it, use";
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
@@ -330,7 +339,7 @@ public class BotServiceTest {
         String numericCommandMessage = "You need to be identified to a registered account to join this channel";
 
         Pack pack = testPack();
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -357,7 +366,7 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -392,7 +401,7 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -416,7 +425,7 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -457,7 +466,7 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -496,7 +505,7 @@ public class BotServiceTest {
 
         Pack pack = testPack();
 
-        botService.initializeBot(pack);
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         assertTrue(stateStorage.get("Andy").isPresent());
@@ -531,7 +540,7 @@ public class BotServiceTest {
         String botNick = "Andy";
         String incoming_message = "crrrrrap";
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
@@ -546,7 +555,7 @@ public class BotServiceTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         botService.handleCtcpQuery(botNick, ctcpQuery, 0L);
@@ -569,7 +578,7 @@ public class BotServiceTest {
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
 
-        botService.initializeBot(testPack());
+        initializeBot.handle(new InitializeBotCommand(testPack()));
         reset(botMessaging, ircBot, eventDispatcher);
 
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);

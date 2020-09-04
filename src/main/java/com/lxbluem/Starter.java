@@ -13,10 +13,12 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.IrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.ports.BotFactory;
 import com.lxbluem.irc.domain.ports.BotStateStorage;
 import com.lxbluem.irc.domain.ports.BotStorage;
 import com.lxbluem.irc.domain.ports.NameGenerator;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateVerticle;
@@ -50,16 +52,24 @@ public class Starter {
 
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
-        BotFactory botFactory = new IrcBotFactory();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         BotService botService = new BotService(
                 botStorage,
                 botStateStorage,
                 botMessaging,
                 eventDispatcher,
-                botFactory,
                 clock,
                 nameGenerator
+        );
+        BotFactory botFactory = new IrcBotFactory();
+        InitializeBot initializeBot = new InitializeBotImpl(
+                botStorage,
+                botStateStorage,
+                eventDispatcher,
+                clock,
+                nameGenerator,
+                botFactory,
+                botService
         );
 
         deploy(vertx, EventLoggerVerticle.class.getName());
@@ -72,7 +82,7 @@ public class Starter {
             deploy(vertx, new StateVerticle(stateService, clock));
             deploy(vertx, SearchVerticle.class.getName());
 //            deploy(vertx, new BotVerticle(botMessaging));
-            deploy(vertx, new NewBotVerticle(botService));
+            deploy(vertx, new NewBotVerticle(initializeBot, botService));
         });
 
 //        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time", new JsonObject().put("time", Instant.now().toString())));

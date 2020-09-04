@@ -1,7 +1,6 @@
 package com.lxbluem.irc.adapters;
 
 import com.lxbluem.irc.domain.BotService;
-import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.ports.IrcBot;

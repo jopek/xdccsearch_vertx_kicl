@@ -47,7 +47,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     private void startTransfer(SerializedRequest serializedRequest, Promise<JsonObject> result) {
         try {
             Pack pack = Json.decodeValue(serializedRequest.getBody(), Pack.class);
-            String botNickName = initializeBot.handle(new InitializeBotCommand(pack));
+            InitializeBotCommand initializeBotCommand = new InitializeBotCommand(pack);
+            String botNickName = initializeBot.handle(initializeBotCommand);
             result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);

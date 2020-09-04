@@ -5,12 +5,12 @@ import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 
-public class IrcBotFactory implements BotFactory {
+public class KittehIrcBotFactory implements BotFactory {
 
     private final ExitBot exitBot;
     private final BotService botService;
 
-    public IrcBotFactory(ExitBot exitBot, BotService botService) {
+    public KittehIrcBotFactory(ExitBot exitBot, BotService botService) {
         this.exitBot = exitBot;
         this.botService = botService;
     }

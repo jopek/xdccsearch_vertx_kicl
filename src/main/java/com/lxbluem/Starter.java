@@ -11,7 +11,7 @@ import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.irc.NewBotVerticle;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.adapters.IrcBotFactory;
+import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
@@ -85,7 +85,7 @@ public class Starter {
                 nameGenerator,
                 exitBot
         );
-        BotFactory botFactory = new IrcBotFactory(exitBot, botService);
+        BotFactory botFactory = new KittehIrcBotFactory(exitBot, botService);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 botStateStorage,

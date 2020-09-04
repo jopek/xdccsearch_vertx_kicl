@@ -3,7 +3,7 @@ package com.lxbluem.irc.adapters;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
-import com.lxbluem.irc.domain.ports.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
 import org.kitteh.irc.client.library.Client;

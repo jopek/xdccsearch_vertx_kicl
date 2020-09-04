@@ -5,7 +5,7 @@ import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
-import com.lxbluem.irc.domain.ports.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import io.vertx.core.Promise;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;

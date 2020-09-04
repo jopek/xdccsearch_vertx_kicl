@@ -3,7 +3,7 @@ package com.lxbluem.irc;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.infrastructure.Address;
-import com.lxbluem.irc.domain.ports.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.Vertx;
 import io.vertx.rxjava.core.eventbus.Message;

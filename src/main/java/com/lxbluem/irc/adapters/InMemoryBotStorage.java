@@ -1,7 +1,7 @@
 package com.lxbluem.irc.adapters;
 
-import com.lxbluem.irc.domain.ports.BotStorage;
-import com.lxbluem.irc.domain.ports.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 
 import java.util.HashMap;
 import java.util.Map;

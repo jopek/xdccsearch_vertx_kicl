@@ -1,7 +1,7 @@
 package com.lxbluem.irc.adapters;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.irc.domain.ports.PackStorage;
+import com.lxbluem.irc.domain.ports.outgoing.PackStorage;
 
 import java.util.HashMap;
 import java.util.Map;

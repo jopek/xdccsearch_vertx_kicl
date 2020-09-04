@@ -3,14 +3,13 @@ package com.lxbluem.irc.domain.interactors;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotDccPackRequestedEvent;
 import com.lxbluem.common.domain.events.BotInitializedEvent;
-import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
-import com.lxbluem.irc.domain.ports.*;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.outgoing.*;
 
 import java.time.Clock;
 import java.time.Instant;

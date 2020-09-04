@@ -7,9 +7,9 @@ import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
-import com.lxbluem.irc.domain.ports.BotStateStorage;
-import com.lxbluem.irc.domain.ports.BotStorage;
-import com.lxbluem.irc.domain.ports.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 
 import java.time.Clock;
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package com.lxbluem.irc.domain.ports;
+package com.lxbluem.irc.domain.ports.outgoing;
 
 
 import com.lxbluem.common.domain.Pack;

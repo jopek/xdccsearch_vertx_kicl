@@ -8,8 +8,10 @@ import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -49,6 +51,7 @@ public class NewBotVerticleDeploymentTest {
         BotFactory botFactory = () -> mockBot;
         EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         BotService botService = new BotService(
                 botStorage,
                 stateStorage,
@@ -56,7 +59,8 @@ public class NewBotVerticleDeploymentTest {
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot);
+                exitBot,
+                noticeMessageHandler);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,

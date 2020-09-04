@@ -1,9 +1,7 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.common.domain.events.BotFailedEvent;
-import com.lxbluem.common.domain.events.BotNoticeEvent;
 import com.lxbluem.common.domain.events.BotRenamedEvent;
-import com.lxbluem.common.domain.events.DccQueuedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
@@ -11,6 +9,7 @@ import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.model.request.ManualExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
@@ -22,8 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
 import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
@@ -37,6 +34,7 @@ public class BotService {
     private final Clock clock;
     private final NameGenerator nameGenerator;
     private final ExitBot exitBot;
+    private final NoticeMessageHandler noticeMessageHandler;
 
     public BotService(
             BotStorage botStorage,
@@ -45,7 +43,8 @@ public class BotService {
             EventDispatcher eventDispatcher,
             Clock clock,
             NameGenerator nameGenerator,
-            ExitBot exitBot
+            ExitBot exitBot,
+            NoticeMessageHandler noticeMessageHandler
     ) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
@@ -54,10 +53,7 @@ public class BotService {
         this.clock = clock;
         this.nameGenerator = nameGenerator;
         this.exitBot = exitBot;
-    }
-
-    public void exit(String botNickName, String reason) {
-        exitBot.handle(new ManualExitCommand(botNickName, reason));
+        this.noticeMessageHandler = noticeMessageHandler;
     }
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {
@@ -101,58 +97,6 @@ public class BotService {
             eventDispatcher.dispatch(renameMessage);
         });
     }
-
-    public void handleNoticeMessage(String botNickName, String remoteName, String noticeMessage) {
-        botStorage.get(botNickName).ifPresent(bot ->
-                stateStorage.get(botNickName).ifPresent(botState -> {
-                    if (remoteName.toLowerCase().startsWith("ls"))
-                        return;
-
-                    String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
-                    if (lowerCaseNoticeMessage.contains("queue for pack") || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-                        eventDispatcher.dispatch(new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
-                        return;
-                    }
-
-                    String channelName = botState.getPack().getChannelName();
-                    if (lowerCaseNoticeMessage.contains(channelName.toLowerCase())) {
-                        Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(noticeMessage);
-                        Set<String> references = botState.channelReferences(channelName, mentionedChannels);
-                        bot.joinChannel(references);
-                        return;
-                    }
-
-                    if (remoteName.equalsIgnoreCase("nickserv")) {
-                        if (lowerCaseNoticeMessage.contains("your nickname is not registered. to register it, use")) {
-                            botState.nickRegistryRequired();
-                            bot.registerNickname(botNickName);
-                            return;
-                        }
-
-                        Pattern pattern = Pattern.compile("nickname .* registered", Pattern.CASE_INSENSITIVE);
-                        Matcher matcher = pattern.matcher(noticeMessage);
-
-                        if (matcher.find()) {
-                            botState.nickRegistered();
-                            return;
-                        }
-                        return;
-                    }
-
-                    if (lowerCaseNoticeMessage.contains("download connection failed")
-                            || lowerCaseNoticeMessage.contains("connection refused")
-                            || lowerCaseNoticeMessage.contains("you already requested that pack")
-                    ) {
-                        BotFailedEvent noticeFailMessage = new BotFailedEvent(botNickName, nowEpochMillis(), noticeMessage);
-                        botFailed(noticeFailMessage);
-                        return;
-                    }
-
-                    BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, noticeMessage);
-                    eventDispatcher.dispatch(botNoticeEvent);
-                }));
-    }
-
 
     public void handleCtcpQuery(String botNickName, DccCtcpQuery ctcpQuery, long localIp) {
         if (!ctcpQuery.isValid()) {
@@ -200,7 +144,7 @@ public class BotService {
 
     private void botFailed(BotFailedEvent message) {
         eventDispatcher.dispatch(message);
-        exit(message.getBot(), message.getMessage());
+        exitBot.handle(new ManualExitCommand(message.getBot(), message.getMessage()));
     }
 
     private long nowEpochMillis() {

@@ -12,6 +12,7 @@ import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,7 @@ public class InitializeBotImplTest {
     private InitializeBot initializeBot;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         BotFactory botFactory = () -> ircBot;
@@ -51,6 +52,7 @@ public class InitializeBotImplTest {
         new AtomicInteger(0);
         eventDispatcher = mock(EventDispatcher.class);
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         BotService botService = new BotService(
                 botStorage,
                 stateStorage,
@@ -58,7 +60,8 @@ public class InitializeBotImplTest {
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot
+                exitBot,
+                noticeMessageHandler
         );
 
         initializeBot = new InitializeBotImpl(

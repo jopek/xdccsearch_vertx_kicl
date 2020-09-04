@@ -4,7 +4,9 @@ import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
@@ -19,10 +21,12 @@ import org.kitteh.irc.client.library.event.client.ClientReceiveNumericEvent;
 import org.kitteh.irc.client.library.event.client.NickRejectedEvent;
 import org.kitteh.irc.client.library.event.user.PrivateCtcpQueryEvent;
 import org.kitteh.irc.client.library.event.user.PrivateNoticeEvent;
+import org.kitteh.irc.client.library.exception.KittehNagException;
 import org.kitteh.irc.client.library.feature.filter.NumericFilter;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,12 +35,14 @@ public class KittehIrcBot implements IrcBot {
     private final boolean isDebugging;
     private final BotService botService;
     private final ExitBot exitBot;
+    private final NoticeMessageHandler noticeMessageHandler;
     private Client client;
     private String botName;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler) {
         this.botService = botService;
         this.exitBot = exitBot;
+        this.noticeMessageHandler = noticeMessageHandler;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -57,6 +63,13 @@ public class KittehIrcBot implements IrcBot {
                 .build();
 
         client.getEventManager().registerEventListener(this);
+        Consumer<Exception> exceptionConsumer = e -> {
+            if (e instanceof KittehNagException)
+                return;
+            ManualExitCommand exitCommand = new ManualExitCommand(botName, e.getMessage());
+            exitBot.handle(exitCommand);
+        };
+        client.getExceptionListener().setConsumer(exceptionConsumer);
 
         if (isDebugging) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
@@ -186,7 +199,8 @@ public class KittehIrcBot implements IrcBot {
         String botName = event.getClient().getNick();
         String noticeMessage = event.getMessage();
 
-        botService.handleNoticeMessage(botName, remoteNick, noticeMessage);
+        NoticeMessageCommand command = new NoticeMessageCommand(botName, remoteNick, noticeMessage);
+        noticeMessageHandler.handle(command);
     }
 
     @Handler

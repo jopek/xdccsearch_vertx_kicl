@@ -15,8 +15,10 @@ import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
@@ -76,6 +78,7 @@ public class Starter {
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
+        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, botStateStorage, eventDispatcher, clock, exitBot);
         BotService botService = new BotService(
                 botStorage,
                 botStateStorage,
@@ -83,9 +86,10 @@ public class Starter {
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot
+                exitBot,
+                noticeMessageHandler
         );
-        BotFactory botFactory = new KittehIrcBotFactory(exitBot, botService);
+        BotFactory botFactory = new KittehIrcBotFactory(exitBot, noticeMessageHandler, botService);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 botStateStorage,

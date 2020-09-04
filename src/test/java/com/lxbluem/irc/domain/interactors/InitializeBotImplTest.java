@@ -10,6 +10,7 @@ import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import org.junit.Before;
@@ -26,11 +27,9 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.mock;
 
 public class InitializeBotImplTest {
     private BotStateStorage stateStorage;
-    private BotService botService;
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
@@ -44,22 +43,22 @@ public class InitializeBotImplTest {
     public void setUp() throws Exception {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
-        BotFactory botFactory = service -> ircBot;
+        BotFactory botFactory = () -> ircBot;
         stateStorage = new InMemoryBotStateStorage();
         botStorage = new InMemoryBotStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         when(nameGenerator.getNick()).thenReturn("Andy");
         new AtomicInteger(0);
-
         eventDispatcher = mock(EventDispatcher.class);
-
-        botService = new BotService(
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        BotService botService = new BotService(
                 botStorage,
                 stateStorage,
                 botMessaging,
                 eventDispatcher,
                 clock,
-                nameGenerator
+                nameGenerator,
+                exitBot
         );
 
         initializeBot = new InitializeBotImpl(

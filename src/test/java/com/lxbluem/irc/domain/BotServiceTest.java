@@ -7,11 +7,12 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.exception.BotNotFoundException;
+import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -51,6 +52,7 @@ public class BotServiceTest {
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
+    private ExitBot exitBot;
 
 
     @Before
@@ -62,6 +64,7 @@ public class BotServiceTest {
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         when(nameGenerator.getNick()).thenReturn("Andy");
         eventDispatcher = mock(EventDispatcher.class);
+        exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         initialiseStorages();
         requestHookExecuted.set(0);
 
@@ -71,7 +74,8 @@ public class BotServiceTest {
                 botMessaging,
                 eventDispatcher,
                 clock,
-                nameGenerator
+                nameGenerator,
+                exitBot
         );
     }
 
@@ -81,75 +85,6 @@ public class BotServiceTest {
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
         stateStorage.save("Andy", new BotState(pack, requestHook));
-    }
-
-    @Test
-    public void exit_before_executing() {
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState state = stateStorage.get("Andy").get();
-        state.channelReferences("#download", Arrays.asList());
-
-        botService.manualExit("Andy");
-
-        verify(ircBot).cancelDcc("keex");
-        verify(ircBot).terminate();
-        verify(eventDispatcher, times(1)).dispatch(any(BotExitedEvent.class));
-        verifyZeroInteractions(ircBot, botMessaging, eventDispatcher);
-
-        state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
-
-        assertEquals(1, requestHookExecuted.get());
-    }
-
-    @Test
-    public void terminte_bot_manually() {
-        botService.manualExit("Andy");
-
-        verify(ircBot).cancelDcc("keex");
-        verify(ircBot).terminate();
-
-        assertFalse(botStorage.get("Andy").isPresent());
-        assertFalse(stateStorage.get("Andy").isPresent());
-
-        ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
-
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-
-        BotExitedEvent sentMesssage = messageSentCaptor.getValue();
-        assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("Bot Andy exiting because requested shutdown", sentMesssage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
-        assertFalse(stateStorage.get("Andy").isPresent());
-        assertEquals("Andy", sentMesssage.getBot());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
-    }
-
-    @Test(expected = BotNotFoundException.class)
-    public void terminate_bot_manually_for_missing_bot() {
-        botService.manualExit("nonexistent");
-        verify(ircBot).terminate();
-
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void terminate_bot() {
-        botService.exit("Andy", "failure");
-        verify(ircBot).cancelDcc("keex");
-        verify(ircBot).terminate();
-
-        assertFalse(botStorage.get("Andy").isPresent());
-        assertFalse(stateStorage.get("Andy").isPresent());
-
-        ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
-        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
-        verifyNoMoreInteractions(botMessaging, ircBot);
-
-        BotExitedEvent sentMesssage = messageSentCaptor.getValue();
-        assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("Bot Andy exiting because failure", sentMesssage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
 
     private Pack testPack() {
@@ -360,14 +295,7 @@ public class BotServiceTest {
         String remoteNick = "keex";
         String noticeMessage = "connection refused";
 
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-        int botStateHash = botState.hashCode();
-
         botService.handleNoticeMessage(botNick, remoteNick, noticeMessage);
-        int botStateHashAfterMethod = botState.hashCode();
-
-        assertEquals("bot state was altered in the notice message handler", botStateHash, botStateHashAfterMethod);
 
         ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
         verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());

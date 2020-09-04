@@ -6,8 +6,10 @@ import com.lxbluem.common.domain.events.DccFinishedEvent;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
-import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.model.request.ExitCommand;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
+import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -27,11 +29,11 @@ import static io.vertx.core.http.HttpMethod.POST;
 public class NewBotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(NewBotVerticle.class);
     private final InitializeBot initializeBot;
-    private final BotService botService;
+    private final ExitBot exitBot;
 
-    public NewBotVerticle(InitializeBot initializeBot, BotService botService) {
+    public NewBotVerticle(InitializeBot initializeBot, ExitBot exitBot) {
         this.initializeBot = initializeBot;
-        this.botService = botService;
+        this.exitBot = exitBot;
     }
 
     @Override
@@ -59,7 +61,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         Map<String, String> params = serializedRequest.getParams();
         String botNickName = params.get("botname");
         try {
-            botService.manualExit(botNickName);
+            exitBot.handle(new ExitCommand(botNickName));
             result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);
@@ -79,12 +81,12 @@ public class NewBotVerticle extends AbstractRouteVerticle {
 
     private void dccFailed(JsonObject eventMessage) {
         BotFailedEvent message = eventMessage.mapTo(BotFailedEvent.class);
-        botService.exit(message.getBot(), message.getMessage());
+        exitBot.handle(new ManualExitCommand(message.getBot(), message.getMessage()));
     }
 
     private void dccFinished(JsonObject eventMessage) {
         DccFinishedEvent message = eventMessage.mapTo(DccFinishedEvent.class);
-        botService.exit(message.getBot(), "DCC transfer finished");
+        exitBot.handle(new ManualExitCommand(message.getBot(), "DCC transfer finished"));
     }
 
 }

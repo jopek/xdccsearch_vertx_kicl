@@ -3,6 +3,8 @@ package com.lxbluem.irc.adapters;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
+import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
@@ -28,11 +30,13 @@ public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
     private final BotService botService;
+    private final ExitBot exitBot;
     private Client client;
     private String botName;
 
-    public KittehIrcBot(BotService botService) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot) {
         this.botService = botService;
+        this.exitBot = exitBot;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -154,7 +158,7 @@ public class KittehIrcBot implements IrcBot {
         System.out.printf("BANNED: BOT:%s EVENT:%s\n", botName, event);
         List<String> parameters = event.getParameters();
         String message = parameters.get(2);
-        botService.exit(botName, message);
+        exitBot.handle(new ManualExitCommand(botName, message));
     }
 
     @NumericFilter(477)

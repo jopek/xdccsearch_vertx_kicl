@@ -47,7 +47,7 @@ public class InitializeBotImpl implements InitializeBot {
         Pack pack = initializeBotCommand.getPack();
         String botNickName = nameGenerator.getNick();
 
-        IrcBot bot = botFactory.createNewInstance(botService);
+        IrcBot bot = botFactory.createNewInstance();
         botStorage.save(botNickName, bot);
 
         BotConnectionDetails botConnectionDetails = connectionDetailsFromPack(pack, botNickName);

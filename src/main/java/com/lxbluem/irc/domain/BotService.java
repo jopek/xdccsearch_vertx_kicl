@@ -1,12 +1,16 @@
 package com.lxbluem.irc.domain;
 
-import com.lxbluem.common.domain.events.*;
+import com.lxbluem.common.domain.events.BotFailedEvent;
+import com.lxbluem.common.domain.events.BotNoticeEvent;
+import com.lxbluem.common.domain.events.BotRenamedEvent;
+import com.lxbluem.common.domain.events.DccQueuedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
+import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
@@ -32,6 +36,7 @@ public class BotService {
     private final EventDispatcher eventDispatcher;
     private final Clock clock;
     private final NameGenerator nameGenerator;
+    private final ExitBot exitBot;
 
     public BotService(
             BotStorage botStorage,
@@ -39,38 +44,20 @@ public class BotService {
             BotMessaging botMessaging,
             EventDispatcher eventDispatcher,
             Clock clock,
-            NameGenerator nameGenerator) {
+            NameGenerator nameGenerator,
+            ExitBot exitBot
+    ) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
         this.eventDispatcher = eventDispatcher;
         this.clock = clock;
         this.nameGenerator = nameGenerator;
-    }
-
-    public void manualExit(String botNickName) {
-        botStorage.get(botNickName).orElseThrow(() -> new BotNotFoundException(botNickName));
-        commonExit(botNickName, "requested shutdown");
+        this.exitBot = exitBot;
     }
 
     public void exit(String botNickName, String reason) {
-        botStorage.get(botNickName).ifPresent(bot -> commonExit(botNickName, reason));
-    }
-
-    private void commonExit(String botNickName, String reason) {
-        botStorage.get(botNickName).ifPresent(ircBot -> {
-            stateStorage.get(botNickName).ifPresent(state ->
-                    ircBot.cancelDcc(state.getPack().getNickName())
-            );
-
-            ircBot.terminate();
-        });
-        botStorage.remove(botNickName);
-        stateStorage.remove(botNickName);
-
-        String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
-        eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
-
+        exitBot.handle(new ManualExitCommand(botNickName, reason));
     }
 
     public void usersInChannel(String botNickName, String channelName, List<String> usersInChannel) {

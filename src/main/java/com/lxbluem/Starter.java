@@ -13,12 +13,14 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.IrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
-import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
@@ -26,7 +28,10 @@ import com.lxbluem.state.StateVerticle;
 import com.lxbluem.state.adapters.InMemoryStateRepository;
 import com.lxbluem.state.domain.StateService;
 import com.lxbluem.state.domain.ports.StateRepository;
-import io.vertx.core.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Verticle;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.jackson.DatabindCodec;
 import lombok.extern.slf4j.Slf4j;
@@ -70,15 +75,17 @@ public class Starter {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
+        ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
         BotService botService = new BotService(
                 botStorage,
                 botStateStorage,
                 botMessaging,
                 eventDispatcher,
                 clock,
-                nameGenerator
+                nameGenerator,
+                exitBot
         );
-        BotFactory botFactory = new IrcBotFactory();
+        BotFactory botFactory = new IrcBotFactory(exitBot, botService);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 botStateStorage,
@@ -88,7 +95,7 @@ public class Starter {
                 botFactory,
                 botService
         );
-        return new NewBotVerticle(initializeBot, botService);
+        return new NewBotVerticle(initializeBot, exitBot);
     }
 
     private static Verticle getStateVerticle(Clock clock) {

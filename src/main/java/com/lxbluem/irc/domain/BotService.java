@@ -4,9 +4,6 @@ import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.events.BotRenamedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
-import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
-import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.model.request.ManualExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
@@ -17,13 +14,8 @@ import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
-import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
-import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 import static java.lang.String.format;
 
 public class BotService {
@@ -96,42 +88,6 @@ public class BotService {
                     .build();
             eventDispatcher.dispatch(renameMessage);
         });
-    }
-
-    public void handleCtcpQuery(String botNickName, DccCtcpQuery ctcpQuery, long localIp) {
-        if (!ctcpQuery.isValid()) {
-            return;
-        }
-        botStorage.get(botNickName).ifPresent(bot ->
-                stateStorage.get(botNickName).ifPresent(botState -> {
-
-                    AtomicReference<String> resolvedFilename = new AtomicReference<>("");
-
-                    Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
-                        int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
-                        if (passiveDccSocketPort == 0)
-                            return;
-                        String nickName = botState.getPack().getNickName();
-                        String dccSendRequest = format("DCC SEND %s %d %d %d %d",
-                                resolvedFilename.get(),
-                                localIp,
-                                passiveDccSocketPort,
-                                ctcpQuery.getSize(),
-                                ctcpQuery.getToken()
-                        );
-
-                        bot.sendCtcpMessage(nickName, dccSendRequest);
-                    };
-
-                    Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
-                        String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
-                        resolvedFilename.set(filenameAnswer);
-                        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNickName);
-                        botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
-                    };
-
-                    botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(ctcpQuery.getFilename()), filenameResolverConsumer);
-                }));
     }
 
     public void channelRequiresAccountRegistry(String botNickName, String channelName, String message) {

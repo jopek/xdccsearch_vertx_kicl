@@ -1,10 +1,8 @@
 package com.lxbluem.irc.adapters;
 
 import com.lxbluem.irc.domain.BotService;
-import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
-import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
-import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
+import com.lxbluem.irc.domain.model.request.*;
+import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -38,11 +36,13 @@ public class KittehIrcBot implements IrcBot {
     private final NoticeMessageHandler noticeMessageHandler;
     private Client client;
     private String botName;
+    private final CtcpQueryHandler ctcpQueryHandler;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
+        this.ctcpQueryHandler = ctcpQueryHandler;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -211,7 +211,7 @@ public class KittehIrcBot implements IrcBot {
                 .map(User::getHost)
                 .map(this::transformIpToLong)
                 .orElse(0L);
-        botService.handleCtcpQuery(botName, dccCtcpQuery, localIp);
+        ctcpQueryHandler.handle(new CtcpQueryCommand(botName, dccCtcpQuery, localIp));
     }
 
     private long transformIpToLong(String ipString) {

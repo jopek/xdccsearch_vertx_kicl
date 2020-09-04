@@ -13,9 +13,11 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
+import com.lxbluem.irc.domain.interactors.CtcpQueryHandlerImpl;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
+import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
@@ -89,7 +91,8 @@ public class Starter {
                 exitBot,
                 noticeMessageHandler
         );
-        BotFactory botFactory = new KittehIrcBotFactory(exitBot, noticeMessageHandler, botService);
+        CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
+        BotFactory botFactory = new KittehIrcBotFactory(exitBot, noticeMessageHandler, botService, ctcpQueryHandler);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 botStateStorage,

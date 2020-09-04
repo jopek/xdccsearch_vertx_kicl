@@ -13,14 +13,8 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.BotService;
-import com.lxbluem.irc.domain.interactors.CtcpQueryHandlerImpl;
-import com.lxbluem.irc.domain.interactors.ExitBotImpl;
-import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
-import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
-import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
-import com.lxbluem.irc.domain.ports.incoming.ExitBot;
-import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.*;
+import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
@@ -84,15 +78,18 @@ public class Starter {
         BotService botService = new BotService(
                 botStorage,
                 botStateStorage,
-                botMessaging,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot,
-                noticeMessageHandler
+                exitBot
         );
         CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
-        BotFactory botFactory = new KittehIrcBotFactory(exitBot, noticeMessageHandler, botService, ctcpQueryHandler);
+        UsersInChannel usersInChannel = new UsersInChannelImpl(botStateStorage, exitBot, eventDispatcher, clock);
+        BotFactory botFactory = new KittehIrcBotFactory(exitBot,
+                noticeMessageHandler,
+                botService,
+                ctcpQueryHandler,
+                usersInChannel);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 botStateStorage,

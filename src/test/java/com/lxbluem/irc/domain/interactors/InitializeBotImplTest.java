@@ -56,12 +56,10 @@ public class InitializeBotImplTest {
         BotService botService = new BotService(
                 botStorage,
                 stateStorage,
-                botMessaging,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot,
-                noticeMessageHandler
+                exitBot
         );
 
         initializeBot = new InitializeBotImpl(

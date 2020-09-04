@@ -1,10 +1,8 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.common.adapter.EventBusBotMessaging;
 import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.events.DccFailedEvent;
 import com.lxbluem.common.domain.events.DccFinishedEvent;
-import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
@@ -12,11 +10,9 @@ import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
-import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
@@ -57,29 +53,24 @@ public class NewBotVerticleTest {
         vertx = Vertx.vertx();
 
         vertx.eventBus().addOutboundInterceptor(interceptor("out"));
-//        vertx.eventBus().addInboundInterceptor(interceptor("in"));
 
         String botNickName = "Andy";
         NameGenerator nameGenerator = () -> botNickName;
 
         Clock clock = Clock.systemDefaultZone();
-        BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
         EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         BotService botService = new BotService(
                 botStorage,
                 stateStorage,
-                botMessaging,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot,
-                noticeMessageHandler
+                exitBot
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,

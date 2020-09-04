@@ -5,6 +5,7 @@ import com.lxbluem.irc.domain.model.request.*;
 import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.UsersInChannel;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
@@ -37,12 +38,14 @@ public class KittehIrcBot implements IrcBot {
     private Client client;
     private String botName;
     private final CtcpQueryHandler ctcpQueryHandler;
+    private final UsersInChannel usersInChannel;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, UsersInChannel usersInChannel) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.ctcpQueryHandler = ctcpQueryHandler;
+        this.usersInChannel = usersInChannel;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -139,13 +142,13 @@ public class KittehIrcBot implements IrcBot {
     @Handler
     public void userListAvailable(ChannelUsersUpdatedEvent event) {
         Channel channel = event.getChannel();
-        List<String> usersInChannel = channel
+        List<String> users = channel
                 .getUsers()
                 .stream()
                 .map(User::getNick)
                 .collect(Collectors.toList());
         String channelName = channel.getName();
-        botService.usersInChannel(botName, channelName, usersInChannel);
+        usersInChannel.handle(new UsersInChannelCommand(botName, channelName, users));
     }
 
     @Handler

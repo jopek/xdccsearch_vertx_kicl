@@ -55,12 +55,11 @@ public class NewBotVerticleDeploymentTest {
         BotService botService = new BotService(
                 botStorage,
                 stateStorage,
-                botMessaging,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot,
-                noticeMessageHandler);
+                exitBot
+        );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,

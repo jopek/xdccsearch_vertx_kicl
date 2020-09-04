@@ -1,9 +1,6 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.common.domain.events.BotEvent;
-import com.lxbluem.common.domain.events.BotExitedEvent;
-import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.events.BotRenamedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
@@ -11,9 +8,11 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
+import com.lxbluem.irc.domain.interactors.UsersInChannelImpl;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.UsersInChannel;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -28,12 +27,16 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -54,6 +57,8 @@ public class BotServiceTest {
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private ExitBot exitBot;
+    private UsersInChannel usersInChannel;
+    private Clock clock;
 
 
     @Before
@@ -68,17 +73,16 @@ public class BotServiceTest {
         exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         initialiseStorages();
         requestHookExecuted.set(0);
+        usersInChannel = new UsersInChannelImpl(stateStorage, exitBot, eventDispatcher, clock);
 
         NoticeMessageHandler noticeMessageHanlder = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         botService = new BotService(
                 botStorage,
                 stateStorage,
-                botMessaging,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                exitBot,
-                noticeMessageHanlder
+                exitBot
         );
     }
 
@@ -99,38 +103,6 @@ public class BotServiceTest {
                 .channelName("#download")
                 .packNumber(5)
                 .build();
-    }
-
-    @Test
-    public void users_in_channel() {
-        botService.usersInChannel("Andy", "#download", asList("operator", "keex", "doomsman", "hellbaby"));
-
-        verifyNoMoreInteractions(botMessaging, ircBot);
-
-        assertEquals(1, requestHookExecuted.get());
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-        assertTrue(botState.isRemoteUserSeen());
-    }
-
-    @Test
-    public void users_in_channel__remoteUser_of_target_channel_missing() {
-        botService.usersInChannel("Andy", "#download", asList("operator", "doomsman", "hellbaby"));
-
-        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
-        verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
-        List<BotEvent> eventList = messageSentCaptor.getAllValues();
-
-        verify(ircBot).cancelDcc("keex");
-        verify(ircBot).terminate();
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-
-        BotFailedEvent failedEvent = (BotFailedEvent) eventList.get(0);
-        assertEquals("bot keex not in channel #download", failedEvent.getMessage());
-        BotExitedEvent exitedEvent = (BotExitedEvent) eventList.get(1);
-        assertEquals("Bot Andy exiting because bot keex not in channel #download", exitedEvent.getMessage());
-        assertFalse(stateStorage.get("Andy").isPresent());
-        assertFalse(botStorage.get("Andy").isPresent());
     }
 
     @Test

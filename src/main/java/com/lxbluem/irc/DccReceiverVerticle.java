@@ -73,9 +73,9 @@ public class DccReceiverVerticle extends AbstractVerticle {
 
         Observable<String> terminationForBot =
                 botExited.mergeWith(botFailed)
-                .map(Message::body)
-                .map(jso -> jso.getString("bot"))
-                .doOnNext(botNickName -> LOG.info("about to terminate DCC connection for {}", botNickName));
+                        .map(Message::body)
+                        .map(jso -> jso.getString("bot"))
+                        .doOnNext(botNickName -> LOG.info("about to terminate DCC connection for {}", botNickName));
 
         eventBus.<JsonObject>consumer(DCC_INITIALIZE.address())
                 .toObservable()

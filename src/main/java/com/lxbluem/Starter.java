@@ -19,15 +19,14 @@ import com.lxbluem.irc.domain.ports.BotStateStorage;
 import com.lxbluem.irc.domain.ports.BotStorage;
 import com.lxbluem.irc.domain.ports.NameGenerator;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
 import com.lxbluem.state.StateVerticle;
 import com.lxbluem.state.adapters.InMemoryStateRepository;
 import com.lxbluem.state.domain.StateService;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
+import com.lxbluem.state.domain.ports.StateRepository;
+import io.vertx.core.*;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.jackson.DatabindCodec;
 import lombok.extern.slf4j.Slf4j;
@@ -41,15 +40,33 @@ public class Starter {
         log.info("starting");
         DatabindCodec.mapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+        Clock clock = Clock.systemDefaultZone();
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
-        Clock clock = Clock.systemDefaultZone();
-
-        EventDispatcher eventDispatcher = new EventbusEventDispatcher(eventBus);
         BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock);
+        EventDispatcher eventDispatcher = new EventbusEventDispatcher(eventBus);
 
-        StateService stateService = new StateService(new InMemoryStateRepository(), clock);
+        Verticle stateVerticle = getStateVerticle(clock);
+        Verticle botVerticle = getBotVerticle(botMessaging, clock, eventDispatcher);
+        Verticle searchVerticle = new SearchVerticle();
+        Verticle filenameResolverVerticle = new FilenameResolverVerticle();
+        Verticle receiverVerticle = new DccReceiverVerticle(botMessaging);
+        Verticle eventLoggerVerticle = new EventLoggerVerticle();
+        Verticle notificationVerticle = new ExternalNotificationVerticle();
+        Verticle routerVerticle = new RouterVerticle();
 
+        deployWithHook(vertx, routerVerticle, deploymentId -> {
+            deploy(vertx, stateVerticle);
+            deploy(vertx, searchVerticle);
+            deploy(vertx, botVerticle);
+        });
+        deploy(vertx, eventLoggerVerticle);
+        deploy(vertx, receiverVerticle);
+//        deploy(vertx, notificationVerticle);
+        deploy(vertx, filenameResolverVerticle);
+    }
+
+    private static Verticle getBotVerticle(BotMessaging botMessaging, Clock clock, EventDispatcher eventDispatcher) {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
@@ -71,43 +88,33 @@ public class Starter {
                 botFactory,
                 botService
         );
+        return new NewBotVerticle(initializeBot, botService);
+    }
 
-        deploy(vertx, EventLoggerVerticle.class.getName());
-        deploy(vertx, new DccReceiverVerticle(botMessaging));
-//        deploy(vertx, ExternalNotificationVerticle.class.getName());
-        deploy(vertx, FilenameResolverVerticle.class.getName());
+    private static Verticle getStateVerticle(Clock clock) {
+        StateRepository stateRepository = new InMemoryStateRepository();
+        StateService stateService = new StateService(stateRepository, clock);
+        return new StateVerticle(stateService, clock);
+    }
 
-        deploy(vertx, RouterVerticle.class.getName(), event -> {
-            logDeployment(RouterVerticle.class.getName(), event);
-            deploy(vertx, new StateVerticle(stateService, clock));
-            deploy(vertx, SearchVerticle.class.getName());
-//            deploy(vertx, new BotVerticle(botMessaging));
-            deploy(vertx, new NewBotVerticle(initializeBot, botService));
+    private static void deploy(Vertx vertx, Verticle verticle) {
+        vertx.deployVerticle(verticle, deploymentId ->
+            logDeployment(verticle, deploymentId));
+    }
+
+    private static void deployWithHook(Vertx vertx, Verticle verticle, Handler<AsyncResult<String>> hook) {
+        vertx.deployVerticle(verticle, deploymentId -> {
+            hook.handle(deploymentId);
+            logDeployment(verticle, deploymentId);
         });
-
-//        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time", new JsonObject().put("time", Instant.now().toString())));
-//        vertx.periodicStream(1000).handler(i -> vertx.eventBus().publish("time1", new JsonObject().put("time1", Instant.now().toString())));
-//        vertx.periodicStream(1100).handler(i -> vertx.eventBus().publish("time2", new JsonObject().put("time2", Instant.now().toString())));
     }
 
-    private static void deploy(Vertx vertx, String verticleClassname) {
-        vertx.deployVerticle(verticleClassname, event -> logDeployment(verticleClassname, event));
-    }
-
-    private static void deploy(Vertx vertx, AbstractVerticle verticle) {
-        vertx.deployVerticle(verticle, event -> logDeployment(verticle.getClass().getName(), event));
-    }
-
-    private static void deploy(Vertx vertx, String verticleClassname, Handler<AsyncResult<String>> asyncResultHandler) {
-        vertx.deployVerticle(verticleClassname, asyncResultHandler);
-    }
-
-    private static void logDeployment(String name, AsyncResult<String> event) {
-        if (event.succeeded())
-            log.info("deployed {} with id {}", name, event.result());
+    private static void logDeployment(Verticle name, AsyncResult<String> deploymentId) {
+        if (deploymentId.succeeded())
+            log.info("deployed {} with id {}", name, deploymentId.result());
         else {
-            log.error("deployed {} with id {} {}", name, event.result(), " - FAILED! : " + event.cause().getMessage());
-            event.cause().printStackTrace();
+            log.error("deployed {} with id {} {}", name, deploymentId.result(), " - FAILED! : " + deploymentId.cause().getMessage());
+            deploymentId.cause().printStackTrace();
         }
     }
 }

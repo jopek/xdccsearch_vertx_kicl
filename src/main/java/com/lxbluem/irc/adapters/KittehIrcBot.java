@@ -2,10 +2,7 @@ package com.lxbluem.irc.adapters;
 
 import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.*;
-import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
-import com.lxbluem.irc.domain.ports.incoming.ExitBot;
-import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.incoming.UsersInChannel;
+import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
@@ -39,8 +36,9 @@ public class KittehIrcBot implements IrcBot {
     private String botName;
     private final CtcpQueryHandler ctcpQueryHandler;
     private final UsersInChannel usersInChannel;
+    private JoinMentionedChannels joinMentionedChannels;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, UsersInChannel usersInChannel) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, UsersInChannel usersInChannel, JoinMentionedChannels joinMentionedChannels) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
@@ -165,7 +163,8 @@ public class KittehIrcBot implements IrcBot {
                 .getValue()
                 .orElse("");
         String botname = event.getClient().getNick();
-        botService.channelTopic(botname, channelName, topic);
+        JoinMentionedChannelsCommand command = new JoinMentionedChannelsCommand(botname, channelName, topic);
+        joinMentionedChannels.handle(command);
     }
 
     @NumericFilter(474)

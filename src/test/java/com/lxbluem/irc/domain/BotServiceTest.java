@@ -36,7 +36,6 @@ import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -103,26 +102,6 @@ public class BotServiceTest {
                 .channelName("#download")
                 .packNumber(5)
                 .build();
-    }
-
-    @Test
-    public void channel_topic() {
-        botService.channelTopic("Andy", "#download", "join #room; for #help, otherwise [#voice] ");
-
-        verify(ircBot).joinChannel(stringCollectionCaptor.capture());
-        Collection<String> channelsToJoin = stringCollectionCaptor.getValue();
-        assertEquals(2, channelsToJoin.size());
-        assertTrue(channelsToJoin.containsAll(Arrays.asList("#voice", "#room")));
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void channel_topic__no_other_channels_referenced() {
-        botService.channelTopic("Andy", "#download", "lalalal");
-
-        verify(ircBot).joinChannel(stringCollectionCaptor.capture());
-        assertTrue(stringCollectionCaptor.getValue().isEmpty());
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test

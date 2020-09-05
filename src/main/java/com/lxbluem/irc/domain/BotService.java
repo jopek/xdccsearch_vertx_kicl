@@ -10,7 +10,6 @@ import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
 public class BotService {
     private final BotStorage botStorage;
@@ -36,15 +35,6 @@ public class BotService {
         this.exitBot = exitBot;
     }
 
-    public void channelTopic(String botNickName, String channelName, String topic) {
-        botStorage.get(botNickName).ifPresent(bot ->
-                stateStorage.get(botNickName).ifPresent(botState -> {
-                    Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
-                    Set<String> channelReferences = botState.channelReferences(channelName, mentionedChannels);
-                    bot.joinChannel(channelReferences);
-                })
-        );
-    }
 
     public void messageOfTheDay(String botNickName, List<String> motd) {
         botStorage.get(botNickName).ifPresent(bot ->

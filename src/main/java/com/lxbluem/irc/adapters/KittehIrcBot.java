@@ -36,14 +36,17 @@ public class KittehIrcBot implements IrcBot {
     private String botName;
     private final CtcpQueryHandler ctcpQueryHandler;
     private final LookForPackUser lookForPackUser;
-    private JoinMentionedChannels joinMentionedChannels;
+    private final RegisterNickName registerNickName;
+    private final JoinMentionedChannels joinMentionedChannels;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, LookForPackUser lookForPackUser, JoinMentionedChannels joinMentionedChannels) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, LookForPackUser lookForPackUser, JoinMentionedChannels joinMentionedChannels, RegisterNickName registerNickName) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.ctcpQueryHandler = ctcpQueryHandler;
         this.lookForPackUser = lookForPackUser;
+        this.joinMentionedChannels = joinMentionedChannels;
+        this.registerNickName = registerNickName;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -151,8 +154,7 @@ public class KittehIrcBot implements IrcBot {
 
     @Handler
     public void onMotd(ClientReceiveMotdEvent event) {
-        List<String> motd = event.getMotd().orElse(Collections.emptyList());
-        botService.messageOfTheDay(botName, motd);
+        registerNickName.handle(new RegisterNickNameCommand(botName));
     }
 
     @Handler

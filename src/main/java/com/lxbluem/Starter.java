@@ -80,18 +80,20 @@ public class Starter {
                 botStateStorage,
                 eventDispatcher,
                 clock,
-                nameGenerator,
-                exitBot
+                nameGenerator
         );
         CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
-        BotFactory botFactory = new KittehIrcBotFactory(exitBot,
+        RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
+        BotFactory botFactory = new KittehIrcBotFactory(
+                exitBot,
                 noticeMessageHandler,
                 botService,
                 ctcpQueryHandler,
                 lookForPackUser,
-                joinMentionedChannels
+                joinMentionedChannels,
+                registerNickName
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,

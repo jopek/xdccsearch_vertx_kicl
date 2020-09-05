@@ -58,8 +58,7 @@ public class InitializeBotImplTest {
                 stateStorage,
                 eventDispatcher,
                 clock,
-                nameGenerator,
-                exitBot
+                nameGenerator
         );
 
         initializeBot = new InitializeBotImpl(

@@ -2,14 +2,12 @@ package com.lxbluem.irc.domain;
 
 import com.lxbluem.common.domain.events.BotRenamedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 
 public class BotService {
     private final BotStorage botStorage;
@@ -17,29 +15,19 @@ public class BotService {
     private final EventDispatcher eventDispatcher;
     private final Clock clock;
     private final NameGenerator nameGenerator;
-    private final ExitBot exitBot;
 
     public BotService(
             BotStorage botStorage,
             BotStateStorage stateStorage,
             EventDispatcher eventDispatcher,
             Clock clock,
-            NameGenerator nameGenerator,
-            ExitBot exitBot
+            NameGenerator nameGenerator
     ) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
         this.clock = clock;
         this.nameGenerator = nameGenerator;
-        this.exitBot = exitBot;
-    }
-
-
-    public void messageOfTheDay(String botNickName, List<String> motd) {
-        botStorage.get(botNickName).ifPresent(bot ->
-                bot.registerNickname(botNickName)
-        );
     }
 
     public void changeNick(String botNickName, String serverMessages) {

@@ -57,8 +57,7 @@ public class NewBotVerticleDeploymentTest {
                 stateStorage,
                 eventDispatcher,
                 clock,
-                nameGenerator,
-                exitBot
+                nameGenerator
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,

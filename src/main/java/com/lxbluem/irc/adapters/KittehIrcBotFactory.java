@@ -13,6 +13,7 @@ public class KittehIrcBotFactory implements BotFactory {
     private final CtcpQueryHandler ctcpQueryHandler;
     private final LookForPackUser lookForPackUser;
     private final JoinMentionedChannels joinMentionedChannels;
+    private final RegisterNickName registerNickName;
 
     public KittehIrcBotFactory(
             ExitBot exitBot,
@@ -20,22 +21,27 @@ public class KittehIrcBotFactory implements BotFactory {
             BotService botService,
             CtcpQueryHandler ctcpQueryHandler,
             LookForPackUser lookForPackUser,
-            JoinMentionedChannels joinMentionedChannels) {
+            JoinMentionedChannels joinMentionedChannels,
+            RegisterNickName registerNickName) {
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.botService = botService;
         this.ctcpQueryHandler = ctcpQueryHandler;
         this.lookForPackUser = lookForPackUser;
         this.joinMentionedChannels = joinMentionedChannels;
+        this.registerNickName = registerNickName;
     }
 
     @Override
     public IrcBot createNewInstance() {
-        return new KittehIrcBot(botService,
+        return new KittehIrcBot(
+                botService,
                 exitBot,
                 noticeMessageHandler,
                 ctcpQueryHandler,
                 lookForPackUser,
-                joinMentionedChannels);
+                joinMentionedChannels,
+                registerNickName
+        );
     }
 }

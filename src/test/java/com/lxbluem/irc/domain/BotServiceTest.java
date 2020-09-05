@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -80,8 +79,7 @@ public class BotServiceTest {
                 stateStorage,
                 eventDispatcher,
                 clock,
-                nameGenerator,
-                exitBot
+                nameGenerator
         );
     }
 
@@ -102,14 +100,6 @@ public class BotServiceTest {
                 .channelName("#download")
                 .packNumber(5)
                 .build();
-    }
-
-    @Test
-    public void message_of_the_day() {
-        botService.messageOfTheDay("Andy", asList("message of the", "dayyyyyy", "in multiple strings"));
-
-        verify(ircBot).registerNickname("Andy");
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test

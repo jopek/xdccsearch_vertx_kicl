@@ -28,10 +28,10 @@ import java.util.stream.Collectors;
 public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
-    private final ExitBot exitBot;
-    private final NoticeMessageHandler noticeMessageHandler;
     private Client client;
     private String botName;
+    private final ExitBot exitBot;
+    private final NoticeMessageHandler noticeMessageHandler;
     private final StartDccTransfer startDccTransfer;
     private final LookForPackUser lookForPackUser;
     private final RegisterNickName registerNickName;

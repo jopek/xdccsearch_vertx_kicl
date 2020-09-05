@@ -13,6 +13,7 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.interactors.*;
+import com.lxbluem.irc.domain.interactors.subhandlers.*;
 import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
@@ -71,13 +72,20 @@ public class Starter {
     private static Verticle getBotVerticle(BotMessaging botMessaging, Clock clock, EventDispatcher eventDispatcher) {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
-        NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
-        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, botStateStorage, eventDispatcher, clock, exitBot);
+
+        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher, clock);
+        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, botStateStorage, exitBot, eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, botStateStorage));
+        noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, botStateStorage));
+        noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, botStateStorage));
+
         StartDccTransfer startDccTransfer = new StartDccTransferImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
+        NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ChangeNickNameImpl changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher, clock);
         SkipProtectedChannelImpl skipProtectedChannel = new SkipProtectedChannelImpl(botStateStorage);
         BotFactory botFactory = new KittehIrcBotFactory(

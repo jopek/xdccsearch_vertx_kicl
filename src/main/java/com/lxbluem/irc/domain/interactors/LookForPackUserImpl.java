@@ -35,7 +35,7 @@ public class LookForPackUserImpl implements LookForPackUser {
 
         stateStorage.get(botNickName).ifPresent(botState -> {
             botState.channelNickList(channelName, usersInChannel);
-            if (!botState.hasSeenRemoteUser()) {
+            if (!botState.isRemoteUserSeen()) {
                 String remoteUser = botState.getPack().getNickName();
                 final String message = format("bot %s not in channel %s", remoteUser, channelName);
                 BotFailedEvent failedEvent = new BotFailedEvent(botNickName, nowEpochMillis(), message);

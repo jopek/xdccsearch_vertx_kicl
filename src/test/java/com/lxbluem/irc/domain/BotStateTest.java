@@ -28,7 +28,7 @@ public class BotStateTest {
         botState.channelNickList("#2", Arrays.asList("user1", "user2", "user3"));
         botState.channelNickList("#3", Arrays.asList("userd", "usere"));
 
-        assertTrue(botState.hasRequestedPack());
+        assertTrue(botState.isPackRequested());
     }
 
     @Test
@@ -44,7 +44,7 @@ public class BotStateTest {
         botState.channelReferences("#3", Arrays.asList("#unusedChannel"));
         botState.channelNickList("#3", Arrays.asList("dude2"));
 
-        assertTrue(botState.hasRequestedPack());
+        assertTrue(botState.isPackRequested());
     }
 
     @Test
@@ -56,8 +56,8 @@ public class BotStateTest {
         botState.channelReferences("#MainChannel", Arrays.asList("#2", "#3"));
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
 
-        assertFalse(botState.canRequestPack());
-        assertFalse(botState.hasRequestedPack());
+        assertFalse(botState.isRequestingPackPossible());
+        assertFalse(botState.isPackRequested());
     }
 
     @Test
@@ -68,7 +68,7 @@ public class BotStateTest {
         });
         botState.channelNickList("#MainChannel", Arrays.asList("user1", "user2", "user3"));
 
-        assertFalse(botState.canRequestPack());
+        assertFalse(botState.isRequestingPackPossible());
     }
 
     @Test
@@ -85,10 +85,10 @@ public class BotStateTest {
         botState.channelReferences("#3", Arrays.asList("#irrelevant"));
         botState.channelNickList("#3", Arrays.asList());
 
-        assertFalse(botState.hasRequestedPack());
+        assertFalse(botState.isPackRequested());
 
         botState.nickRegistered();
-        assertTrue(botState.hasRequestedPack());
+        assertTrue(botState.isPackRequested());
     }
 
     @Test
@@ -170,8 +170,8 @@ public class BotStateTest {
         botState.channelReferences("#MainChannel", Arrays.asList());
         botState.channelNickList("#MainChannel", Arrays.asList("user2", "user3"));
 
-        assertFalse(botState.canRequestPack());
-        assertFalse(botState.hasRequestedPack());
+        assertFalse(botState.isRequestingPackPossible());
+        assertFalse(botState.isPackRequested());
     }
 
     @Test

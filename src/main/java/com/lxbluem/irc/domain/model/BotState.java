@@ -62,16 +62,12 @@ public class BotState {
         if (channelName.equalsIgnoreCase(mainChannelName))
             remoteUserSeen = channelNickList.stream().anyMatch(nick -> nick.equalsIgnoreCase(remoteUser));
 
-        if (canRequestPack()) {
+        if (isRequestingPackPossible()) {
             decoratedRequestHook.run();
         }
     }
 
-    public boolean hasSeenRemoteUser() {
-        return remoteUserSeen;
-    }
-
-    public boolean canRequestPack() {
+    public boolean isRequestingPackPossible() {
         boolean main = joinedChannels.contains(mainChannelName);
         boolean allAdditional = joinedChannels.containsAll(referencedChannelNames);
         boolean allChannelsJoined = main && allAdditional;
@@ -82,10 +78,6 @@ public class BotState {
                 || remoteUserSeen && allChannelsJoined && nickRegistered;
     }
 
-    public boolean hasRequestedPack() {
-        return packRequested;
-    }
-
     public void nickRegistryRequired() {
         this.nickRegistryRequired = true;
     }
@@ -93,7 +85,7 @@ public class BotState {
     public void nickRegistered() {
         this.nickRegistered = true;
 
-        if (canRequestPack()) {
+        if (isRequestingPackPossible()) {
             decoratedRequestHook.run();
         }
     }
@@ -104,7 +96,7 @@ public class BotState {
 
     public void removeReferencedChannel(String channelName) {
         referencedChannelNames.remove(channelName);
-        if (canRequestPack()) {
+        if (isRequestingPackPossible()) {
             decoratedRequestHook.run();
         }
     }

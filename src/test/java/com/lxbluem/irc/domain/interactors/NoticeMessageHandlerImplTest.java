@@ -6,6 +6,7 @@ import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.domain.interactors.subhandlers.*;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
@@ -59,7 +60,12 @@ public class NoticeMessageHandlerImplTest {
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
 
-        noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
+        noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher, clock);
+        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
     }
 
     private void initialiseStorages() {
@@ -164,8 +170,8 @@ public class NoticeMessageHandlerImplTest {
 
         assertEquals(1, requestHookExecuted.get());
 
-        assertTrue(botState.hasRequestedPack());
-        assertFalse(botState.canRequestPack());
+        assertTrue(botState.isPackRequested());
+        assertFalse(botState.isRequestingPackPossible());
 
         noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
 
@@ -174,7 +180,7 @@ public class NoticeMessageHandlerImplTest {
         assertEquals(1, stringCollectionCaptor.getValue().size());
         assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
 
-        assertFalse(botState.canRequestPack());
+        assertFalse(botState.isRequestingPackPossible());
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
@@ -234,4 +240,15 @@ public class NoticeMessageHandlerImplTest {
     }
 
 
+        assertFalse(botState.isSearchRequested());
+        verify(ircBot).stopSearchListing("keex");
+        verify(ircBot).requestDccPack("keex", 1);
+
+        ArgumentCaptor<BotNoticeEvent> messageSent = ArgumentCaptor.forClass(BotNoticeEvent.class);
+        verify(eventDispatcher, times(1)).dispatch(messageSent.capture());
+        BotNoticeEvent event = messageSent.getValue();
+        assertEquals("Andy", event.getBot());
+        assertEquals("keex", event.getRemoteNick());
+        assertEquals("pack number changed", event.getMessage());
+    }
 }

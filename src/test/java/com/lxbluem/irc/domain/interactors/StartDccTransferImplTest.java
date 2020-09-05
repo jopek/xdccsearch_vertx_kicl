@@ -44,7 +44,7 @@ public class StartDccTransferImplTest {
 
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
-    private StartDccTransfer queryHandler;
+    private StartDccTransfer startDccTransfer;
 
     @Before
     public void setUp() throws Exception {
@@ -59,7 +59,7 @@ public class StartDccTransferImplTest {
         initialiseStorages();
         requestHookExecuted.set(0);
 
-        queryHandler = new StartDccTransferImpl(botStorage, stateStorage, botMessaging);
+        startDccTransfer = new StartDccTransferImpl(botStorage, stateStorage, botMessaging);
     }
 
     private void initialiseStorages() {
@@ -78,6 +78,7 @@ public class StartDccTransferImplTest {
                 .serverPort(6667)
                 .channelName("#download")
                 .packNumber(5)
+                .packName("test1.bin")
                 .build();
     }
 
@@ -87,7 +88,19 @@ public class StartDccTransferImplTest {
         String incoming_message = "crrrrrap";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+    }
+
+    @Test
+    public void incoming_ctcp_query_does_nothing_for_unexpected_filename() {
+        String botNick = "Andy";
+        // DCC SEND <filename> <ip> <port> <file size>
+        String incoming_message = "DCC SEND unexpected_filename.txt 3232260964 50000 6";
+        DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+
+        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
@@ -99,7 +112,7 @@ public class StartDccTransferImplTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
@@ -128,7 +141,7 @@ public class StartDccTransferImplTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 3232260865L));
+        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 3232260865L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();

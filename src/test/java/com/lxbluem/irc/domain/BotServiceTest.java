@@ -7,12 +7,12 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
+import com.lxbluem.irc.domain.interactors.LookForPackUserImpl;
 import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
-import com.lxbluem.irc.domain.interactors.UsersInChannelImpl;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.incoming.UsersInChannel;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -56,7 +56,7 @@ public class BotServiceTest {
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private ExitBot exitBot;
-    private UsersInChannel usersInChannel;
+    private LookForPackUser lookForPackUser;
     private Clock clock;
 
 
@@ -72,7 +72,7 @@ public class BotServiceTest {
         exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         initialiseStorages();
         requestHookExecuted.set(0);
-        usersInChannel = new UsersInChannelImpl(stateStorage, exitBot, eventDispatcher, clock);
+        lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher, clock);
 
         NoticeMessageHandler noticeMessageHanlder = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         botService = new BotService(

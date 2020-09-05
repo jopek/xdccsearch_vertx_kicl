@@ -8,9 +8,9 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.model.BotState;
-import com.lxbluem.irc.domain.model.request.UsersInChannelCommand;
+import com.lxbluem.irc.domain.model.request.LookForPackUserCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
-import com.lxbluem.irc.domain.ports.incoming.UsersInChannel;
+import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -28,12 +28,12 @@ import static java.util.Arrays.asList;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-public class UsersInChannelImplTest {
+public class LookForPackUserImplTest {
     private EventDispatcher eventDispatcher;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
     private BotStateStorage stateStorage;
     private BotStorage botStorage;
-    private UsersInChannel usersInChannel;
+    private LookForPackUser lookForPackUser;
 
     private final IrcBot ircBot = mock(IrcBot.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
@@ -47,7 +47,7 @@ public class UsersInChannelImplTest {
         eventDispatcher = mock(EventDispatcher.class);
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         initialiseStorages();
-        usersInChannel = new UsersInChannelImpl(stateStorage, exitBot, eventDispatcher, clock);
+        lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher, clock);
     }
 
     private void initialiseStorages() {
@@ -72,8 +72,8 @@ public class UsersInChannelImplTest {
     @Test
     public void users_in_channel() {
         List<String> usersInChannel = asList("operator", "keex", "doomsman", "hellbaby");
-        UsersInChannelCommand command = new UsersInChannelCommand("Andy", "#download", usersInChannel);
-        this.usersInChannel.handle(command);
+        LookForPackUserCommand command = new LookForPackUserCommand("Andy", "#download", usersInChannel);
+        this.lookForPackUser.handle(command);
 
         verifyNoMoreInteractions(eventDispatcher, ircBot);
 
@@ -84,7 +84,7 @@ public class UsersInChannelImplTest {
 
     @Test
     public void users_in_channel__remoteUser_of_target_channel_missing() {
-        usersInChannel.handle(new UsersInChannelCommand("Andy", "#download", asList("operator", "doomsman", "hellbaby")));
+        lookForPackUser.handle(new LookForPackUserCommand("Andy", "#download", asList("operator", "doomsman", "hellbaby")));
 
         ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
         verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());

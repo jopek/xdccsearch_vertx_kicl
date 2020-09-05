@@ -11,7 +11,7 @@ public class KittehIrcBotFactory implements BotFactory {
     private final BotService botService;
     private final NoticeMessageHandler noticeMessageHandler;
     private final CtcpQueryHandler ctcpQueryHandler;
-    private final UsersInChannel usersInChannel;
+    private final LookForPackUser lookForPackUser;
     private final JoinMentionedChannels joinMentionedChannels;
 
     public KittehIrcBotFactory(
@@ -19,13 +19,13 @@ public class KittehIrcBotFactory implements BotFactory {
             NoticeMessageHandler noticeMessageHandler,
             BotService botService,
             CtcpQueryHandler ctcpQueryHandler,
-            UsersInChannel usersInChannel,
+            LookForPackUser lookForPackUser,
             JoinMentionedChannels joinMentionedChannels) {
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.botService = botService;
         this.ctcpQueryHandler = ctcpQueryHandler;
-        this.usersInChannel = usersInChannel;
+        this.lookForPackUser = lookForPackUser;
         this.joinMentionedChannels = joinMentionedChannels;
     }
 
@@ -35,7 +35,7 @@ public class KittehIrcBotFactory implements BotFactory {
                 exitBot,
                 noticeMessageHandler,
                 ctcpQueryHandler,
-                usersInChannel,
+                lookForPackUser,
                 joinMentionedChannels);
     }
 }

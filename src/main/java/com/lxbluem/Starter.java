@@ -84,13 +84,13 @@ public class Starter {
                 exitBot
         );
         CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
-        UsersInChannel usersInChannel = new UsersInChannelImpl(botStateStorage, exitBot, eventDispatcher, clock);
+        LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         BotFactory botFactory = new KittehIrcBotFactory(exitBot,
                 noticeMessageHandler,
                 botService,
                 ctcpQueryHandler,
-                usersInChannel,
+                lookForPackUser,
                 joinMentionedChannels
         );
         InitializeBot initializeBot = new InitializeBotImpl(

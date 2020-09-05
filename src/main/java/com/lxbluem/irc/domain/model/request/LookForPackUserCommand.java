@@ -9,7 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Getter
-public class UsersInChannelCommand {
+public class LookForPackUserCommand {
     String botNickName;
     String channelName;
     List<String> usersInChannel;

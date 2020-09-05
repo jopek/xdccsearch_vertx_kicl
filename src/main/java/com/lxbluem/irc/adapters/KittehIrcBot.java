@@ -35,15 +35,15 @@ public class KittehIrcBot implements IrcBot {
     private Client client;
     private String botName;
     private final CtcpQueryHandler ctcpQueryHandler;
-    private final UsersInChannel usersInChannel;
+    private final LookForPackUser lookForPackUser;
     private JoinMentionedChannels joinMentionedChannels;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, UsersInChannel usersInChannel, JoinMentionedChannels joinMentionedChannels) {
+    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, LookForPackUser lookForPackUser, JoinMentionedChannels joinMentionedChannels) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.ctcpQueryHandler = ctcpQueryHandler;
-        this.usersInChannel = usersInChannel;
+        this.lookForPackUser = lookForPackUser;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -146,7 +146,7 @@ public class KittehIrcBot implements IrcBot {
                 .map(User::getNick)
                 .collect(Collectors.toList());
         String channelName = channel.getName();
-        usersInChannel.handle(new UsersInChannelCommand(botName, channelName, users));
+        lookForPackUser.handle(new LookForPackUserCommand(botName, channelName, users));
     }
 
     @Handler

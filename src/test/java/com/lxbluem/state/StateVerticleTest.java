@@ -103,6 +103,15 @@ public class StateVerticleTest {
     @Test(timeout = 3_000)
     public void initialise_state(TestContext context) {
 
+        vertx.eventBus().addOutboundInterceptor(
+                dc -> {
+                    Object body = dc.body();
+                    String address = dc.message().address();
+                    String sendPublish = dc.message().isSend() ? "send" : "publish";
+                    System.out.printf("%s INTERCEPTOR %s %s\n", sendPublish, address, body);
+                    dc.next();
+                });
+
         Async stateSent = context.async();
         vertx.eventBus().<JsonObject>consumer(Address.STATE.address(), m -> {
             JsonObject body = m.body();

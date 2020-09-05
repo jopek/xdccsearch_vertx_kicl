@@ -1,4 +1,4 @@
-package com.lxbluem;
+package com.lxbluem.state.domain;
 
 import com.lxbluem.state.domain.model.MovingAverage;
 import com.lxbluem.state.domain.model.Progress;

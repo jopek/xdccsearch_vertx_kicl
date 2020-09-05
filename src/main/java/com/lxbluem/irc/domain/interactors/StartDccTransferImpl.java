@@ -1,11 +1,11 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.ports.BotMessaging;
-import com.lxbluem.irc.domain.model.request.CtcpQueryCommand;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
-import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
+import com.lxbluem.irc.domain.model.request.StartDccTransferCommand;
+import com.lxbluem.irc.domain.ports.incoming.StartDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 
@@ -16,19 +16,19 @@ import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
 import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 import static java.lang.String.format;
 
-public class CtcpQueryHandlerImpl implements CtcpQueryHandler {
+public class StartDccTransferImpl implements StartDccTransfer {
     private final BotStorage botStorage;
     private final BotStateStorage stateStorage;
     private final BotMessaging botMessaging;
 
-    public CtcpQueryHandlerImpl(BotStorage botStorage, BotStateStorage stateStorage, BotMessaging botMessaging) {
+    public StartDccTransferImpl(BotStorage botStorage, BotStateStorage stateStorage, BotMessaging botMessaging) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
     }
 
     @Override
-    public void handle(CtcpQueryCommand command) {
+    public void handle(StartDccTransferCommand command) {
         String botNickName = command.getBotNickName();
         DccCtcpQuery ctcpQuery = command.getCtcpQuery();
         long localIp = command.getLocalIp();

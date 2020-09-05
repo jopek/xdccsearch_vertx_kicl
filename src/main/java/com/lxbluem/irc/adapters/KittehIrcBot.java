@@ -32,7 +32,7 @@ public class KittehIrcBot implements IrcBot {
     private final NoticeMessageHandler noticeMessageHandler;
     private Client client;
     private String botName;
-    private final CtcpQueryHandler ctcpQueryHandler;
+    private final StartDccTransfer startDccTransfer;
     private final LookForPackUser lookForPackUser;
     private final RegisterNickName registerNickName;
     private final ChangeNickName changeNickNameHandler;
@@ -42,7 +42,7 @@ public class KittehIrcBot implements IrcBot {
     public KittehIrcBot(
             ExitBot exitBot,
             NoticeMessageHandler noticeMessageHandler,
-            CtcpQueryHandler ctcpQueryHandler,
+            StartDccTransfer startDccTransfer,
             LookForPackUser lookForPackUser,
             JoinMentionedChannels joinMentionedChannels,
             RegisterNickName registerNickName,
@@ -50,7 +50,7 @@ public class KittehIrcBot implements IrcBot {
             SkipProtectedChannel skipProtectedChannel) {
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
-        this.ctcpQueryHandler = ctcpQueryHandler;
+        this.startDccTransfer = startDccTransfer;
         this.lookForPackUser = lookForPackUser;
         this.joinMentionedChannels = joinMentionedChannels;
         this.registerNickName = registerNickName;
@@ -225,7 +225,7 @@ public class KittehIrcBot implements IrcBot {
                 .map(User::getHost)
                 .map(this::transformIpToLong)
                 .orElse(0L);
-        ctcpQueryHandler.handle(new CtcpQueryCommand(botName, dccCtcpQuery, localIp));
+        startDccTransfer.handle(new StartDccTransferCommand(botName, dccCtcpQuery, localIp));
     }
 
     private long transformIpToLong(String ipString) {

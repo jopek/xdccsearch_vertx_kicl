@@ -7,11 +7,11 @@ import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.model.BotState;
-import com.lxbluem.irc.domain.model.request.CtcpQueryCommand;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
-import com.lxbluem.irc.domain.ports.incoming.CtcpQueryHandler;
+import com.lxbluem.irc.domain.model.request.StartDccTransferCommand;
+import com.lxbluem.irc.domain.ports.incoming.StartDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -32,7 +32,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class CtcpQueryHandlerImplTest {
+public class StartDccTransferImplTest {
     private BotStateStorage stateStorage;
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
@@ -44,7 +44,7 @@ public class CtcpQueryHandlerImplTest {
 
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
-    private CtcpQueryHandler queryHandler;
+    private StartDccTransfer queryHandler;
 
     @Before
     public void setUp() throws Exception {
@@ -59,7 +59,7 @@ public class CtcpQueryHandlerImplTest {
         initialiseStorages();
         requestHookExecuted.set(0);
 
-        queryHandler = new CtcpQueryHandlerImpl(botStorage, stateStorage, botMessaging);
+        queryHandler = new StartDccTransferImpl(botStorage, stateStorage, botMessaging);
     }
 
     private void initialiseStorages() {
@@ -87,7 +87,7 @@ public class CtcpQueryHandlerImplTest {
         String incoming_message = "crrrrrap";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new CtcpQueryCommand(botNick, ctcpQuery, 0L));
+        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
@@ -99,7 +99,7 @@ public class CtcpQueryHandlerImplTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new CtcpQueryCommand(botNick, ctcpQuery, 0L));
+        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
@@ -128,7 +128,7 @@ public class CtcpQueryHandlerImplTest {
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        queryHandler.handle(new CtcpQueryCommand(botNick, ctcpQuery, 3232260865L));
+        queryHandler.handle(new StartDccTransferCommand(botNick, ctcpQuery, 3232260865L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();

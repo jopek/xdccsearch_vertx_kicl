@@ -74,7 +74,7 @@ public class Starter {
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
         NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, botStateStorage, eventDispatcher, clock, exitBot);
-        CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
+        StartDccTransfer startDccTransfer = new StartDccTransferImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
@@ -83,7 +83,7 @@ public class Starter {
         BotFactory botFactory = new KittehIrcBotFactory(
                 exitBot,
                 noticeMessageHandler,
-                ctcpQueryHandler,
+                startDccTransfer,
                 lookForPackUser,
                 joinMentionedChannels,
                 registerNickName,

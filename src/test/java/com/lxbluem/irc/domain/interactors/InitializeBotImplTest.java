@@ -54,11 +54,8 @@ public class InitializeBotImplTest {
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         BotService botService = new BotService(
-                botStorage,
                 stateStorage,
-                eventDispatcher,
-                clock,
-                nameGenerator
+                clock
         );
 
         initializeBot = new InitializeBotImpl(

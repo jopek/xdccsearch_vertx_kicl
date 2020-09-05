@@ -37,9 +37,18 @@ public class KittehIrcBot implements IrcBot {
     private final CtcpQueryHandler ctcpQueryHandler;
     private final LookForPackUser lookForPackUser;
     private final RegisterNickName registerNickName;
+    private final ChangeNickName changeNickNameHandler;
     private final JoinMentionedChannels joinMentionedChannels;
 
-    public KittehIrcBot(BotService botService, ExitBot exitBot, NoticeMessageHandler noticeMessageHandler, CtcpQueryHandler ctcpQueryHandler, LookForPackUser lookForPackUser, JoinMentionedChannels joinMentionedChannels, RegisterNickName registerNickName) {
+    public KittehIrcBot(
+            BotService botService,
+            ExitBot exitBot,
+            NoticeMessageHandler noticeMessageHandler,
+            CtcpQueryHandler ctcpQueryHandler,
+            LookForPackUser lookForPackUser,
+            JoinMentionedChannels joinMentionedChannels,
+            RegisterNickName registerNickName,
+            ChangeNickName changeNickName) {
         this.botService = botService;
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
@@ -47,6 +56,7 @@ public class KittehIrcBot implements IrcBot {
         this.lookForPackUser = lookForPackUser;
         this.joinMentionedChannels = joinMentionedChannels;
         this.registerNickName = registerNickName;
+        changeNickNameHandler = changeNickName;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -125,7 +135,6 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void terminate() {
-//        client.shutdown();
         TimerTask delayedTermination = new TimerTask() {
             @Override
             public void run() {
@@ -194,7 +203,8 @@ public class KittehIrcBot implements IrcBot {
         String serverMessages = event.getSource().getMessage();
         String attemptedNick = event.getAttemptedNick();
 
-        botService.changeNick(attemptedNick, serverMessages);
+        ChangeNickNameCommand command = new ChangeNickNameCommand(attemptedNick, serverMessages);
+        changeNickNameHandler.handle(command);
     }
 
     @Handler

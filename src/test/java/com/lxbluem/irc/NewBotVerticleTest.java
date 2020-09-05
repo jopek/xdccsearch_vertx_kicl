@@ -65,11 +65,8 @@ public class NewBotVerticleTest {
         EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
         BotService botService = new BotService(
-                botStorage,
                 stateStorage,
-                eventDispatcher,
-                clock,
-                nameGenerator
+                clock
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,

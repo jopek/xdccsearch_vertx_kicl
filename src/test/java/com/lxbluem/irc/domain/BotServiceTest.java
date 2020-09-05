@@ -1,7 +1,6 @@
 package com.lxbluem.irc.domain;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.common.domain.events.BotRenamedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
@@ -75,11 +74,8 @@ public class BotServiceTest {
 
         NoticeMessageHandler noticeMessageHanlder = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
         botService = new BotService(
-                botStorage,
                 stateStorage,
-                eventDispatcher,
-                clock,
-                nameGenerator
+                clock
         );
     }
 
@@ -100,25 +96,6 @@ public class BotServiceTest {
                 .channelName("#download")
                 .packNumber(5)
                 .build();
-    }
-
-    @Test
-    public void register_new_nick_when_rejected() {
-        when(nameGenerator.getNick()).thenReturn("Randy");
-        botService.changeNick("Andy", "something happened; serverMessages; more serverMessages");
-
-        verify(ircBot).changeNickname(eq("Randy"));
-
-        ArgumentCaptor<BotRenamedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotRenamedEvent.class);
-        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
-
-        BotRenamedEvent sentMesssage = messageSentCaptor.getValue();
-        assertEquals("Andy", sentMesssage.getBot());
-        assertEquals("something happened; serverMessages; more serverMessages", sentMesssage.getMessage());
-        assertEquals("Randy", sentMesssage.getRenameto());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
-
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test

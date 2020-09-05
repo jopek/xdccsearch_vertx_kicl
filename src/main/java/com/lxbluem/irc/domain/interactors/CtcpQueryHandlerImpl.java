@@ -10,7 +10,6 @@ import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
@@ -40,15 +39,13 @@ public class CtcpQueryHandlerImpl implements CtcpQueryHandler {
         botStorage.get(botNickName).ifPresent(bot ->
                 stateStorage.get(botNickName).ifPresent(botState -> {
 
-                    AtomicReference<String> resolvedFilename = new AtomicReference<>("");
-
                     Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
                         int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
                         if (passiveDccSocketPort == 0)
                             return;
                         String nickName = botState.getPack().getNickName();
                         String dccSendRequest = format("DCC SEND %s %d %d %d %d",
-                                resolvedFilename.get(),
+                                ctcpQuery.getFilename(),
                                 localIp,
                                 passiveDccSocketPort,
                                 ctcpQuery.getSize(),
@@ -59,9 +56,8 @@ public class CtcpQueryHandlerImpl implements CtcpQueryHandler {
                     };
 
                     Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
-                        String filenameAnswer = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
-                        resolvedFilename.set(filenameAnswer);
-                        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNickName);
+                        String resolvedFilename = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
+                        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNickName, resolvedFilename);
                         botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
                     };
 

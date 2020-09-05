@@ -50,10 +50,12 @@ public class CtcpQueryHandlerImplTest {
     public void setUp() throws Exception {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
+        eventDispatcher = mock(EventDispatcher.class);
+
         stateStorage = new InMemoryBotStateStorage();
         botStorage = new InMemoryBotStorage();
         when(nameGenerator.getNick()).thenReturn("Andy");
-        eventDispatcher = mock(EventDispatcher.class);
+
         initialiseStorages();
         requestHookExecuted.set(0);
 
@@ -64,7 +66,7 @@ public class CtcpQueryHandlerImplTest {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
-        Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
+        Runnable requestHook = requestHookExecuted::incrementAndGet;
         stateStorage.save("Andy", new BotState(pack, requestHook));
     }
 
@@ -103,7 +105,15 @@ public class CtcpQueryHandlerImplTest {
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
-        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNick);
+        DccInitializeRequest query = DccInitializeRequest.builder()
+                .bot("Andy")
+                .filename("test1._x0x_.bin")
+                .ip("192.168.99.100")
+                .port(50000)
+                .passive(false)
+                .size(6)
+                .token(0)
+                .build();
         verify(botMessaging).ask(eq(Address.DCC_INITIALIZE), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.emptyMap());
@@ -114,7 +124,7 @@ public class CtcpQueryHandlerImplTest {
     @Test
     public void incoming_ctcp_query_passive_dcc() {
         String botNick = "Andy";
-        // DCC SEND <filename> <ip> <port> <file size>
+        // DCC SEND <filename> <ip> <port> <file size> <token>
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
@@ -124,12 +134,20 @@ public class CtcpQueryHandlerImplTest {
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
-        DccInitializeRequest query = DccInitializeRequest.from(ctcpQuery, botNick);
+        DccInitializeRequest query = DccInitializeRequest.builder()
+                .bot("Andy")
+                .filename("test1._x0x_.bin")
+                .ip("192.168.99.100")
+                .port(0)
+                .passive(true)
+                .size(6)
+                .token(1)
+                .build();
         verify(botMessaging).ask(eq(Address.DCC_INITIALIZE), eq(query), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> dccInitConsumer = consumerArgumentCaptor.getValue();
         dccInitConsumer.accept(Collections.singletonMap("port", 12345));
 
-        verify(ircBot).sendCtcpMessage("keex", "DCC SEND test1._x0x_.bin 3232260865 12345 6 1");
+        verify(ircBot).sendCtcpMessage("keex", "DCC SEND test1.bin 3232260865 12345 6 1");
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }

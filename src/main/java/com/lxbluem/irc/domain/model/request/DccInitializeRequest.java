@@ -17,10 +17,10 @@ public class DccInitializeRequest implements Serializable {
     private int token;
     private String bot;
 
-    public static DccInitializeRequest from(DccCtcpQuery query, String botNickName) {
+    public static DccInitializeRequest from(DccCtcpQuery query, String botNickName, String resolvedFilename) {
         return DccInitializeRequest.builder()
                 .bot(botNickName)
-                .filename(query.getFilename())
+                .filename(resolvedFilename)
                 .ip(query.getParsedIp())
                 .port(query.getPort())
                 .passive(query.getTransferType().equals(DccCtcpQuery.TransferType.PASSIVE))

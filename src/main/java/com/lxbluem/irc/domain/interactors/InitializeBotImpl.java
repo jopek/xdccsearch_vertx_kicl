@@ -4,7 +4,6 @@ import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotDccPackRequestedEvent;
 import com.lxbluem.common.domain.events.BotInitializedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
@@ -22,7 +21,6 @@ public class InitializeBotImpl implements InitializeBot {
     private final BotStateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
     private final Clock clock;
-    private final BotService botService;
 
     public InitializeBotImpl(
             BotStorage botStorage,
@@ -30,8 +28,7 @@ public class InitializeBotImpl implements InitializeBot {
             EventDispatcher eventDispatcher,
             Clock clock,
             NameGenerator nameGenerator,
-            BotFactory botFactory,
-            BotService botService
+            BotFactory botFactory
     ) {
         this.nameGenerator = nameGenerator;
         this.botFactory = botFactory;
@@ -39,7 +36,6 @@ public class InitializeBotImpl implements InitializeBot {
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
         this.clock = clock;
-        this.botService = botService;
     }
 
     @Override

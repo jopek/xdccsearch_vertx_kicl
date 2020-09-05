@@ -1,17 +1,12 @@
 package com.lxbluem.irc;
 
-import com.lxbluem.common.adapter.EventBusBotMessaging;
 import com.lxbluem.common.adapter.EventbusEventDispatcher;
-import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
-import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -44,26 +39,19 @@ public class NewBotVerticleDeploymentTest {
         NameGenerator nameGenerator = () -> botNickName;
 
         Clock clock = Clock.systemDefaultZone();
-        BotMessaging botMessaging = new EventBusBotMessaging(vertx.eventBus(), clock);
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
         EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
-        BotService botService = new BotService(
-                stateStorage,
-                clock
-        );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                botFactory,
-                botService
+                botFactory
         );
         verticle = new NewBotVerticle(initializeBot, exitBot);
     }

@@ -9,7 +9,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 
 import static com.lxbluem.state.domain.model.DccState.INIT;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class StateTest {
 

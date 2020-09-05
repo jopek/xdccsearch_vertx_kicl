@@ -7,12 +7,9 @@ import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
-import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +19,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -49,14 +45,7 @@ public class InitializeBotImplTest {
         botStorage = new InMemoryBotStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         when(nameGenerator.getNick()).thenReturn("Andy");
-        new AtomicInteger(0);
         eventDispatcher = mock(EventDispatcher.class);
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, stateStorage, eventDispatcher, clock, exitBot);
-        BotService botService = new BotService(
-                stateStorage,
-                clock
-        );
 
         initializeBot = new InitializeBotImpl(
                 botStorage,
@@ -64,8 +53,7 @@ public class InitializeBotImplTest {
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                botFactory,
-                botService
+                botFactory
         );
     }
 

@@ -1,6 +1,5 @@
 package com.lxbluem.irc.adapters;
 
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.model.request.*;
 import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -29,7 +28,6 @@ import java.util.stream.Collectors;
 public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
-    private final BotService botService;
     private final ExitBot exitBot;
     private final NoticeMessageHandler noticeMessageHandler;
     private Client client;
@@ -38,18 +36,18 @@ public class KittehIrcBot implements IrcBot {
     private final LookForPackUser lookForPackUser;
     private final RegisterNickName registerNickName;
     private final ChangeNickName changeNickNameHandler;
+    private final SkipProtectedChannel skipProtectedChannel;
     private final JoinMentionedChannels joinMentionedChannels;
 
     public KittehIrcBot(
-            BotService botService,
             ExitBot exitBot,
             NoticeMessageHandler noticeMessageHandler,
             CtcpQueryHandler ctcpQueryHandler,
             LookForPackUser lookForPackUser,
             JoinMentionedChannels joinMentionedChannels,
             RegisterNickName registerNickName,
-            ChangeNickName changeNickName) {
-        this.botService = botService;
+            ChangeNickName changeNickName,
+            SkipProtectedChannel skipProtectedChannel) {
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
         this.ctcpQueryHandler = ctcpQueryHandler;
@@ -57,6 +55,7 @@ public class KittehIrcBot implements IrcBot {
         this.joinMentionedChannels = joinMentionedChannels;
         this.registerNickName = registerNickName;
         changeNickNameHandler = changeNickName;
+        this.skipProtectedChannel = skipProtectedChannel;
         client = new DefaultClient();
         isDebugging = true;
     }
@@ -195,7 +194,8 @@ public class KittehIrcBot implements IrcBot {
         String botNickName = parameters.get(0);
         String attemptedChannel = parameters.get(1);
         String message = parameters.get(2);
-        botService.channelRequiresAccountRegistry(botNickName, attemptedChannel, message);
+        SkipProtectedChannelCommand command = new SkipProtectedChannelCommand(botNickName, attemptedChannel, message);
+        skipProtectedChannel.handle(command);
     }
 
     @Handler

@@ -12,7 +12,6 @@ import com.lxbluem.irc.NewBotVerticle;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.*;
 import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
@@ -75,24 +74,21 @@ public class Starter {
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
         NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(botStorage, botStateStorage, eventDispatcher, clock, exitBot);
-        BotService botService = new BotService(
-                botStateStorage,
-                clock
-        );
         CtcpQueryHandler ctcpQueryHandler = new CtcpQueryHandlerImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
         ChangeNickNameImpl changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher, clock);
+        SkipProtectedChannelImpl skipProtectedChannel = new SkipProtectedChannelImpl(botStateStorage);
         BotFactory botFactory = new KittehIrcBotFactory(
                 exitBot,
                 noticeMessageHandler,
-                botService,
                 ctcpQueryHandler,
                 lookForPackUser,
                 joinMentionedChannels,
                 registerNickName,
-                changeNickName
+                changeNickName,
+                skipProtectedChannel
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
@@ -100,8 +96,7 @@ public class Starter {
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                botFactory,
-                botService
+                botFactory
         );
         return new NewBotVerticle(initializeBot, exitBot);
     }

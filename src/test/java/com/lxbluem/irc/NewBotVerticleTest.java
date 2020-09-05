@@ -7,7 +7,6 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.BotService;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
@@ -64,18 +63,13 @@ public class NewBotVerticleTest {
         BotFactory botFactory = () -> mockBot;
         EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-        BotService botService = new BotService(
-                stateStorage,
-                clock
-        );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,
                 eventDispatcher,
                 clock,
                 nameGenerator,
-                botFactory,
-                botService
+                botFactory
         );
         Verticle verticle = new NewBotVerticle(initializeBot, exitBot);
         vertx.deployVerticle(verticle, context.asyncAssertSuccess());

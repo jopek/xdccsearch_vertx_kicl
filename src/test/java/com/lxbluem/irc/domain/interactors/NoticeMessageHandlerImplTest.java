@@ -1,9 +1,7 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.common.domain.events.BotEvent;
 import com.lxbluem.common.domain.events.BotNoticeEvent;
-import com.lxbluem.common.domain.events.DccQueuedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
@@ -25,13 +23,9 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -103,34 +97,6 @@ public class NoticeMessageHandlerImplTest {
         BotNoticeEvent botNoticeEvent = captor.getValue();
         assertEquals("someDude", botNoticeEvent.getRemoteNick());
         assertEquals("lalala", botNoticeEvent.getMessage());
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void notice_message_handler_queued() {
-        String botNick = "Andy";
-        String remoteNick = "keex";
-        String noticeMessage = "queue for pack";
-        Pack pack = testPack();
-
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-        botState.channelReferences(pack.getChannelName(), new HashSet<>());
-        botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
-        verify(eventDispatcher, times(1)).dispatch(messageSentCaptor.capture());
-        List<BotEvent> eventList = messageSentCaptor.getAllValues();
-
-        assertEquals(1, requestHookExecuted.get());
-
-        DccQueuedEvent sentQueueMesssage = (DccQueuedEvent) eventList.get(0);
-        assertEquals("Andy", sentQueueMesssage.getBot());
-        assertEquals("queue for pack", sentQueueMesssage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), sentQueueMesssage.getTimestamp());
-
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 }

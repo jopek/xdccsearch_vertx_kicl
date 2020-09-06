@@ -26,15 +26,14 @@ public class NoticeMessageHandlerImpl implements NoticeMessageHandler {
 
     @Override
     public void handle(NoticeMessageCommand command) {
-        AtomicBoolean conditionMatched = new AtomicBoolean(false);
+        AtomicBoolean isCommandHandled = new AtomicBoolean(false);
         for (SubHandler subHandler : subHandlers) {
-            if (subHandler.handle(command)) {
-                conditionMatched.set(true);
+            isCommandHandled.set(subHandler.handle(command));
+            if (isCommandHandled.get())
                 break;
-            }
         }
 
-        if (conditionMatched.get())
+        if (isCommandHandled.get())
             return;
 
         String botNickName = command.getBotNickName();

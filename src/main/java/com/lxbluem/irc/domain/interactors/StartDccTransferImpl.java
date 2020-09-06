@@ -43,9 +43,12 @@ public class StartDccTransferImpl implements StartDccTransfer {
 
                     String packName = botState.getPack().getPackName();
                     String incomingFilename = ctcpQuery.getFilename();
+                    String packNickName = botState.getPack().getNickName();
                     if (!incomingFilename.equalsIgnoreCase(packName)) {
                         String message = "incoming file '%s' does not match known pack file '%s'";
                         log.warn(String.format(message, incomingFilename, packName));
+                        bot.startSearchListing(packNickName, packName);
+                        botState.requestSearchListing();
                         return;
                     }
 
@@ -53,7 +56,6 @@ public class StartDccTransferImpl implements StartDccTransfer {
                         int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
                         if (passiveDccSocketPort == 0)
                             return;
-                        String nickName = botState.getPack().getNickName();
                         String dccSendRequest = format("DCC SEND %s %d %d %d %d",
                                 incomingFilename,
                                 localIp,
@@ -62,7 +64,7 @@ public class StartDccTransferImpl implements StartDccTransfer {
                                 ctcpQuery.getToken()
                         );
 
-                        bot.sendCtcpMessage(nickName, dccSendRequest);
+                        bot.sendCtcpMessage(packNickName, dccSendRequest);
                     };
 
                     Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {

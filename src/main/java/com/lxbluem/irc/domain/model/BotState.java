@@ -19,6 +19,7 @@ public class BotState {
     private final String remoteUser;
     private boolean remoteUserSeen;
     private boolean packRequested;
+    private boolean searchRequested;
     private boolean nickRegistryRequired;
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
@@ -99,5 +100,13 @@ public class BotState {
         if (isRequestingPackPossible()) {
             decoratedRequestHook.run();
         }
+    }
+
+    public void requestSearchListing() {
+        searchRequested = true;
+    }
+
+    public void stopSearchListing() {
+        searchRequested = false;
     }
 }

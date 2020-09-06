@@ -148,6 +148,16 @@ public class KittehIrcBot implements IrcBot {
         client.sendMessage(remoteBotName, "xdcc cancel");
     }
 
+    @Override
+    public void startSearchListing(String remoteBotName, String packname) {
+        client.sendMessage(remoteBotName, "xdcc search " + packname);
+    }
+
+    @Override
+    public void stopSearchListing(String remoteBotName) {
+        client.sendMessage(remoteBotName, "xdcc stop");
+    }
+
     @Handler
     public void userListAvailable(ChannelUsersUpdatedEvent event) {
         Channel channel = event.getChannel();

@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -47,7 +49,7 @@ public class StartDccTransferImplTest {
     private StartDccTransfer startDccTransfer;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         eventDispatcher = mock(EventDispatcher.class);
@@ -94,13 +96,18 @@ public class StartDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_does_nothing_for_unexpected_filename() {
+    public void incoming_ctcp_query_requests_search_for_unexpected_filename() {
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND unexpected_filename.txt 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+        BotState botState = stateStorage.get("Andy").get();
 
+        assertFalse(botState.isSearchRequested());
         startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+
+        verify(ircBot).startSearchListing(eq("keex"), eq("test1.bin"));
+        assertTrue(botState.isSearchRequested());
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }

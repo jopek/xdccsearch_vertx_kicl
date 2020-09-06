@@ -22,4 +22,8 @@ public interface IrcBot {
     void terminate();
 
     void cancelDcc(String remoteBotName);
+
+    void stopSearchListing(String remoteBotName);
+
+    void startSearchListing(String remoteBotName, String packname);
 }

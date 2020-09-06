@@ -66,6 +66,7 @@ public class NoticeMessageHandlerImplTest {
         noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, stateStorage));
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher, clock));
     }
 
     private void initialiseStorages() {
@@ -237,18 +238,5 @@ public class NoticeMessageHandlerImplTest {
         assertEquals(fixedInstant.toEpochMilli(), sentQueueMesssage.getTimestamp());
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-
-        assertFalse(botState.isSearchRequested());
-        verify(ircBot).stopSearchListing("keex");
-        verify(ircBot).requestDccPack("keex", 1);
-
-        ArgumentCaptor<BotNoticeEvent> messageSent = ArgumentCaptor.forClass(BotNoticeEvent.class);
-        verify(eventDispatcher, times(1)).dispatch(messageSent.capture());
-        BotNoticeEvent event = messageSent.getValue();
-        assertEquals("Andy", event.getBot());
-        assertEquals("keex", event.getRemoteNick());
-        assertEquals("pack number changed", event.getMessage());
     }
 }

@@ -80,6 +80,7 @@ public class Starter {
         noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, botStateStorage));
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, botStateStorage));
+        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, botStateStorage, eventDispatcher, clock));
 
         StartDccTransfer startDccTransfer = new StartDccTransferImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);

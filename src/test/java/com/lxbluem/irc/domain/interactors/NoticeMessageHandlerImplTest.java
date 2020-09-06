@@ -1,20 +1,10 @@
 package com.lxbluem.irc.domain.interactors;
 
-import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotNoticeEvent;
-import com.lxbluem.common.domain.ports.BotMessaging;
+import com.lxbluem.common.domain.events.Event;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
-import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.interactors.subhandlers.*;
-import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
-import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
-import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
-import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
-import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,64 +14,61 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashSet;
+import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
+import static java.util.Arrays.asList;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NoticeMessageHandlerImplTest {
 
-    private BotStateStorage stateStorage;
-    private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
-    private IrcBot ircBot;
-    private BotStorage botStorage;
-    private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
-
-    private final NameGenerator nameGenerator = mock(NameGenerator.class);
-    private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private NoticeMessageHandler noticeMessageHandler;
 
     @Before
     public void setUp() {
-        botMessaging = mock(BotMessaging.class);
-        ircBot = mock(IrcBot.class);
-        stateStorage = new InMemoryBotStateStorage();
-        botStorage = new InMemoryBotStorage();
-        when(nameGenerator.getNick()).thenReturn("Andy");
         eventDispatcher = mock(EventDispatcher.class);
-        initialiseStorages();
-        requestHookExecuted.set(0);
+        Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-
         noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher, clock);
-        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher, clock));
-        noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, stateStorage));
-        noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, stateStorage));
-        noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
-        noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
-        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher, clock));
     }
 
-    private void initialiseStorages() {
-        botStorage.save("Andy", ircBot);
+    @Test
+    public void use_subhandler_skips_handlers_eventdispatcher() {
+        noticeMessageHandler.registerMessageHandler(command -> false);
+        noticeMessageHandler.registerMessageHandler(command -> true);
 
-        Pack pack = testPack();
-        Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        noticeMessageHandler.handle(new NoticeMessageCommand("botNick", "remoteNick", "noticeMessage"));
+
+        verify(eventDispatcher, never()).dispatch(any(Event.class));
     }
 
-    private Pack testPack() {
-        return Pack.builder()
-                .nickName("keex")
-                .networkName("nn")
-                .serverHostName("192.168.99.100")
-                .serverPort(6667)
-                .channelName("#download")
-                .packNumber(5)
-                .build();
+    @Test
+    public void skip_other_subhandlers_if_previous_subhandler_handled_command() {
+        Set<Integer> checkpoint = new HashSet<>();
+        noticeMessageHandler.registerMessageHandler(command -> {
+            checkpoint.add(1);
+            return false;
+        });
+        noticeMessageHandler.registerMessageHandler(command -> {
+            checkpoint.add(2);
+            return false;
+        });
+        noticeMessageHandler.registerMessageHandler(command -> {
+            checkpoint.add(3);
+            return true;
+        });
+        noticeMessageHandler.registerMessageHandler(command -> {
+            checkpoint.add(4);
+            return false;
+        });
+
+        noticeMessageHandler.handle(new NoticeMessageCommand("botNick", "remoteNick", "noticeMessage"));
+
+        assertTrue(checkpoint.containsAll(asList(1, 2, 3)));
+        assertFalse(checkpoint.contains(4));
     }
 
     @Test
@@ -97,6 +84,6 @@ public class NoticeMessageHandlerImplTest {
         BotNoticeEvent botNoticeEvent = captor.getValue();
         assertEquals("someDude", botNoticeEvent.getRemoteNick());
         assertEquals("lalala", botNoticeEvent.getMessage());
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+        verifyNoMoreInteractions(eventDispatcher);
     }
 }

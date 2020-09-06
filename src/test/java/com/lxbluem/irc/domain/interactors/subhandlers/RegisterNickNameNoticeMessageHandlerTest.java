@@ -6,6 +6,7 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -20,7 +21,7 @@ public class RegisterNickNameNoticeMessageHandlerTest {
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
-    private RegisterNickNameNoticeMessageHandler noticeMessageHandler;
+    private NoticeMessageHandler.SubHandler noticeMessageHandler;
     private BotState botState;
 
     @Before

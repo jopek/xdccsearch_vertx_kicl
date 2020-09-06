@@ -10,6 +10,7 @@ import com.lxbluem.irc.domain.interactors.subhandlers.*;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -38,10 +39,9 @@ public class NoticeMessageHandlerImplTest {
     private BotStorage botStorage;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
 
-
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
-    private NoticeMessageHandlerImpl noticeMessageHandler;
+    private NoticeMessageHandler noticeMessageHandler;
 
     @Before
     public void setUp() {

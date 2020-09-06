@@ -11,6 +11,7 @@ import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.*;
 
 public class FailureNoticeMessageHandlerTest {
 
-    private FailureNoticeMessageHandler noticeMessageHandler;
+    private NoticeMessageHandler.SubHandler noticeMessageHandler;
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;

@@ -1,7 +1,9 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.common.domain.events.*;
+import com.lxbluem.common.domain.events.BotEvent;
+import com.lxbluem.common.domain.events.BotNoticeEvent;
+import com.lxbluem.common.domain.events.DccQueuedEvent;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
@@ -182,33 +184,6 @@ public class NoticeMessageHandlerImplTest {
         assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
 
         assertFalse(botState.isRequestingPackPossible());
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void notice_message_handler_connection_refused() {
-        String botNick = "Andy";
-        String remoteNick = "keex";
-        String noticeMessage = "connection refused";
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);
-        verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
-        List<BotEvent> eventList = messageSentCaptor.getAllValues();
-
-        BotFailedEvent failMessage = (BotFailedEvent) eventList.get(0);
-        assertEquals("Andy", failMessage.getBot());
-        assertEquals("connection refused", failMessage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), failMessage.getTimestamp());
-
-        BotExitedEvent exitMessage = (BotExitedEvent) eventList.get(1);
-        assertEquals("Andy", exitMessage.getBot());
-        assertEquals("Bot Andy exiting because connection refused", exitMessage.getMessage());
-        assertEquals(fixedInstant.toEpochMilli(), exitMessage.getTimestamp());
-
-        verify(ircBot).cancelDcc("keex");
-        verify(ircBot).terminate();
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 

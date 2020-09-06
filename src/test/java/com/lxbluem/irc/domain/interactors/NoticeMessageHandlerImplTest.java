@@ -25,7 +25,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -117,26 +116,6 @@ public class NoticeMessageHandlerImplTest {
 
         verify(ircBot).registerNickname(botNick);
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void notice_message_handler_nickserv_registered_nick_request() {
-        String botNick = "Andy";
-        String remoteNick = "nickserv";
-        String noticeMessage = "nickname Andy registered";
-        Pack pack = testPack();
-
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-        botState.nickRegistryRequired();
-        botState.channelNickList(pack.getChannelName(), Collections.singletonList(pack.getNickName()));
-        botState.channelReferences(pack.getChannelName(), Arrays.asList());
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        verify(ircBot, never()).registerNickname(botNick);
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-        assertEquals(1, requestHookExecuted.get());
     }
 
     @Test

@@ -107,18 +107,6 @@ public class NoticeMessageHandlerImplTest {
     }
 
     @Test
-    public void notice_message_handler_nickserv_register_nick() {
-        String botNick = "Andy";
-        String remoteNick = "nickserv";
-        String noticeMessage = "your nickname is not registered. to register it, use";
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        verify(ircBot).registerNickname(botNick);
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
     public void notice_message_handler_queued() {
         String botNick = "Andy";
         String remoteNick = "keex";

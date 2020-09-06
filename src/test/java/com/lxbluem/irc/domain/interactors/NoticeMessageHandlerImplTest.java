@@ -20,16 +20,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -42,8 +45,6 @@ public class NoticeMessageHandlerImplTest {
     private BotStorage botStorage;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
 
-    @Captor
-    private ArgumentCaptor<Collection<String>> stringCollectionCaptor;
 
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
@@ -136,55 +137,6 @@ public class NoticeMessageHandlerImplTest {
         verify(ircBot, never()).registerNickname(botNick);
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
         assertEquals(1, requestHookExecuted.get());
-    }
-
-    @Test
-    public void notice_message_handler_more_channels_required() {
-        String botNick = "Andy";
-        String remoteNick = "Zombie";
-        String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
-        Pack pack = testPack();
-
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-
-        botState.channelReferences(pack.getChannelName(), Arrays.asList());
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        verify(ircBot, never()).registerNickname(botNick);
-        verify(ircBot).joinChannel(new HashSet<>(Collections.singletonList("#zw-chat")));
-
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
-    }
-
-    @Test
-    public void notice_message_handler_more_channels_required_after_request() {
-        String botNick = "Andy";
-        String remoteNick = "Zombie";
-        String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
-        Pack pack = testPack();
-
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState botState = stateStorage.get("Andy").get();
-        botState.channelReferences("#download", Arrays.asList("#someChannel"));
-        botState.channelNickList("#download", Collections.singletonList(pack.getNickName()));
-        botState.channelNickList("#someChannel", Arrays.asList("user1", "user2"));
-
-        assertEquals(1, requestHookExecuted.get());
-
-        assertTrue(botState.isPackRequested());
-        assertFalse(botState.isRequestingPackPossible());
-
-        noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
-
-        verify(ircBot, never()).registerNickname(botNick);
-        verify(ircBot).joinChannel(stringCollectionCaptor.capture());
-        assertEquals(1, stringCollectionCaptor.getValue().size());
-        assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
-
-        assertFalse(botState.isRequestingPackPossible());
-        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test

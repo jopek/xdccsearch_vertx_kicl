@@ -1,13 +1,13 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.JoinMentionedChannelsCommand;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 @RunWith(MockitoJUnitRunner.class)
 public class JoinMentionedChannelsImplTest {
 
-    private BotStateStorage stateStorage;
+    private StateStorage stateStorage;
     private IrcBot ircBot;
     private BotStorage botStorage;
 
@@ -38,7 +38,7 @@ public class JoinMentionedChannelsImplTest {
     @Before
     public void setUp() {
         ircBot = mock(IrcBot.class);
-        stateStorage = new InMemoryBotStateStorage();
+        stateStorage = new InMemoryStateStorage();
         botStorage = new InMemoryBotStorage();
         initialiseStorages();
         requestHookExecuted.set(0);
@@ -51,7 +51,7 @@ public class JoinMentionedChannelsImplTest {
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        stateStorage.save("Andy", new State(pack, requestHook));
     }
 
     private Pack testPack() {

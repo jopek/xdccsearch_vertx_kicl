@@ -5,8 +5,8 @@ import com.lxbluem.common.domain.events.BotInitializedEvent;
 import com.lxbluem.common.domain.events.Event;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
@@ -26,7 +26,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 public class InitializeBotImplTest {
-    private BotStateStorage stateStorage;
+    private StateStorage stateStorage;
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
@@ -41,7 +41,7 @@ public class InitializeBotImplTest {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         BotFactory botFactory = () -> ircBot;
-        stateStorage = new InMemoryBotStateStorage();
+        stateStorage = new InMemoryStateStorage();
         botStorage = new InMemoryBotStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         when(nameGenerator.getNick()).thenReturn("Andy");

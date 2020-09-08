@@ -1,11 +1,11 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.SkipProtectedChannelCommand;
 import com.lxbluem.irc.domain.ports.incoming.SkipProtectedChannel;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,19 +17,19 @@ import static org.junit.Assert.assertEquals;
 
 public class SkipProtectedChannelImplTest {
 
-    private BotStateStorage stateStorage;
+    private StateStorage stateStorage;
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
 
     @Before
     public void setUp() {
-        stateStorage = new InMemoryBotStateStorage();
+        stateStorage = new InMemoryStateStorage();
         initialiseStorages();
     }
 
     private void initialiseStorages() {
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        stateStorage.save("Andy", new State(pack, requestHook));
     }
 
     private Pack testPack() {
@@ -45,12 +45,12 @@ public class SkipProtectedChannelImplTest {
 
     @Test
     public void channel_requires_account_registry__account_register_nick() {
-        BotState botState = stateStorage.get("Andy").get();
+        State state = stateStorage.get("Andy").get();
         String botNick = "Andy";
         String numericCommandMessage = "You need to be identified to a registered account to join this channel";
-        botState.channelReferences("#download", Arrays.asList("#2", "#mg-lounge"));
-        botState.channelNickList("#download", Arrays.asList("keex"));
-        botState.channelReferences("#2", Collections.emptyList());
+        state.channelReferences("#download", Arrays.asList("#2", "#mg-lounge"));
+        state.channelNickList("#download", Arrays.asList("keex"));
+        state.channelReferences("#2", Collections.emptyList());
 
         SkipProtectedChannel skipProtectedChannel = new SkipProtectedChannelImpl(stateStorage);
         SkipProtectedChannelCommand command = new SkipProtectedChannelCommand(botNick, "#mg-lounge", numericCommandMessage);

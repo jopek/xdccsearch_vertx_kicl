@@ -1,20 +1,17 @@
 package com.lxbluem.irc.domain.interactors.subhandlers;
 
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
-import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class NickNameRegisteredNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
-    private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
 
-    public NickNameRegisteredNoticeMessageHandler(BotStorage botStorage, BotStateStorage stateStorage) {
-        this.botStorage = botStorage;
+    public NickNameRegisteredNoticeMessageHandler(StateStorage stateStorage) {
         this.stateStorage = stateStorage;
     }
 
@@ -34,7 +31,7 @@ public class NickNameRegisteredNoticeMessageHandler implements NoticeMessageHand
             return false;
 
         stateStorage.get(botNickName)
-                .ifPresent(BotState::nickRegistered);
+                .ifPresent(State::nickRegistered);
         return true;
     }
 }

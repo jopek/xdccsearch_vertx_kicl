@@ -6,8 +6,8 @@ import com.lxbluem.common.domain.events.DccFinishedEvent;
 import com.lxbluem.common.domain.events.DccStartedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
@@ -60,7 +60,7 @@ public class NewBotVerticleTest {
 
         Clock clock = Clock.systemDefaultZone();
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
         EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus(), clock);

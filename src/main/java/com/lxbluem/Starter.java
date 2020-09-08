@@ -9,16 +9,16 @@ import com.lxbluem.eventlogger.EventLoggerVerticle;
 import com.lxbluem.filesystem.FilenameResolverVerticle;
 import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.irc.NewBotVerticle;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
 import com.lxbluem.irc.domain.interactors.*;
 import com.lxbluem.irc.domain.interactors.subhandlers.*;
 import com.lxbluem.irc.domain.ports.incoming.*;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
@@ -71,25 +71,25 @@ public class Starter {
 
     private static Verticle getBotVerticle(BotMessaging botMessaging, EventDispatcher eventDispatcher) {
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage botStateStorage = new InMemoryBotStateStorage();
-        ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher);
+        StateStorage stateStorage = new InMemoryStateStorage();
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
 
         NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher);
-        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, botStateStorage, exitBot, eventDispatcher));
-        noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, botStateStorage));
-        noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, botStateStorage));
+        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher));
+        noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(stateStorage));
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher));
-        noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, botStateStorage));
-        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, botStateStorage, eventDispatcher));
-        noticeMessageHandler.registerMessageHandler(new CompareIncomingPackWithRequestedPack(botStorage, botStateStorage));
+        noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher));
+        noticeMessageHandler.registerMessageHandler(new CompareIncomingPackWithRequestedPack(botStorage, stateStorage));
 
-        PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, botStateStorage, botMessaging);
-        LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher);
-        JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
+        PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging);
+        LookForPackUser lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher);
+        JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, stateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
         ChangeNickNameImpl changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher);
-        SkipProtectedChannelImpl skipProtectedChannel = new SkipProtectedChannelImpl(botStateStorage);
+        SkipProtectedChannelImpl skipProtectedChannel = new SkipProtectedChannelImpl(stateStorage);
         BotFactory botFactory = new KittehIrcBotFactory(
                 exitBot,
                 noticeMessageHandler,
@@ -102,12 +102,12 @@ public class Starter {
         );
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
-                botStateStorage,
+                stateStorage,
                 eventDispatcher,
                 nameGenerator,
                 botFactory
         );
-        ToggleDccTransferStarted toggleDccTransferStarted = new ToggleDccTransferStartedImpl(botStateStorage);
+        ToggleDccTransferStarted toggleDccTransferStarted = new ToggleDccTransferStartedImpl(stateStorage);
         return new NewBotVerticle(initializeBot, exitBot, toggleDccTransferStarted);
     }
 

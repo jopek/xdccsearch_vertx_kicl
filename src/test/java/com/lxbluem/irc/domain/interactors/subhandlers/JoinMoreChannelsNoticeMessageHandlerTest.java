@@ -2,14 +2,14 @@ package com.lxbluem.irc.domain.interactors.subhandlers;
 
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +34,7 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler noticeMessageHandler;
-    private BotState botState;
+    private State state;
 
     @Captor
     private ArgumentCaptor<Collection<String>> stringCollectionCaptor;
@@ -45,20 +45,20 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
         Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
         noticeMessageHandler = new JoinMoreChannelsNoticeMessageHandler(botStorage, stateStorage);
 
         initialiseStorages(botStorage, stateStorage);
     }
 
-    private void initialiseStorages(BotStorage botStorage, BotStateStorage stateStorage) {
+    private void initialiseStorages(BotStorage botStorage, StateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        botState = new BotState(pack, requestHook);
-        stateStorage.save("Andy", botState);
+        state = new State(pack, requestHook);
+        stateStorage.save("Andy", state);
     }
 
     private Pack testPack() {
@@ -79,7 +79,7 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
         String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
         Pack pack = testPack();
 
-        botState.channelReferences(pack.getChannelName(), Arrays.asList());
+        state.channelReferences(pack.getChannelName(), Arrays.asList());
 
         noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
 
@@ -96,14 +96,14 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
         String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
         Pack pack = testPack();
 
-        botState.channelReferences("#download", Arrays.asList("#someChannel"));
-        botState.channelNickList("#download", Collections.singletonList(pack.getNickName()));
-        botState.channelNickList("#someChannel", Arrays.asList("user1", "user2"));
+        state.channelReferences("#download", Arrays.asList("#someChannel"));
+        state.channelNickList("#download", Collections.singletonList(pack.getNickName()));
+        state.channelNickList("#someChannel", Arrays.asList("user1", "user2"));
 
         assertEquals(1, requestHookExecuted.get());
 
-        assertTrue(botState.isPackRequested());
-        assertFalse(botState.isRequestingPackPossible());
+        assertTrue(state.isPackRequested());
+        assertFalse(state.isRequestingPackPossible());
 
         noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
 
@@ -112,7 +112,7 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
         assertEquals(1, stringCollectionCaptor.getValue().size());
         assertTrue(stringCollectionCaptor.getValue().contains("#zw-chat"));
 
-        assertFalse(botState.isRequestingPackPossible());
+        assertFalse(state.isRequestingPackPossible());
         verifyNoMoreInteractions(ircBot, eventDispatcher);
     }
 

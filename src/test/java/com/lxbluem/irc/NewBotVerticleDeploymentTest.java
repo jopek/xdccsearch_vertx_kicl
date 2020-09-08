@@ -1,8 +1,8 @@
 package com.lxbluem.irc;
 
 import com.lxbluem.common.adapter.EventbusEventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
 import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
@@ -42,7 +42,7 @@ public class NewBotVerticleDeploymentTest {
 
         Clock clock = Clock.systemDefaultZone();
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
         EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus(), clock);

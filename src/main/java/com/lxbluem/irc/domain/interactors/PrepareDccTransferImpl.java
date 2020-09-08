@@ -6,8 +6,8 @@ import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.model.request.PrepareDccTransferCommand;
 import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +21,10 @@ import static java.lang.String.format;
 public class PrepareDccTransferImpl implements PrepareDccTransfer {
     private static final Logger log = LoggerFactory.getLogger(PrepareDccTransferImpl.class);
     private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
     private final BotMessaging botMessaging;
 
-    public PrepareDccTransferImpl(BotStorage botStorage, BotStateStorage stateStorage, BotMessaging botMessaging) {
+    public PrepareDccTransferImpl(BotStorage botStorage, StateStorage stateStorage, BotMessaging botMessaging) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
@@ -42,11 +42,11 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
             return;
 
         botStorage.get(botNickName).ifPresent(bot ->
-                stateStorage.get(botNickName).ifPresent(botState -> {
+                stateStorage.get(botNickName).ifPresent(state -> {
 
-                    String packName = botState.getPack().getPackName();
+                    String packName = state.getPack().getPackName();
                     String incomingFilename = ctcpQuery.getFilename();
-                    String packNickName = botState.getPack().getNickName();
+                    String packNickName = state.getPack().getNickName();
 
                     Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
                         int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
@@ -70,11 +70,11 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
                     };
 
                     FilenameResolveRequest resolveRequest = new FilenameResolveRequest(incomingFilename);
-                    botState.saveCtcpHandshake(
+                    state.saveCtcpHandshake(
                             () -> botMessaging.ask(FILENAME_RESOLVE, resolveRequest, filenameResolverConsumer)
                     );
-                    if (botState.isRemoteSendsCorrectPack())
-                        botState.continueCtcpHandshake();
+                    if (state.isRemoteSendsCorrectPack())
+                        state.continueCtcpHandshake();
                 })
         );
     }

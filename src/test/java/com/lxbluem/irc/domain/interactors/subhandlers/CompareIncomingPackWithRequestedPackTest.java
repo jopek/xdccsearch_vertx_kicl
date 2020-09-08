@@ -1,14 +1,14 @@
 package com.lxbluem.irc.domain.interactors.subhandlers;
 
 import com.lxbluem.common.domain.Pack;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,26 +22,26 @@ public class CompareIncomingPackWithRequestedPackTest {
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler handler;
-    private BotState botState;
+    private State state;
 
     @Before
     public void setUp() throws Exception {
         requestHookExecuted = new AtomicInteger();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         handler = new CompareIncomingPackWithRequestedPack(botStorage, stateStorage);
 
         initializeStorages(botStorage, stateStorage);
     }
 
-    private void initializeStorages(BotStorage botStorage, BotStateStorage stateStorage) {
+    private void initializeStorages(BotStorage botStorage, StateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.incrementAndGet();
-        botState = new BotState(pack, requestHook);
-        stateStorage.save("Andy", botState);
+        state = new State(pack, requestHook);
+        stateStorage.save("Andy", state);
     }
 
     private Pack testPack() {
@@ -64,7 +64,7 @@ public class CompareIncomingPackWithRequestedPackTest {
         boolean handled = handler.handle(command);
 
         assertTrue(handled);
-        assertTrue(botState.isRemoteSendsCorrectPack());
+        assertTrue(state.isRemoteSendsCorrectPack());
         verifyZeroInteractions(ircBot);
     }
 
@@ -76,7 +76,7 @@ public class CompareIncomingPackWithRequestedPackTest {
         boolean handled = handler.handle(command);
 
         assertTrue(handled);
-        assertFalse(botState.isRemoteSendsCorrectPack());
+        assertFalse(state.isRemoteSendsCorrectPack());
         verify(ircBot).startSearchListing("keex", "test1.bin");
     }
 }

@@ -4,8 +4,8 @@ import com.lxbluem.common.domain.events.BotNoticeEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -13,10 +13,10 @@ import java.util.regex.Pattern;
 
 public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandler.SubHandler {
     private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
 
-    public XdccSearchPackResponseMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, EventDispatcher eventDispatcher) {
+    public XdccSearchPackResponseMessageHandler(BotStorage botStorage, StateStorage stateStorage, EventDispatcher eventDispatcher) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
@@ -31,8 +31,8 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
         AtomicBoolean conditionApplied = new AtomicBoolean(false);
 
         botStorage.get(botNickName).ifPresent(bot ->
-                stateStorage.get(botNickName).ifPresent(botState -> {
-                    if (!remoteName.equalsIgnoreCase(botState.getRemoteUser()))
+                stateStorage.get(botNickName).ifPresent(state -> {
+                    if (!remoteName.equalsIgnoreCase(state.getRemoteUser()))
                         return;
                     if (noticeMessage.toLowerCase().contains("list stopped")) {
                         conditionApplied.set(true);
@@ -43,7 +43,7 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
                         return;
                     }
 
-                    if (!botState.isSearchRequested())
+                    if (!state.isSearchRequested())
                         return;
 
                     conditionApplied.set(true);
@@ -57,20 +57,20 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
                     Matcher matcher = pattern.matcher(noticeMessage);
                     if (matcher.find()) {
                         bot.stopSearchListing(remoteName);
-                        botState.stopSearchListing();
+                        state.stopSearchListing();
 
                         String packNumberMatch = matcher.group(1);
                         int incomingPackNumber = Integer.parseInt(packNumberMatch);
-                        int packNumber = botState.getPack().getPackNumber();
+                        int packNumber = state.getPack().getPackNumber();
 
                         String incomingPackName = matcher.group(2);
 
                         if (incomingPackNumber == packNumber)
-                            botState.continueCtcpHandshake();
+                            state.continueCtcpHandshake();
                         else {
                             bot.requestDccPack(remoteName, incomingPackNumber);
-                            botState.getPack().setPackNumber(incomingPackNumber);
-                            botState.getPack().setPackName(incomingPackName);
+                            state.getPack().setPackNumber(incomingPackNumber);
+                            state.getPack().setPackName(incomingPackName);
                             String message = String.format("pack number changed #%d -> #%d; requesting #%d", packNumber, incomingPackNumber, incomingPackNumber);
                             eventDispatcher.dispatch(new BotNoticeEvent(botNickName, remoteName, message));
                         }

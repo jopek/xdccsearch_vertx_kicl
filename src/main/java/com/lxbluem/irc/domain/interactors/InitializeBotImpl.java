@@ -4,7 +4,7 @@ import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotDccPackRequestedEvent;
 import com.lxbluem.common.domain.events.BotInitializedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
@@ -16,12 +16,12 @@ public class InitializeBotImpl implements InitializeBot {
     private final NameGenerator nameGenerator;
     private final BotFactory botFactory;
     private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
 
     public InitializeBotImpl(
             BotStorage botStorage,
-            BotStateStorage stateStorage,
+            StateStorage stateStorage,
             EventDispatcher eventDispatcher,
             NameGenerator nameGenerator,
             BotFactory botFactory
@@ -46,8 +46,8 @@ public class InitializeBotImpl implements InitializeBot {
         bot.joinChannel(pack.getChannelName());
 
         Runnable requestHook = dccRequestHook(botNickName, pack);
-        BotState botState = new BotState(pack, requestHook);
-        stateStorage.save(botNickName, botState);
+        State state = new State(pack, requestHook);
+        stateStorage.save(botNickName, state);
 
         eventDispatcher.dispatch(new BotInitializedEvent(botNickName, pack));
 

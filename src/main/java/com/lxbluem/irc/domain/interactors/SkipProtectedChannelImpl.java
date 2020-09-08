@@ -2,12 +2,12 @@ package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.irc.domain.model.request.SkipProtectedChannelCommand;
 import com.lxbluem.irc.domain.ports.incoming.SkipProtectedChannel;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 public class SkipProtectedChannelImpl implements SkipProtectedChannel {
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
 
-    public SkipProtectedChannelImpl(BotStateStorage stateStorage) {
+    public SkipProtectedChannelImpl(StateStorage stateStorage) {
         this.stateStorage = stateStorage;
     }
 
@@ -17,9 +17,9 @@ public class SkipProtectedChannelImpl implements SkipProtectedChannel {
         String channelName = command.getChannelName();
         String message = command.getMessage();
 
-        stateStorage.get(botNickName).ifPresent(botState -> {
+        stateStorage.get(botNickName).ifPresent(state -> {
             if (message.toLowerCase().contains("registered account to join")) {
-                botState.removeReferencedChannel(channelName);
+                state.removeReferencedChannel(channelName);
             }
         });
     }

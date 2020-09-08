@@ -6,14 +6,14 @@ import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
     private final ExitBot exitBot;
     private final EventDispatcher eventDispatcher;
 
-    public FailureNoticeMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, ExitBot exitBot, EventDispatcher eventDispatcher) {
+    public FailureNoticeMessageHandler(BotStorage botStorage, StateStorage stateStorage, ExitBot exitBot, EventDispatcher eventDispatcher) {
         this.exitBot = exitBot;
         this.eventDispatcher = eventDispatcher;
     }

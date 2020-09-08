@@ -2,8 +2,8 @@ package com.lxbluem.irc.domain.interactors.subhandlers;
 
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -11,10 +11,10 @@ import java.util.regex.Pattern;
 
 public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandler.SubHandler {
     private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
     public static final Pattern PATTERN = Pattern.compile("\\*\\* sending you pack #\\d+ \\(\"(.*?)\"\\)", Pattern.CASE_INSENSITIVE);
 
-    public CompareIncomingPackWithRequestedPack(BotStorage botStorage, BotStateStorage stateStorage) {
+    public CompareIncomingPackWithRequestedPack(BotStorage botStorage, StateStorage stateStorage) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
     }
@@ -29,8 +29,8 @@ public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandle
 
         botStorage.get(botNickName).ifPresent(ircBot ->
                 stateStorage.get(botNickName)
-                        .ifPresent(botState -> {
-                            if (!remoteName.equalsIgnoreCase(botState.getRemoteUser()))
+                        .ifPresent(state -> {
+                            if (!remoteName.equalsIgnoreCase(state.getRemoteUser()))
                                 return;
 
                             Matcher matcher = PATTERN.matcher(noticeMessage);
@@ -40,14 +40,14 @@ public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandle
 
                             String incomingPackName = matcher.group(1);
 
-                            String packName = botState.getPack().getPackName();
+                            String packName = state.getPack().getPackName();
                             if (!(incomingPackName.equalsIgnoreCase(packName))) {
                                 ircBot.startSearchListing(remoteName, packName);
-                                botState.requestSearchListing();
+                                state.requestSearchListing();
                                 return;
                             }
 
-                            botState.remoteSendsCorrectPack();
+                            state.remoteSendsCorrectPack();
                         })
         );
 

@@ -3,14 +3,14 @@ package com.lxbluem.irc.domain.interactors.subhandlers;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotNoticeEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,7 +28,7 @@ public class XdccSearchPackResponseMessageHandlerTest {
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler noticeMessageHandler;
-    private BotState botState;
+    private State state;
 
 
     @Before
@@ -37,20 +37,20 @@ public class XdccSearchPackResponseMessageHandlerTest {
         Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
         noticeMessageHandler = new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher);
 
         initialiseStorages(botStorage, stateStorage);
     }
 
-    private void initialiseStorages(BotStorage botStorage, BotStateStorage stateStorage) {
+    private void initialiseStorages(BotStorage botStorage, StateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        botState = new BotState(pack, requestHook);
-        stateStorage.save("Andy", botState);
+        state = new State(pack, requestHook);
+        stateStorage.save("Andy", state);
     }
 
     private Pack testPack() {
@@ -68,17 +68,17 @@ public class XdccSearchPackResponseMessageHandlerTest {
 
     @Test
     public void search_request_response() {
-        botState.requestSearchListing();
-        assertTrue(botState.isSearchRequested());
+        state.requestSearchListing();
+        assertTrue(state.isSearchRequested());
 
         noticeMessageHandler.handle(new NoticeMessageCommand("Andy", "keex", "Searching for \"test\"..."));
         noticeMessageHandler.handle(new NoticeMessageCommand("Andy", "keex", " - Pack #1 matches, \"test1.bin\""));
 
-        assertFalse(botState.isSearchRequested());
+        assertFalse(state.isSearchRequested());
         verify(ircBot).stopSearchListing("keex");
         verify(ircBot).requestDccPack("keex", 1);
-        assertEquals("test1.bin", botState.getPack().getPackName());
-        assertEquals(1, botState.getPack().getPackNumber());
+        assertEquals("test1.bin", state.getPack().getPackName());
+        assertEquals(1, state.getPack().getPackNumber());
 
         ArgumentCaptor<BotNoticeEvent> messageSent = ArgumentCaptor.forClass(BotNoticeEvent.class);
         verify(eventDispatcher).dispatch(messageSent.capture());

@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode
-public class BotState {
+public class State {
     private final Pack pack;
     private final String mainChannelName;
     private final String remoteUser;
@@ -29,7 +29,7 @@ public class BotState {
     private boolean remoteSendsCorrectPack;
     private Runnable ctcpHandshake;
 
-    public BotState(Pack pack, Runnable requestHook) {
+    public State(Pack pack, Runnable requestHook) {
         this.pack = pack;
         mainChannelName = pack.getChannelName().toLowerCase();
         remoteUser = pack.getNickName();

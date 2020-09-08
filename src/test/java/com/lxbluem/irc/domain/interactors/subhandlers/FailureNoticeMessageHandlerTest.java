@@ -5,16 +5,16 @@ import com.lxbluem.common.domain.events.BotEvent;
 import com.lxbluem.common.domain.events.BotExitedEvent;
 import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -41,7 +41,7 @@ public class FailureNoticeMessageHandlerTest {
         Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
         noticeMessageHandler = new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher);
@@ -49,12 +49,12 @@ public class FailureNoticeMessageHandlerTest {
         initialiseStorages(botStorage, stateStorage);
     }
 
-    private void initialiseStorages(BotStorage botStorage, BotStateStorage stateStorage) {
+    private void initialiseStorages(BotStorage botStorage, StateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        stateStorage.save("Andy", new State(pack, requestHook));
     }
 
     private Pack testPack() {

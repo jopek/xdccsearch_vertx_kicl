@@ -61,7 +61,6 @@ public class ChangeNickNameImplTest {
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals("something happened; serverMessages; more serverMessages", sentMesssage.getMessage());
         assertEquals("Randy", sentMesssage.getRenameto());
-        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
 
         verifyNoMoreInteractions(ircBot, eventDispatcher);
     }

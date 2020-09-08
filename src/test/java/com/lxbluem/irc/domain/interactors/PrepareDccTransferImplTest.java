@@ -4,18 +4,18 @@ import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
-import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.adapters.InMemoryStateStorage;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.model.request.PrepareDccTransferCommand;
 import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,7 +44,7 @@ public class PrepareDccTransferImplTest {
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private PrepareDccTransfer prepareDccTransfer;
-    private BotState botState;
+    private State state;
 
     @Before
     public void setUp() {
@@ -52,7 +52,7 @@ public class PrepareDccTransferImplTest {
         ircBot = mock(IrcBot.class);
         eventDispatcher = mock(EventDispatcher.class);
 
-        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        StateStorage stateStorage = new InMemoryStateStorage();
         BotStorage botStorage = new InMemoryBotStorage();
         when(nameGenerator.getNick()).thenReturn("Andy");
 
@@ -62,13 +62,13 @@ public class PrepareDccTransferImplTest {
         prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging);
     }
 
-    private void initializeStorages(BotStorage botStorage, BotStateStorage stateStorage) {
+    private void initializeStorages(BotStorage botStorage, StateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = requestHookExecuted::incrementAndGet;
-        botState = new BotState(pack, requestHook);
-        stateStorage.save("Andy", botState);
+        state = new State(pack, requestHook);
+        stateStorage.save("Andy", state);
     }
 
     private Pack testPack() {
@@ -96,7 +96,7 @@ public class PrepareDccTransferImplTest {
 
     @Test
     public void incoming_ctcp_query_requests_search_for_expected_filename() {
-        botState.remoteSendsCorrectPack();
+        state.remoteSendsCorrectPack();
 
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
@@ -125,7 +125,7 @@ public class PrepareDccTransferImplTest {
 
     @Test
     public void incoming_ctcp_query_active_dcc() {
-        botState.remoteSendsCorrectPack();
+        state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
@@ -155,7 +155,7 @@ public class PrepareDccTransferImplTest {
 
     @Test
     public void incoming_ctcp_query_passive_dcc() {
-        botState.remoteSendsCorrectPack();
+        state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size> <token>
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";

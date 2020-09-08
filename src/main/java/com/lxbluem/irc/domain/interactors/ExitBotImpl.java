@@ -3,22 +3,22 @@ package com.lxbluem.irc.domain.interactors;
 import com.lxbluem.common.domain.events.BotExitedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
-import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
 import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
-import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 public class ExitBotImpl implements ExitBot {
     private final BotStorage botStorage;
-    private final BotStateStorage stateStorage;
+    private final StateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
 
     public ExitBotImpl(
             BotStorage botStorage,
-            BotStateStorage stateStorage,
+            StateStorage stateStorage,
             EventDispatcher eventDispatcher) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
@@ -46,7 +46,7 @@ public class ExitBotImpl implements ExitBot {
     public void handle(DccFinishedExitCommand finishedExitCommand) {
         String botNickName = finishedExitCommand.getBotNickName();
         String reason = finishedExitCommand.getReason();
-        stateStorage.get(botNickName).ifPresent(BotState::dccTransferStopped);
+        stateStorage.get(botNickName).ifPresent(State::dccTransferStopped);
         commonExit(botNickName, reason);
     }
 

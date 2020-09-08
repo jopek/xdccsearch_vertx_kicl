@@ -206,8 +206,13 @@ public class BotStateTest {
 
     @Test(expected = RuntimeException.class)
     public void remoteNickNameIsNull() {
-        Pack pack = getPack();
-        pack.setNickName(null);
+        Pack pack = Pack.builder()
+                .networkName("nn")
+                .serverHostName("192.168.99.100")
+                .serverPort(6667)
+                .channelName("#MainChannel")
+                .build();
+        assertNull(pack.getNickName());
         new BotState(pack, () -> {
         });
     }

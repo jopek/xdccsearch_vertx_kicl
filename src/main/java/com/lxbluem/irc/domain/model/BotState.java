@@ -24,6 +24,7 @@ public class BotState {
     private boolean nickRegistered;
     private final Set<String> referencedChannelNames = new HashSet<>();
     private final Set<String> joinedChannels = new HashSet<>();
+    private boolean dccTransferRunning;
     private final Runnable decoratedRequestHook;
     private boolean remoteSendsCorrectPack;
     private Runnable ctcpHandshake;
@@ -102,6 +103,14 @@ public class BotState {
         if (isRequestingPackPossible()) {
             decoratedRequestHook.run();
         }
+    }
+
+    public void dccTransferStopped() {
+        this.dccTransferRunning = false;
+    }
+
+    public void dccTransferRunning() {
+        this.dccTransferRunning = true;
     }
 
     public void requestSearchListing() {

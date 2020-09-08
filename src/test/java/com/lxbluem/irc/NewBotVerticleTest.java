@@ -3,15 +3,18 @@ package com.lxbluem.irc;
 import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.events.DccFailedEvent;
 import com.lxbluem.common.domain.events.DccFinishedEvent;
+import com.lxbluem.common.domain.events.DccStartedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
@@ -45,7 +48,7 @@ public class NewBotVerticleTest {
     private final String stopAddress = "NewBotVerticle:DELETE:/xfers/:botname";
     private final JsonObject startMessage = new JsonObject()
             .put("method", "POST")
-            .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"mybotDCCp\",  \"n\": 1}");
+            .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"remoteBotName\",  \"n\": 1}");
 
     @Before
     public void setUp(TestContext context) {
@@ -71,7 +74,8 @@ public class NewBotVerticleTest {
                 nameGenerator,
                 botFactory
         );
-        Verticle verticle = new NewBotVerticle(initializeBot, exitBot);
+        ToggleDccTransferStarted toggleDccTransferStarted = new ToggleDccTransferStartedImpl(stateStorage);
+        Verticle verticle = new NewBotVerticle(initializeBot, exitBot, toggleDccTransferStarted);
         vertx.deployVerticle(verticle, context.asyncAssertSuccess());
     }
 
@@ -193,6 +197,44 @@ public class NewBotVerticleTest {
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(dccFailedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_FAILED.address(), dccFinishJsonObject);
+
+    }
+
+    @Test(timeout = 3_000)
+    public void stopTransfer_via_request_cancels_transfer_when_dcc_transfer_started(TestContext context) {
+        vertx.eventBus()
+                .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
+                    context.assertEquals("Andy", m.body().getString("bot"));
+                }));
+
+        Async async = context.async();
+        vertx.eventBus()
+                .consumer(Address.BOT_EXITED.address(), result -> {
+                    JsonObject body = (JsonObject) result.body();
+                    System.out.println(body.encode());
+                    context.assertEquals("Andy", body.getString("bot"));
+                    context.assertEquals("Bot Andy exiting because requested shutdown", body.getString("message"));
+                    async.complete();
+                });
+
+        // trigger
+        DccStartedEvent dccStartedEvent = new DccStartedEvent("Andy", Instant.now().toEpochMilli());
+        JsonObject dccStartedJsonObject = JsonObject.mapFrom(dccStartedEvent);
+        vertx.eventBus()
+                .publish(Address.DCC_STARTED.address(), dccStartedJsonObject);
+
+        JsonObject stopMessage = new JsonObject()
+                .put("method", "DELETE")
+                .put("params", new JsonObject().put("botname", "Andy"));
+
+        System.out.printf("serialized https request: %s\n", stopMessage.encode());
+        vertx.eventBus()
+                .<JsonObject>request(stopAddress, stopMessage, context.asyncAssertSuccess(reply -> {
+                    JsonObject body = reply.body();
+                    context.assertEquals("Andy", body.getString("bot"));
+                    System.out.printf("stop request reply: %s\n", body.encode());
+                    context.verify(unused -> verify(mockBot).cancelDcc("remoteBotName"));
+                }));
 
     }
 

@@ -5,8 +5,10 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.interactors.ExitBotImpl;
 import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -53,7 +55,8 @@ public class NewBotVerticleDeploymentTest {
                 nameGenerator,
                 botFactory
         );
-        verticle = new NewBotVerticle(initializeBot, exitBot);
+        ToggleDccTransferStarted toggleDccTransferStarted = new ToggleDccTransferStartedImpl(stateStorage);
+        verticle = new NewBotVerticle(initializeBot, exitBot, toggleDccTransferStarted);
     }
 
     @Test(timeout = 30_000)

@@ -3,14 +3,17 @@ package com.lxbluem.irc;
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.events.DccFinishedEvent;
+import com.lxbluem.common.domain.events.DccStartedEvent;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
+import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
 import com.lxbluem.irc.domain.model.request.ExitCommand;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.ToggleDccTransferStartedCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -21,8 +24,7 @@ import rx.functions.Action1;
 
 import java.util.Map;
 
-import static com.lxbluem.common.infrastructure.Address.DCC_FAILED;
-import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
+import static com.lxbluem.common.infrastructure.Address.*;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
@@ -30,10 +32,15 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(NewBotVerticle.class);
     private final InitializeBot initializeBot;
     private final ExitBot exitBot;
+    private final ToggleDccTransferStarted toggleDccTransferStarted;
 
-    public NewBotVerticle(InitializeBot initializeBot, ExitBot exitBot) {
+    public NewBotVerticle(
+            InitializeBot initializeBot,
+            ExitBot exitBot,
+            ToggleDccTransferStarted toggleDccTransferStarted) {
         this.initializeBot = initializeBot;
         this.exitBot = exitBot;
+        this.toggleDccTransferStarted = toggleDccTransferStarted;
     }
 
     @Override
@@ -42,6 +49,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         registerRoute(DELETE, "/xfers/:botname", this::stopTransfer)
                 .setHandler(start);
 
+        handle(DCC_STARTED, this::dccStarted);
         handle(DCC_FINISHED, this::dccFinished);
         handle(DCC_FAILED, this::dccFailed);
     }
@@ -79,14 +87,21 @@ public class NewBotVerticle extends AbstractRouteVerticle {
                 });
     }
 
+    private void dccStarted(JsonObject eventMessage) {
+        DccStartedEvent message = eventMessage.mapTo(DccStartedEvent.class);
+        String botNickName = message.getBot();
+        ToggleDccTransferStartedCommand command = new ToggleDccTransferStartedCommand(botNickName);
+        toggleDccTransferStarted.handle(command);
+    }
+
     private void dccFailed(JsonObject eventMessage) {
         BotFailedEvent message = eventMessage.mapTo(BotFailedEvent.class);
-        exitBot.handle(new ManualExitCommand(message.getBot(), message.getMessage()));
+        exitBot.handle(new DccFinishedExitCommand(message.getBot(), message.getMessage()));
     }
 
     private void dccFinished(JsonObject eventMessage) {
         DccFinishedEvent message = eventMessage.mapTo(DccFinishedEvent.class);
-        exitBot.handle(new ManualExitCommand(message.getBot(), "DCC transfer finished"));
+        exitBot.handle(new DccFinishedExitCommand(message.getBot(), "DCC transfer finished"));
     }
 
 }

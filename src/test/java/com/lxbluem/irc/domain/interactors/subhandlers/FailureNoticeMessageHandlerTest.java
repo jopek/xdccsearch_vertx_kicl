@@ -87,7 +87,7 @@ public class FailureNoticeMessageHandlerTest {
         assertEquals("Andy", exitMessage.getBot());
         assertEquals("Bot Andy exiting because connection refused", exitMessage.getMessage());
 
-        verify(ircBot).cancelDcc("keex");
+        verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
         verifyNoMoreInteractions(ircBot, eventDispatcher);
     }

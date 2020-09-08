@@ -90,7 +90,7 @@ public class LookForPackUserImplTest {
         verify(eventDispatcher, times(2)).dispatch(messageSentCaptor.capture());
         List<BotEvent> eventList = messageSentCaptor.getAllValues();
 
-        verify(ircBot).cancelDcc("keex");
+        verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
         verifyNoMoreInteractions(ircBot, eventDispatcher);
 

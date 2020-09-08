@@ -3,6 +3,7 @@ package com.lxbluem.irc.domain.model.request;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.regex.Pattern;
 @AllArgsConstructor
 @Builder
 @Getter
+@ToString
 public class DccCtcpQuery implements Serializable {
 
     private final String filename;

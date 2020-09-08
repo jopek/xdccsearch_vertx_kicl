@@ -108,7 +108,8 @@ public class Starter {
                 nameGenerator,
                 botFactory
         );
-        return new NewBotVerticle(initializeBot, exitBot);
+        ToggleDccTransferStarted toggleDccTransferStarted = new ToggleDccTransferStartedImpl(botStateStorage);
+        return new NewBotVerticle(initializeBot, exitBot, toggleDccTransferStarted);
     }
 
     private static Verticle getStateVerticle(Clock clock) {

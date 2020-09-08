@@ -8,6 +8,7 @@ import com.lxbluem.irc.adapters.InMemoryBotStateStorage;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
 import com.lxbluem.irc.domain.model.request.ExitCommand;
 import com.lxbluem.irc.domain.model.request.ManualExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
@@ -25,7 +26,8 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -41,6 +43,7 @@ public class ExitBotImplTest {
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private ExitBot exitBot;
+    private BotState botState;
 
 
     @Before
@@ -51,7 +54,7 @@ public class ExitBotImplTest {
         botStorage = new InMemoryBotStorage();
         when(nameGenerator.getNick()).thenReturn("Andy");
         eventDispatcher = mock(EventDispatcher.class);
-        initialiseStorages();
+        initializeStorages(botStorage, stateStorage);
         requestHookExecuted.set(0);
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
 
@@ -60,27 +63,74 @@ public class ExitBotImplTest {
 
     @Test
     public void exit_before_executing() {
-        assertTrue(stateStorage.get("Andy").isPresent());
-        BotState state = stateStorage.get("Andy").get();
-        state.channelReferences("#download", Arrays.asList());
+        botState.channelReferences("#download", Arrays.asList());
 
         exitBot.handle(new ManualExitCommand("Andy", "requested shutdown"));
 
-        verify(ircBot).cancelDcc("keex");
+        verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
         verify(eventDispatcher, times(1)).dispatch(any(BotExitedEvent.class));
         verifyZeroInteractions(ircBot, botMessaging, eventDispatcher);
 
-        state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
+        botState.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
 
         assertEquals(1, requestHookExecuted.get());
     }
 
     @Test
-    public void terminte_bot_manually() {
+    public void terminte_bot_manually_with_running_tranfer() {
+        botState.dccTransferRunning();
         exitBot.handle(new ExitCommand("Andy"));
 
         verify(ircBot).cancelDcc("keex");
+        verify(ircBot).terminate();
+
+        assertFalse(botStorage.get("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
+
+        ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+
+        BotExitedEvent sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("Bot Andy exiting because requested shutdown", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+        assertFalse(stateStorage.get("Andy").isPresent());
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+    }
+    @Test
+    public void terminte_bot_finished_dcc_with_running_tranfer() {
+        botState.dccTransferRunning();
+        exitBot.handle(new DccFinishedExitCommand("Andy", "transfer finished"));
+
+        verify(ircBot, never()).cancelDcc("keex");
+        verify(ircBot).terminate();
+
+        assertFalse(botStorage.get("Andy").isPresent());
+        assertFalse(stateStorage.get("Andy").isPresent());
+
+        ArgumentCaptor<BotExitedEvent> messageSentCaptor = ArgumentCaptor.forClass(BotExitedEvent.class);
+        verify(eventDispatcher).dispatch(messageSentCaptor.capture());
+
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+
+        BotExitedEvent sentMesssage = messageSentCaptor.getValue();
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals("Bot Andy exiting because transfer finished", sentMesssage.getMessage());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+        assertFalse(stateStorage.get("Andy").isPresent());
+        assertEquals("Andy", sentMesssage.getBot());
+        assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
+    }
+
+    @Test
+    public void terminte_bot_manually_without_running_tranfer() {
+        exitBot.handle(new ExitCommand("Andy"));
+
+        verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
 
         assertFalse(botStorage.get("Andy").isPresent());
@@ -110,6 +160,7 @@ public class ExitBotImplTest {
 
     @Test
     public void terminate_bot() {
+        botState.dccTransferRunning();
         exitBot.handle(new ManualExitCommand("Andy", "failure"));
         verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
@@ -127,12 +178,13 @@ public class ExitBotImplTest {
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
 
-    private void initialiseStorages() {
+    private void initializeStorages(BotStorage botStorage, BotStateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = () -> requestHookExecuted.addAndGet(1);
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        botState = new BotState(pack, requestHook);
+        stateStorage.save("Andy", botState);
     }
 
     private Pack testPack() {

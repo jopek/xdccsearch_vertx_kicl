@@ -3,6 +3,8 @@ package com.lxbluem.irc.domain.interactors;
 import com.lxbluem.common.domain.events.BotExitedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
+import com.lxbluem.irc.domain.model.BotState;
+import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
 import com.lxbluem.irc.domain.model.request.ExitCommand;
 import com.lxbluem.irc.domain.model.request.ManualExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
@@ -43,16 +45,23 @@ public class ExitBotImpl implements ExitBot {
     public void handle(ManualExitCommand manualExitCommand) {
         String botNickName = manualExitCommand.getBotNickName();
         String reason = manualExitCommand.getReason();
-        botStorage.get(botNickName)
-                .ifPresent(bot ->
-                        commonExit(botNickName, reason)
-                );
+        commonExit(botNickName, reason);
+    }
+
+    @Override
+    public void handle(DccFinishedExitCommand finishedExitCommand) {
+        String botNickName = finishedExitCommand.getBotNickName();
+        String reason = finishedExitCommand.getReason();
+        stateStorage.get(botNickName).ifPresent(BotState::dccTransferStopped);
+        commonExit(botNickName, reason);
     }
 
     private void commonExit(String botNickName, String reason) {
         botStorage.get(botNickName).ifPresent(ircBot -> {
-            stateStorage.get(botNickName).ifPresent(state ->
-                    ircBot.cancelDcc(state.getPack().getNickName())
+            stateStorage.get(botNickName).ifPresent(state -> {
+                        if (state.isDccTransferRunning())
+                            ircBot.cancelDcc(state.getPack().getNickName());
+                    }
             );
 
             ircBot.terminate();

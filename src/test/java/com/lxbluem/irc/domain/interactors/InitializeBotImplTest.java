@@ -15,9 +15,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -31,7 +28,6 @@ public class InitializeBotImplTest {
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
     private BotStorage botStorage;
-    private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
 
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private InitializeBot initializeBot;
@@ -43,7 +39,6 @@ public class InitializeBotImplTest {
         BotFactory botFactory = () -> ircBot;
         stateStorage = new InMemoryStateStorage();
         botStorage = new InMemoryBotStorage();
-        Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         when(nameGenerator.getNick()).thenReturn("Andy");
         eventDispatcher = mock(EventDispatcher.class);
 

@@ -34,7 +34,7 @@ public class EventbusEventDispatcherTest {
         uut.dispatch(new BotExitedEvent("name", "ey"));
 
         JsonObject expected = new JsonObject()
-                .put("timestamp", 9L)
+                .put("timestamp", 1597054282000L)
                 .put("bot", "name")
                 .put("message", "ey");
         verify(eventBus).publish(eq("bot.exit"), eq(expected));

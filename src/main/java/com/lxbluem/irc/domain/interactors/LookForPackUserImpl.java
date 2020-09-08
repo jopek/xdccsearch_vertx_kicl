@@ -3,7 +3,7 @@ package com.lxbluem.irc.domain.interactors;
 import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.model.request.LookForPackUserCommand;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
@@ -40,7 +40,7 @@ public class LookForPackUserImpl implements LookForPackUser {
                 final String message = format("bot %s not in channel %s", remoteUser, channelName);
                 BotFailedEvent failedEvent = new BotFailedEvent(botNickName, nowEpochMillis(), message);
                 eventDispatcher.dispatch(failedEvent);
-                exitBot.handle(new ManualExitCommand(failedEvent.getBot(), failedEvent.getMessage()));
+                exitBot.handle(new ReasonedExitCommand(failedEvent.getBot(), failedEvent.getMessage()));
             }
         });
     }

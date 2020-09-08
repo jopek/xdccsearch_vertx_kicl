@@ -9,8 +9,8 @@ import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
-import com.lxbluem.irc.domain.model.request.ExitCommand;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
+import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
@@ -65,7 +65,7 @@ public class ExitBotImplTest {
     public void exit_before_executing() {
         botState.channelReferences("#download", Arrays.asList());
 
-        exitBot.handle(new ManualExitCommand("Andy", "requested shutdown"));
+        exitBot.handle(new RequestedExitCommand("Andy"));
 
         verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
@@ -80,7 +80,7 @@ public class ExitBotImplTest {
     @Test
     public void terminte_bot_manually_with_running_tranfer() {
         botState.dccTransferRunning();
-        exitBot.handle(new ExitCommand("Andy"));
+        exitBot.handle(new RequestedExitCommand("Andy"));
 
         verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
@@ -101,6 +101,7 @@ public class ExitBotImplTest {
         assertEquals("Andy", sentMesssage.getBot());
         assertEquals(fixedInstant.toEpochMilli(), sentMesssage.getTimestamp());
     }
+
     @Test
     public void terminte_bot_finished_dcc_with_running_tranfer() {
         botState.dccTransferRunning();
@@ -128,7 +129,7 @@ public class ExitBotImplTest {
 
     @Test
     public void terminte_bot_manually_without_running_tranfer() {
-        exitBot.handle(new ExitCommand("Andy"));
+        exitBot.handle(new RequestedExitCommand("Andy"));
 
         verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
@@ -152,7 +153,7 @@ public class ExitBotImplTest {
 
     @Test(expected = BotNotFoundException.class)
     public void terminate_bot_manually_for_missing_bot() {
-        exitBot.handle(new ExitCommand("nonexistent"));
+        exitBot.handle(new RequestedExitCommand("nonexistent"));
         verify(ircBot).terminate();
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
@@ -161,7 +162,7 @@ public class ExitBotImplTest {
     @Test
     public void terminate_bot() {
         botState.dccTransferRunning();
-        exitBot.handle(new ManualExitCommand("Andy", "failure"));
+        exitBot.handle(new ReasonedExitCommand("Andy", "failure"));
         verify(ircBot).cancelDcc("keex");
         verify(ircBot).terminate();
 

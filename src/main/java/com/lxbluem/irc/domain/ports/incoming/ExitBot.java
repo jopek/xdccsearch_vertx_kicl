@@ -1,13 +1,13 @@
 package com.lxbluem.irc.domain.ports.incoming;
 
 import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
-import com.lxbluem.irc.domain.model.request.ExitCommand;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
+import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 
 public interface ExitBot {
-    void handle(ExitCommand exitCommand);
+    void handle(RequestedExitCommand requestedExitCommand);
 
-    void handle(ManualExitCommand manualExitCommand);
+    void handle(ReasonedExitCommand reasonedExitCommand);
 
     void handle(DccFinishedExitCommand finishedExitCommand);
 }

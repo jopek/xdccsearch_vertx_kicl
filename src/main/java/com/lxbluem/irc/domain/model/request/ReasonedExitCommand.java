@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 @Builder
 @Getter
-public class ManualExitCommand {
+public class ReasonedExitCommand {
     String botNickName;
     String reason;
 }

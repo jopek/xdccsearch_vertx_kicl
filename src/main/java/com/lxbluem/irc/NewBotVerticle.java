@@ -8,8 +8,8 @@ import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
-import com.lxbluem.irc.domain.model.request.ExitCommand;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
+import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 import com.lxbluem.irc.domain.model.request.ToggleDccTransferStartedCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
@@ -69,7 +69,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         Map<String, String> params = serializedRequest.getParams();
         String botNickName = params.get("botname");
         try {
-            exitBot.handle(new ExitCommand(botNickName));
+            exitBot.handle(new RequestedExitCommand(botNickName));
             result.complete(new JsonObject().put("bot", botNickName));
         } catch (Throwable t) {
             result.fail(t);

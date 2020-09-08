@@ -5,8 +5,8 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.exception.BotNotFoundException;
 import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.DccFinishedExitCommand;
-import com.lxbluem.irc.domain.model.request.ExitCommand;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
+import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
@@ -32,8 +32,8 @@ public class ExitBotImpl implements ExitBot {
     }
 
     @Override
-    public void handle(ExitCommand exitCommand) {
-        String botNickName = exitCommand.getBotNickName();
+    public void handle(RequestedExitCommand requestedExitCommand) {
+        String botNickName = requestedExitCommand.getBotNickName();
         botStorage.get(botNickName)
                 .orElseThrow(() ->
                         new BotNotFoundException(botNickName)
@@ -42,9 +42,9 @@ public class ExitBotImpl implements ExitBot {
     }
 
     @Override
-    public void handle(ManualExitCommand manualExitCommand) {
-        String botNickName = manualExitCommand.getBotNickName();
-        String reason = manualExitCommand.getReason();
+    public void handle(ReasonedExitCommand reasonedExitCommand) {
+        String botNickName = reasonedExitCommand.getBotNickName();
+        String reason = reasonedExitCommand.getReason();
         commonExit(botNickName, reason);
     }
 

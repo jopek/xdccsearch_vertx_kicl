@@ -2,8 +2,8 @@ package com.lxbluem.irc.domain.interactors.subhandlers;
 
 import com.lxbluem.common.domain.events.BotFailedEvent;
 import com.lxbluem.common.domain.ports.EventDispatcher;
-import com.lxbluem.irc.domain.model.request.ManualExitCommand;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
@@ -37,7 +37,7 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
         ) {
             BotFailedEvent failedEvent = new BotFailedEvent(botNickName, nowEpochMillis(), noticeMessage);
             eventDispatcher.dispatch(failedEvent);
-            exitBot.handle(new ManualExitCommand(failedEvent.getBot(), failedEvent.getMessage()));
+            exitBot.handle(new ReasonedExitCommand(failedEvent.getBot(), failedEvent.getMessage()));
             return true;
         }
         return false;

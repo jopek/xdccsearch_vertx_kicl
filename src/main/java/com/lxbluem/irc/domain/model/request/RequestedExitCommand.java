@@ -7,6 +7,6 @@ import lombok.Getter;
 @AllArgsConstructor
 @Builder
 @Getter
-public class ExitCommand {
+public class RequestedExitCommand {
     String botNickName;
 }

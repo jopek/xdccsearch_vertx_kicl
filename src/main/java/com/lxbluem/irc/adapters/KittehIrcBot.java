@@ -79,7 +79,7 @@ public class KittehIrcBot implements IrcBot {
         Consumer<Exception> exceptionConsumer = e -> {
             if (e instanceof KittehNagException)
                 return;
-            ManualExitCommand exitCommand = new ManualExitCommand(botName, e.getMessage());
+            ReasonedExitCommand exitCommand = new ReasonedExitCommand(botName, e.getMessage());
             exitBot.handle(exitCommand);
         };
         client.getExceptionListener().setConsumer(exceptionConsumer);
@@ -193,7 +193,7 @@ public class KittehIrcBot implements IrcBot {
         System.out.printf("BANNED: BOT:%s EVENT:%s\n", botName, event);
         List<String> parameters = event.getParameters();
         String message = parameters.get(2);
-        exitBot.handle(new ManualExitCommand(botName, message));
+        exitBot.handle(new ReasonedExitCommand(botName, message));
     }
 
     @NumericFilter(477)

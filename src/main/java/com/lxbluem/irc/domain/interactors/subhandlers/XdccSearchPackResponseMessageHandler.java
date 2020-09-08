@@ -36,7 +36,7 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
 
         botStorage.get(botNickName).ifPresent(bot ->
                 stateStorage.get(botNickName).ifPresent(botState -> {
-                    if (!remoteName.equalsIgnoreCase(botState.getPack().getNickName()))
+                    if (!remoteName.equalsIgnoreCase(botState.getRemoteUser()))
                         return;
                     if (noticeMessage.toLowerCase().contains("list stopped")) {
                         conditionApplied.set(true);
@@ -49,7 +49,7 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
 
                     if (!botState.isSearchRequested())
                         return;
-                    // swallow all notices from remote bot, even if pattern does not match
+
                     conditionApplied.set(true);
 
                         /*
@@ -57,15 +57,27 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
                           [23:33]  -mybotDCCp-  - Pack #1 matches, "test1.bin"
                           [23:33]  -mybotDCCp-  - Pack #2 matches, "test2.bin"
                          */
-                    Pattern pattern = Pattern.compile("- pack #(\\d+) matches", Pattern.CASE_INSENSITIVE);
+                    Pattern pattern = Pattern.compile("- pack #(\\d+) matches, \"(.*?)\"", Pattern.CASE_INSENSITIVE);
                     Matcher matcher = pattern.matcher(noticeMessage);
                     if (matcher.find()) {
-                        String packNumberMatch = matcher.group(1);
-                        int packNumber = Integer.parseInt(packNumberMatch);
                         bot.stopSearchListing(remoteName);
                         botState.stopSearchListing();
-                        bot.requestDccPack(remoteName, packNumber);
-                        eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, "pack number changed"));
+
+                        String packNumberMatch = matcher.group(1);
+                        int incomingPackNumber = Integer.parseInt(packNumberMatch);
+                        int packNumber = botState.getPack().getPackNumber();
+
+                        String incomingPackName = matcher.group(2);
+
+                        if (incomingPackNumber == packNumber)
+                            botState.continueCtcpHandshake();
+                        else {
+                            bot.requestDccPack(remoteName, incomingPackNumber);
+                            botState.getPack().setPackNumber(incomingPackNumber);
+                            botState.getPack().setPackName(incomingPackName);
+                            String message = String.format("pack number changed #%d -> #%d; requesting #%d", packNumber, incomingPackNumber, incomingPackNumber);
+                            eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, message));
+                        }
                     }
                 })
         );

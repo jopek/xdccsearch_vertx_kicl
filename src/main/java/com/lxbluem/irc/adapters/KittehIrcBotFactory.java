@@ -8,7 +8,7 @@ public class KittehIrcBotFactory implements BotFactory {
 
     private final ExitBot exitBot;
     private final NoticeMessageHandler noticeMessageHandler;
-    private final StartDccTransfer startDccTransfer;
+    private final PrepareDccTransfer prepareDccTransfer;
     private final LookForPackUser lookForPackUser;
     private final JoinMentionedChannels joinMentionedChannels;
     private final RegisterNickName registerNickName;
@@ -18,7 +18,7 @@ public class KittehIrcBotFactory implements BotFactory {
     public KittehIrcBotFactory(
             ExitBot exitBot,
             NoticeMessageHandler noticeMessageHandler,
-            StartDccTransfer startDccTransfer,
+            PrepareDccTransfer prepareDccTransfer,
             LookForPackUser lookForPackUser,
             JoinMentionedChannels joinMentionedChannels,
             RegisterNickName registerNickName,
@@ -26,7 +26,7 @@ public class KittehIrcBotFactory implements BotFactory {
             SkipProtectedChannel skipProtectedChannel) {
         this.exitBot = exitBot;
         this.noticeMessageHandler = noticeMessageHandler;
-        this.startDccTransfer = startDccTransfer;
+        this.prepareDccTransfer = prepareDccTransfer;
         this.lookForPackUser = lookForPackUser;
         this.joinMentionedChannels = joinMentionedChannels;
         this.registerNickName = registerNickName;
@@ -39,7 +39,7 @@ public class KittehIrcBotFactory implements BotFactory {
         return new KittehIrcBot(
                 exitBot,
                 noticeMessageHandler,
-                startDccTransfer,
+                prepareDccTransfer,
                 lookForPackUser,
                 joinMentionedChannels,
                 registerNickName,

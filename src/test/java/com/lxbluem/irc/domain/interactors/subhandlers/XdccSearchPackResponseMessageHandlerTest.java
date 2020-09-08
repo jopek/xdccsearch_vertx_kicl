@@ -61,6 +61,7 @@ public class XdccSearchPackResponseMessageHandlerTest {
                 .serverPort(6667)
                 .channelName("#download")
                 .packNumber(5)
+                .packName("test")
                 .build();
     }
 
@@ -76,13 +77,15 @@ public class XdccSearchPackResponseMessageHandlerTest {
         assertFalse(botState.isSearchRequested());
         verify(ircBot).stopSearchListing("keex");
         verify(ircBot).requestDccPack("keex", 1);
+        assertEquals("test1.bin", botState.getPack().getPackName());
+        assertEquals(1, botState.getPack().getPackNumber());
 
         ArgumentCaptor<BotNoticeEvent> messageSent = ArgumentCaptor.forClass(BotNoticeEvent.class);
         verify(eventDispatcher).dispatch(messageSent.capture());
         BotNoticeEvent event = messageSent.getValue();
         assertEquals("Andy", event.getBot());
         assertEquals("keex", event.getRemoteNick());
-        assertEquals("pack number changed", event.getMessage());
+        assertEquals("pack number changed #5 -> #1; requesting #1", event.getMessage());
     }
 
 }

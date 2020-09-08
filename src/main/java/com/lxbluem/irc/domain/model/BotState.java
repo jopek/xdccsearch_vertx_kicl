@@ -25,6 +25,8 @@ public class BotState {
     private final Set<String> referencedChannelNames = new HashSet<>();
     private final Set<String> joinedChannels = new HashSet<>();
     private final Runnable decoratedRequestHook;
+    private boolean remoteSendsCorrectPack;
+    private Runnable ctcpHandshake;
 
     public BotState(Pack pack, Runnable requestHook) {
         this.pack = pack;
@@ -108,5 +110,17 @@ public class BotState {
 
     public void stopSearchListing() {
         searchRequested = false;
+    }
+
+    public void remoteSendsCorrectPack() {
+        this.remoteSendsCorrectPack = true;
+    }
+
+    public void continueCtcpHandshake() {
+        ctcpHandshake.run();
+    }
+
+    public void saveCtcpHandshake(Runnable ctcpHandshake) {
+        this.ctcpHandshake = ctcpHandshake;
     }
 }

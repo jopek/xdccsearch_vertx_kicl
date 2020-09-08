@@ -4,11 +4,12 @@ import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
-import com.lxbluem.irc.domain.model.request.StartDccTransferCommand;
-import com.lxbluem.irc.domain.ports.incoming.StartDccTransfer;
+import com.lxbluem.irc.domain.model.request.PrepareDccTransferCommand;
+import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
-import lombok.extern.log4j.Log4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -17,23 +18,25 @@ import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
 import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 import static java.lang.String.format;
 
-@Log4j
-public class StartDccTransferImpl implements StartDccTransfer {
+public class PrepareDccTransferImpl implements PrepareDccTransfer {
+    private static final Logger log = LoggerFactory.getLogger(PrepareDccTransferImpl.class);
     private final BotStorage botStorage;
     private final BotStateStorage stateStorage;
     private final BotMessaging botMessaging;
 
-    public StartDccTransferImpl(BotStorage botStorage, BotStateStorage stateStorage, BotMessaging botMessaging) {
+    public PrepareDccTransferImpl(BotStorage botStorage, BotStateStorage stateStorage, BotMessaging botMessaging) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.botMessaging = botMessaging;
     }
 
     @Override
-    public void handle(StartDccTransferCommand command) {
+    public void handle(PrepareDccTransferCommand command) {
         String botNickName = command.getBotNickName();
         DccCtcpQuery ctcpQuery = command.getCtcpQuery();
         long localIp = command.getLocalIp();
+
+        log.debug("{}", ctcpQuery);
 
         if (!ctcpQuery.isValid())
             return;
@@ -44,13 +47,6 @@ public class StartDccTransferImpl implements StartDccTransfer {
                     String packName = botState.getPack().getPackName();
                     String incomingFilename = ctcpQuery.getFilename();
                     String packNickName = botState.getPack().getNickName();
-                    if (!incomingFilename.equalsIgnoreCase(packName)) {
-                        String message = "incoming file '%s' does not match known pack file '%s'";
-                        log.warn(String.format(message, incomingFilename, packName));
-                        bot.startSearchListing(packNickName, packName);
-                        botState.requestSearchListing();
-                        return;
-                    }
 
                     Consumer<Map<String, Object>> passiveDccSocketPortConsumer = (answer) -> {
                         int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
@@ -73,7 +69,13 @@ public class StartDccTransferImpl implements StartDccTransfer {
                         botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
                     };
 
-                    botMessaging.ask(FILENAME_RESOLVE, new FilenameResolveRequest(incomingFilename), filenameResolverConsumer);
-                }));
+                    FilenameResolveRequest resolveRequest = new FilenameResolveRequest(incomingFilename);
+                    botState.saveCtcpHandshake(
+                            () -> botMessaging.ask(FILENAME_RESOLVE, resolveRequest, filenameResolverConsumer)
+                    );
+                    if (botState.isRemoteSendsCorrectPack())
+                        botState.continueCtcpHandshake();
+                })
+        );
     }
 }

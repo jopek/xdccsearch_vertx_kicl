@@ -81,8 +81,9 @@ public class Starter {
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, botStateStorage));
         noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, botStateStorage, eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new CompareIncomingPackWithRequestedPack(botStorage, botStateStorage));
 
-        StartDccTransfer startDccTransfer = new StartDccTransferImpl(botStorage, botStateStorage, botMessaging);
+        PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, botStateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
@@ -92,7 +93,7 @@ public class Starter {
         BotFactory botFactory = new KittehIrcBotFactory(
                 exitBot,
                 noticeMessageHandler,
-                startDccTransfer,
+                prepareDccTransfer,
                 lookForPackUser,
                 joinMentionedChannels,
                 registerNickName,

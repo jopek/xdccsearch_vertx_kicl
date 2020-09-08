@@ -10,8 +10,8 @@ import com.lxbluem.irc.domain.model.BotState;
 import com.lxbluem.irc.domain.model.request.DccCtcpQuery;
 import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
 import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
-import com.lxbluem.irc.domain.model.request.StartDccTransferCommand;
-import com.lxbluem.irc.domain.ports.incoming.StartDccTransfer;
+import com.lxbluem.irc.domain.model.request.PrepareDccTransferCommand;
+import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
@@ -23,30 +23,28 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class StartDccTransferImplTest {
-    private BotStateStorage stateStorage;
+public class PrepareDccTransferImplTest {
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
-    private BotStorage botStorage;
 
     @Captor
     private ArgumentCaptor<Consumer<Map<String, Object>>> consumerArgumentCaptor;
 
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
-    private StartDccTransfer startDccTransfer;
+    private PrepareDccTransfer prepareDccTransfer;
+    private BotState botState;
 
     @Before
     public void setUp() {
@@ -54,22 +52,23 @@ public class StartDccTransferImplTest {
         ircBot = mock(IrcBot.class);
         eventDispatcher = mock(EventDispatcher.class);
 
-        stateStorage = new InMemoryBotStateStorage();
-        botStorage = new InMemoryBotStorage();
+        BotStateStorage stateStorage = new InMemoryBotStateStorage();
+        BotStorage botStorage = new InMemoryBotStorage();
         when(nameGenerator.getNick()).thenReturn("Andy");
 
-        initialiseStorages();
+        initializeStorages(botStorage, stateStorage);
         requestHookExecuted.set(0);
 
-        startDccTransfer = new StartDccTransferImpl(botStorage, stateStorage, botMessaging);
+        prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging);
     }
 
-    private void initialiseStorages() {
+    private void initializeStorages(BotStorage botStorage, BotStateStorage stateStorage) {
         botStorage.save("Andy", ircBot);
 
         Pack pack = testPack();
         Runnable requestHook = requestHookExecuted::incrementAndGet;
-        stateStorage.save("Andy", new BotState(pack, requestHook));
+        botState = new BotState(pack, requestHook);
+        stateStorage.save("Andy", botState);
     }
 
     private Pack testPack() {
@@ -90,8 +89,24 @@ public class StartDccTransferImplTest {
         String incoming_message = "crrrrrap";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+        prepareDccTransfer.handle(new PrepareDccTransferCommand(botNick, ctcpQuery, 0L));
 
+        verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
+    }
+
+    @Test
+    public void incoming_ctcp_query_requests_search_for_expected_filename() {
+        botState.remoteSendsCorrectPack();
+
+        String botNick = "Andy";
+        // DCC SEND <filename> <ip> <port> <file size>
+        String incoming_message = "DCC SEND expected_filename.txt 3232260964 50000 6";
+        DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
+        PrepareDccTransferCommand command = new PrepareDccTransferCommand(botNick, ctcpQuery, 0L);
+
+        prepareDccTransfer.handle(command);
+
+        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), any(Serializable.class), any(Consumer.class));
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
@@ -101,25 +116,22 @@ public class StartDccTransferImplTest {
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND unexpected_filename.txt 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
-        BotState botState = stateStorage.get("Andy").get();
+        PrepareDccTransferCommand command = new PrepareDccTransferCommand(botNick, ctcpQuery, 0L);
 
-        assertFalse(botState.isSearchRequested());
-        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
-
-        verify(ircBot).startSearchListing(eq("keex"), eq("test1.bin"));
-        assertTrue(botState.isSearchRequested());
+        prepareDccTransfer.handle(command);
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
     public void incoming_ctcp_query_active_dcc() {
+        botState.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND test1.bin 3232260964 50000 6";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 0L));
+        prepareDccTransfer.handle(new PrepareDccTransferCommand(botNick, ctcpQuery, 0L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
@@ -143,12 +155,13 @@ public class StartDccTransferImplTest {
 
     @Test
     public void incoming_ctcp_query_passive_dcc() {
+        botState.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size> <token>
         String incoming_message = "DCC SEND test1.bin 3232260964 0 6 1";
         DccCtcpQuery ctcpQuery = DccCtcpQuery.fromQueryString(incoming_message);
 
-        startDccTransfer.handle(new StartDccTransferCommand(botNick, ctcpQuery, 3232260865L));
+        prepareDccTransfer.handle(new PrepareDccTransferCommand(botNick, ctcpQuery, 3232260865L));
 
         verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();

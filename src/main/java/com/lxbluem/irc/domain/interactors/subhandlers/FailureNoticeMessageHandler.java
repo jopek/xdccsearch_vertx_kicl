@@ -31,7 +31,7 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("download connection failed")
-                || lowerCaseNoticeMessage.contains("closing connection")
+                || (lowerCaseNoticeMessage.contains("closing connection") && !lowerCaseNoticeMessage.contains("transfer canceled by user"))
                 || lowerCaseNoticeMessage.contains("connection refused")
                 || lowerCaseNoticeMessage.contains("you already requested that pack")
         ) {

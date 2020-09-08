@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 
 public class FailureNoticeMessageHandlerTest {
@@ -65,6 +66,18 @@ public class FailureNoticeMessageHandlerTest {
                 .channelName("#download")
                 .packNumber(5)
                 .build();
+    }
+
+    @Test
+    public void notice_message_handler_closing_connection_by_user() {
+        String botNick = "Andy";
+        String remoteNick = "keex";
+        String noticeMessage = "closing connection: transfer canceled by user";
+
+        boolean messageHandled = noticeMessageHandler.handle(new NoticeMessageCommand(botNick, remoteNick, noticeMessage));
+
+        verifyNoMoreInteractions(ircBot, eventDispatcher);
+        assertFalse(messageHandled);
     }
 
     @Test

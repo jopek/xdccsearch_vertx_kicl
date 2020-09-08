@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class DccStartedEvent extends BotEvent {
     @Builder
-    public DccStartedEvent(String botName, long timestamp) {
-        super(timestamp, botName);
+    public DccStartedEvent(String botNickName) {
+        super.bot = botNickName;
     }
 }
 

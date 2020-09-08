@@ -58,7 +58,7 @@ public class ExitBotImplTest {
         requestHookExecuted.set(0);
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
 
-        exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
     }
 
     @Test

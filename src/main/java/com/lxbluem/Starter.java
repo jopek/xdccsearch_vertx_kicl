@@ -47,10 +47,10 @@ public class Starter {
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
         BotMessaging botMessaging = new EventBusBotMessaging(eventBus, clock);
-        EventDispatcher eventDispatcher = new EventbusEventDispatcher(eventBus);
+        EventDispatcher eventDispatcher = new EventbusEventDispatcher(eventBus, clock);
 
         Verticle stateVerticle = getStateVerticle(clock);
-        Verticle botVerticle = getBotVerticle(botMessaging, clock, eventDispatcher);
+        Verticle botVerticle = getBotVerticle(botMessaging, eventDispatcher);
         Verticle searchVerticle = new SearchVerticle();
         Verticle filenameResolverVerticle = new FilenameResolverVerticle();
         Verticle receiverVerticle = new DccReceiverVerticle(botMessaging);
@@ -69,26 +69,26 @@ public class Starter {
         deploy(vertx, filenameResolverVerticle);
     }
 
-    private static Verticle getBotVerticle(BotMessaging botMessaging, Clock clock, EventDispatcher eventDispatcher) {
+    private static Verticle getBotVerticle(BotMessaging botMessaging, EventDispatcher eventDispatcher) {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage botStateStorage = new InMemoryBotStateStorage();
-        ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher, clock);
+        ExitBot exitBot = new ExitBotImpl(botStorage, botStateStorage, eventDispatcher);
 
-        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher, clock);
-        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, botStateStorage, exitBot, eventDispatcher, clock));
+        NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher);
+        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, botStateStorage, exitBot, eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, botStateStorage));
         noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(botStorage, botStateStorage));
-        noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, botStateStorage));
-        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, botStateStorage, eventDispatcher, clock));
+        noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, botStateStorage, eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new CompareIncomingPackWithRequestedPack(botStorage, botStateStorage));
 
         PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, botStateStorage, botMessaging);
-        LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher, clock);
+        LookForPackUser lookForPackUser = new LookForPackUserImpl(botStateStorage, exitBot, eventDispatcher);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, botStateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);
         NameGenerator nameGenerator = new NameGenerator.RandomNameGenerator();
-        ChangeNickNameImpl changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher, clock);
+        ChangeNickNameImpl changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher);
         SkipProtectedChannelImpl skipProtectedChannel = new SkipProtectedChannelImpl(botStateStorage);
         BotFactory botFactory = new KittehIrcBotFactory(
                 exitBot,
@@ -104,7 +104,6 @@ public class Starter {
                 botStorage,
                 botStateStorage,
                 eventDispatcher,
-                clock,
                 nameGenerator,
                 botFactory
         );

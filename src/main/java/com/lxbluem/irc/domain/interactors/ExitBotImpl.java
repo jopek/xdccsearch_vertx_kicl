@@ -11,24 +11,18 @@ import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 
-import java.time.Clock;
-import java.time.Instant;
-
 public class ExitBotImpl implements ExitBot {
     private final BotStorage botStorage;
     private final BotStateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
 
     public ExitBotImpl(
             BotStorage botStorage,
             BotStateStorage stateStorage,
-            EventDispatcher eventDispatcher,
-            Clock clock) {
+            EventDispatcher eventDispatcher) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -70,10 +64,7 @@ public class ExitBotImpl implements ExitBot {
         stateStorage.remove(botNickName);
 
         String reasonMessage = String.format("Bot %s exiting because %s", botNickName, reason);
-        eventDispatcher.dispatch(new BotExitedEvent(botNickName, nowEpochMillis(), reasonMessage));
+        eventDispatcher.dispatch(new BotExitedEvent(botNickName, reasonMessage));
     }
 
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
-    }
 }

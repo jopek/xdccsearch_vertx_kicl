@@ -7,9 +7,4 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BotEvent extends Event {
     String bot;
-
-    public BotEvent(long timestamp, String bot) {
-        super(timestamp);
-        this.bot = bot;
-    }
 }

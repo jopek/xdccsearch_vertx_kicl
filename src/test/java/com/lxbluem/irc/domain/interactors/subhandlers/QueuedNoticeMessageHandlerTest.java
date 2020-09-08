@@ -16,7 +16,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.time.Clock;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -40,7 +39,7 @@ public class QueuedNoticeMessageHandlerTest {
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
 
-        noticeMessageHandler = new QueuedNoticeMessageHandler(eventDispatcher, Clock.systemDefaultZone());
+        noticeMessageHandler = new QueuedNoticeMessageHandler(eventDispatcher);
 
         initialiseStorages(botStorage, stateStorage);
     }

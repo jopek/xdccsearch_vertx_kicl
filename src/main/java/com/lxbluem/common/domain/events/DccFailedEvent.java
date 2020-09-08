@@ -10,8 +10,8 @@ public class DccFailedEvent extends BotEvent {
     private String message;
 
     @Builder
-    public DccFailedEvent(String bot, long timestamp, String message) {
-        super(timestamp, bot);
+    public DccFailedEvent(String botNickName, String message) {
+        super.bot = botNickName;
         this.message = message;
     }
 

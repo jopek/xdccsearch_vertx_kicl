@@ -5,16 +5,11 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 
-import java.time.Clock;
-import java.time.Instant;
-
 public class QueuedNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
 
-    public QueuedNoticeMessageHandler(EventDispatcher eventDispatcher, Clock clock) {
+    public QueuedNoticeMessageHandler(EventDispatcher eventDispatcher) {
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -26,14 +21,11 @@ public class QueuedNoticeMessageHandler implements NoticeMessageHandler.SubHandl
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
         if (lowerCaseNoticeMessage.contains("queue for pack")
                 || lowerCaseNoticeMessage.contains("you already have that item queued")) {
-            eventDispatcher.dispatch(new DccQueuedEvent(botNickName, nowEpochMillis(), noticeMessage));
+            eventDispatcher.dispatch(new DccQueuedEvent(botNickName, noticeMessage));
             return true;
         }
 
         return false;
     }
 
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
-    }
 }

@@ -10,8 +10,8 @@ public class BotExitedEvent extends BotEvent {
     private String message;
 
     @Builder
-    public BotExitedEvent(String bot, long timestamp, String message) {
-        super(timestamp, bot);
+    public BotExitedEvent(String botNickName, String message) {
+        super.bot = botNickName;
         this.message = message;
     }
 }

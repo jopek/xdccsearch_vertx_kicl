@@ -11,8 +11,8 @@ public class BotInitializedEvent extends BotEvent {
     private Pack pack;
 
     @Builder
-    public BotInitializedEvent(String bot, long timestamp, Pack pack) {
-        super(timestamp, bot);
+    public BotInitializedEvent(String botNickName, Pack pack) {
+        super.bot = botNickName;
         this.pack = pack;
     }
 }

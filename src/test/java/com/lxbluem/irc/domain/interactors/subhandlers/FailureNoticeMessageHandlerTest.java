@@ -43,8 +43,8 @@ public class FailureNoticeMessageHandlerTest {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
-        noticeMessageHandler = new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher, clock);
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
+        noticeMessageHandler = new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher);
 
         initialiseStorages(botStorage, stateStorage);
     }

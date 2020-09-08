@@ -10,8 +10,8 @@ public class BotFailedEvent extends BotEvent {
     private String message;
 
     @Builder
-    public BotFailedEvent(String bot, long timestamp, String failMessage) {
-        super(timestamp, bot);
+    public BotFailedEvent(String botNickName, String failMessage) {
+        super.bot = botNickName;
         this.message = failMessage;
     }
 }

@@ -28,27 +28,27 @@ public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandle
         AtomicBoolean handledThisCommand = new AtomicBoolean(false);
 
         botStorage.get(botNickName).ifPresent(ircBot ->
-        stateStorage.get(botNickName)
-                .ifPresent(botState -> {
-                    if (!remoteName.equalsIgnoreCase(botState.getRemoteUser()))
-                        return;
+                stateStorage.get(botNickName)
+                        .ifPresent(botState -> {
+                            if (!remoteName.equalsIgnoreCase(botState.getRemoteUser()))
+                                return;
 
-                    Matcher matcher = PATTERN.matcher(noticeMessage);
-                    if (!matcher.find())
-                        return;
-                    handledThisCommand.set(true);
+                            Matcher matcher = PATTERN.matcher(noticeMessage);
+                            if (!matcher.find())
+                                return;
+                            handledThisCommand.set(true);
 
-                    String incomingPackName = matcher.group(1);
+                            String incomingPackName = matcher.group(1);
 
-                    String packName = botState.getPack().getPackName();
-                    if (!(incomingPackName.equalsIgnoreCase(packName))) {
-                        ircBot.startSearchListing(remoteName, packName);
-                        botState.requestSearchListing();
-                        return;
-                    }
+                            String packName = botState.getPack().getPackName();
+                            if (!(incomingPackName.equalsIgnoreCase(packName))) {
+                                ircBot.startSearchListing(remoteName, packName);
+                                botState.requestSearchListing();
+                                return;
+                            }
 
-                    botState.remoteSendsCorrectPack();
-                })
+                            botState.remoteSendsCorrectPack();
+                        })
         );
 
         return handledThisCommand.get();

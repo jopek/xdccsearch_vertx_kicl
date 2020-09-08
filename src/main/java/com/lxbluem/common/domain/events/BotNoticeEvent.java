@@ -13,8 +13,8 @@ public class BotNoticeEvent extends BotEvent {
     private String remoteNick;
 
     @Builder
-    public BotNoticeEvent(String bot, long timestamp, String remoteNick, String noticeMessage) {
-        super(timestamp, bot);
+    public BotNoticeEvent(String botNickName, String remoteNick, String noticeMessage) {
+        super.bot = botNickName;
         this.remoteNick = remoteNick;
         this.message = noticeMessage;
     }

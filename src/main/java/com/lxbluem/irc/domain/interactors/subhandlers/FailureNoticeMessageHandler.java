@@ -9,18 +9,13 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 
-import java.time.Clock;
-import java.time.Instant;
-
 public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
     private final ExitBot exitBot;
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
 
-    public FailureNoticeMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, ExitBot exitBot, EventDispatcher eventDispatcher, Clock clock) {
+    public FailureNoticeMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, ExitBot exitBot, EventDispatcher eventDispatcher) {
         this.exitBot = exitBot;
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -35,7 +30,7 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
                 || lowerCaseNoticeMessage.contains("connection refused")
                 || lowerCaseNoticeMessage.contains("you already requested that pack")
         ) {
-            BotFailedEvent failedEvent = new BotFailedEvent(botNickName, nowEpochMillis(), noticeMessage);
+            BotFailedEvent failedEvent = new BotFailedEvent(botNickName, noticeMessage);
             eventDispatcher.dispatch(failedEvent);
             exitBot.handle(new ReasonedExitCommand(failedEvent.getBot(), failedEvent.getMessage()));
             return true;
@@ -43,7 +38,4 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
         return false;
     }
 
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
-    }
 }

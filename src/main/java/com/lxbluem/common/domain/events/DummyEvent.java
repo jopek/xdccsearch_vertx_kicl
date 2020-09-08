@@ -6,7 +6,4 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class DummyEvent extends Event {
-    public DummyEvent(long timestamp) {
-        super(timestamp);
-    }
 }

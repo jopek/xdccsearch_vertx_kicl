@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -64,13 +63,12 @@ public class NewBotVerticleTest {
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
-        EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        EventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus(), clock);
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,
                 eventDispatcher,
-                clock,
                 nameGenerator,
                 botFactory
         );
@@ -169,7 +167,7 @@ public class NewBotVerticleTest {
                     async.complete();
                 });
 
-        DccFinishedEvent dccFinishedEvent = new DccFinishedEvent("Andy", Instant.now().toEpochMilli());
+        DccFinishedEvent dccFinishedEvent = new DccFinishedEvent("Andy");
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(dccFinishedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_FINISHED.address(), dccFinishJsonObject);
@@ -193,7 +191,7 @@ public class NewBotVerticleTest {
                     exitAsync.complete();
                 });
 
-        DccFailedEvent dccFailedEvent = new DccFailedEvent("Andy", Instant.now().toEpochMilli(), "no space on filesystem");
+        DccFailedEvent dccFailedEvent = new DccFailedEvent("Andy", "no space on filesystem");
         JsonObject dccFinishJsonObject = JsonObject.mapFrom(dccFailedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_FAILED.address(), dccFinishJsonObject);
@@ -218,7 +216,7 @@ public class NewBotVerticleTest {
                 });
 
         // trigger
-        DccStartedEvent dccStartedEvent = new DccStartedEvent("Andy", Instant.now().toEpochMilli());
+        DccStartedEvent dccStartedEvent = new DccStartedEvent("Andy");
         JsonObject dccStartedJsonObject = JsonObject.mapFrom(dccStartedEvent);
         vertx.eventBus()
                 .publish(Address.DCC_STARTED.address(), dccStartedJsonObject);

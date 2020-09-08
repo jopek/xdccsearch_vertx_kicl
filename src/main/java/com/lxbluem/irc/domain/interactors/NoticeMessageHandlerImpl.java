@@ -5,23 +5,16 @@ import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class NoticeMessageHandlerImpl implements NoticeMessageHandler {
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
     private final List<SubHandler> subHandlers = new ArrayList<>();
 
-    public NoticeMessageHandlerImpl(
-            EventDispatcher eventDispatcher,
-            Clock clock
-    ) {
+    public NoticeMessageHandlerImpl(EventDispatcher eventDispatcher) {
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -40,7 +33,7 @@ public class NoticeMessageHandlerImpl implements NoticeMessageHandler {
         String remoteName = command.getRemoteName();
         String noticeMessage = command.getNoticeMessage();
 
-        BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, noticeMessage);
+        BotNoticeEvent botNoticeEvent = new BotNoticeEvent(botNickName, remoteName, noticeMessage);
         eventDispatcher.dispatch(botNoticeEvent);
     }
 
@@ -49,7 +42,4 @@ public class NoticeMessageHandlerImpl implements NoticeMessageHandler {
         subHandlers.add(handler);
     }
 
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
-    }
 }

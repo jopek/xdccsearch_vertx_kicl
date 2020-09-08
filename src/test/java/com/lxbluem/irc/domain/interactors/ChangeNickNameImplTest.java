@@ -38,7 +38,7 @@ public class ChangeNickNameImplTest {
         botStorage.save("Andy", ircBot);
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
 
-        changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher, clock);
+        changeNickName = new ChangeNickNameImpl(botStorage, nameGenerator, eventDispatcher);
     }
 
     @Test

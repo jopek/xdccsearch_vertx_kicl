@@ -39,7 +39,7 @@ public class XdccSearchPackResponseMessageHandlerTest {
         BotStorage botStorage = new InMemoryBotStorage();
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
-        noticeMessageHandler = new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher, clock);
+        noticeMessageHandler = new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher);
 
         initialiseStorages(botStorage, stateStorage);
     }

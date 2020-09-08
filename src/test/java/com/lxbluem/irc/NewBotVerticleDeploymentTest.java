@@ -45,13 +45,12 @@ public class NewBotVerticleDeploymentTest {
         BotStateStorage stateStorage = new InMemoryBotStateStorage();
         mockBot = mock(IrcBot.class);
         BotFactory botFactory = () -> mockBot;
-        EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus());
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        EventbusEventDispatcher eventDispatcher = new EventbusEventDispatcher(vertx.eventBus(), clock);
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
         InitializeBot initializeBot = new InitializeBotImpl(
                 botStorage,
                 stateStorage,
                 eventDispatcher,
-                clock,
                 nameGenerator,
                 botFactory
         );

@@ -12,8 +12,8 @@ public class BotRenamedEvent extends BotEvent {
     private String message;
 
     @Builder
-    public BotRenamedEvent(long timestamp, String attemptedBotName, String renameto, String serverMessages) {
-        super(timestamp, attemptedBotName);
+    public BotRenamedEvent(String attemptedBotName, String renameto, String serverMessages) {
+        super.bot = attemptedBotName;
         this.renameto = renameto;
         this.message = serverMessages;
     }

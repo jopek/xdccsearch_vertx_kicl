@@ -10,8 +10,8 @@ public class DccQueuedEvent extends BotEvent {
     private String message;
 
     @Builder
-    public DccQueuedEvent(String botName, long timestamp, String noticeMessage) {
-        super(timestamp, botName);
+    public DccQueuedEvent(String botNickName, String noticeMessage) {
+        super.bot = botNickName;
         message = noticeMessage;
     }
 }

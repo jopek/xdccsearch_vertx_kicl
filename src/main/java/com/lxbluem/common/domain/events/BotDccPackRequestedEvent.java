@@ -12,8 +12,8 @@ public class BotDccPackRequestedEvent extends BotEvent {
     private int packNumber;
 
     @Builder
-    public BotDccPackRequestedEvent(String bot, long timestamp, String message, String remoteNickName, int packNumber) {
-        super(timestamp, bot);
+    public BotDccPackRequestedEvent(String botNickName, String message, String remoteNickName, int packNumber) {
+        super.bot = botNickName;
         this.message = message;
         this.remoteNickName = remoteNickName;
         this.packNumber = packNumber;

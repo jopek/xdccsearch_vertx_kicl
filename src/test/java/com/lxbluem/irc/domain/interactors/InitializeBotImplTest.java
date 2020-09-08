@@ -51,7 +51,6 @@ public class InitializeBotImplTest {
                 botStorage,
                 stateStorage,
                 eventDispatcher,
-                clock,
                 nameGenerator,
                 botFactory
         );

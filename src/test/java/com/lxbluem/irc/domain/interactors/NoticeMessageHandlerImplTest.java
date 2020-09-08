@@ -32,7 +32,7 @@ public class NoticeMessageHandlerImplTest {
         eventDispatcher = mock(EventDispatcher.class);
         Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
-        noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher, clock);
+        noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher);
     }
 
     @Test

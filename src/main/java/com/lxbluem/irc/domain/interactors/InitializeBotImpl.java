@@ -10,8 +10,6 @@ import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.outgoing.*;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.function.Consumer;
 
 public class InitializeBotImpl implements InitializeBot {
@@ -20,13 +18,11 @@ public class InitializeBotImpl implements InitializeBot {
     private final BotStorage botStorage;
     private final BotStateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
 
     public InitializeBotImpl(
             BotStorage botStorage,
             BotStateStorage stateStorage,
             EventDispatcher eventDispatcher,
-            Clock clock,
             NameGenerator nameGenerator,
             BotFactory botFactory
     ) {
@@ -35,7 +31,6 @@ public class InitializeBotImpl implements InitializeBot {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -54,7 +49,7 @@ public class InitializeBotImpl implements InitializeBot {
         BotState botState = new BotState(pack, requestHook);
         stateStorage.save(botNickName, botState);
 
-        eventDispatcher.dispatch(new BotInitializedEvent(botNickName, nowEpochMillis(), pack));
+        eventDispatcher.dispatch(new BotInitializedEvent(botNickName, pack));
 
         return botNickName;
     }
@@ -75,16 +70,12 @@ public class InitializeBotImpl implements InitializeBot {
             bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
 
             String noticeMessage = String.format("requesting pack #%s from %s", pack.getPackNumber(), pack.getNickName());
-            BotDccPackRequestedEvent event = new BotDccPackRequestedEvent(botNickName, nowEpochMillis(), noticeMessage, pack.getNickName(), pack.getPackNumber());
+            BotDccPackRequestedEvent event = new BotDccPackRequestedEvent(botNickName, noticeMessage, pack.getNickName(), pack.getPackNumber());
             eventDispatcher.dispatch(event);
         };
 
         return () -> botStorage.get(botNickName)
                 .ifPresent(botRequestFn);
-    }
-
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
     }
 
 }

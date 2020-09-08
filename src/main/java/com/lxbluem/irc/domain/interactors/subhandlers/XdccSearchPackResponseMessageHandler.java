@@ -7,8 +7,6 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStateStorage;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,13 +15,11 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
     private final BotStorage botStorage;
     private final BotStateStorage stateStorage;
     private final EventDispatcher eventDispatcher;
-    private final Clock clock;
 
-    public XdccSearchPackResponseMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, EventDispatcher eventDispatcher, Clock clock) {
+    public XdccSearchPackResponseMessageHandler(BotStorage botStorage, BotStateStorage stateStorage, EventDispatcher eventDispatcher) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
         this.eventDispatcher = eventDispatcher;
-        this.clock = clock;
     }
 
     @Override
@@ -76,7 +72,7 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
                             botState.getPack().setPackNumber(incomingPackNumber);
                             botState.getPack().setPackName(incomingPackName);
                             String message = String.format("pack number changed #%d -> #%d; requesting #%d", packNumber, incomingPackNumber, incomingPackNumber);
-                            eventDispatcher.dispatch(new BotNoticeEvent(botNickName, nowEpochMillis(), remoteName, message));
+                            eventDispatcher.dispatch(new BotNoticeEvent(botNickName, remoteName, message));
                         }
                     }
                 })
@@ -84,7 +80,4 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
         return conditionApplied.get();
     }
 
-    private long nowEpochMillis() {
-        return Instant.now(clock).toEpochMilli();
-    }
 }

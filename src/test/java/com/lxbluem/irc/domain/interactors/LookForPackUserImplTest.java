@@ -45,9 +45,9 @@ public class LookForPackUserImplTest {
         stateStorage = new InMemoryBotStateStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
         eventDispatcher = mock(EventDispatcher.class);
-        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher, clock);
+        ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
         initialiseStorages();
-        lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher, clock);
+        lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher);
     }
 
     private void initialiseStorages() {

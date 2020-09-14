@@ -11,9 +11,6 @@ import lombok.*;
 @Builder
 @EqualsAndHashCode
 public class Pack {
-    @JsonProperty(value = "pid")
-    private long packId;
-
     @NonNull
     @JsonProperty(value = "cname")
     private String channelName;

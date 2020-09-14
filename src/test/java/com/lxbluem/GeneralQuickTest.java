@@ -13,7 +13,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.ListIterator;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -98,5 +97,15 @@ public class GeneralQuickTest {
         String[] str = new String[]{"a", "b", "c"};
         String collect = String.join(" ", str);
         System.out.println(collect);
+    }
+
+    @Test
+    public void stringUtils_containsOnly() {
+        String valid = "0123456789";
+
+        assertTrue(StringUtils.containsOnly("92", valid));
+        assertTrue(StringUtils.containsOnly("", valid));
+        assertFalse(StringUtils.containsOnly(null, valid));
+        assertFalse(StringUtils.containsOnly("undefined", valid));
     }
 }

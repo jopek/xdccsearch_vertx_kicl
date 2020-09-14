@@ -22,6 +22,10 @@ import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import com.lxbluem.notification.ExternalNotificationVerticle;
 import com.lxbluem.rest.RouterVerticle;
 import com.lxbluem.search.SearchVerticle;
+import com.lxbluem.search.adapters.ixirc.IxircSearchGateway;
+import com.lxbluem.search.domain.interactors.ListMatchingPacksImpl;
+import com.lxbluem.search.domain.ports.ListMatchingPacks;
+import com.lxbluem.search.domain.ports.SearchGateway;
 import com.lxbluem.state.StateVerticle;
 import com.lxbluem.state.adapters.InMemoryStateRepository;
 import com.lxbluem.state.domain.StateService;
@@ -51,7 +55,7 @@ public class Starter {
 
         Verticle stateVerticle = getStateVerticle(clock);
         Verticle botVerticle = getBotVerticle(botMessaging, eventDispatcher);
-        Verticle searchVerticle = new SearchVerticle();
+        Verticle searchVerticle = getSearchVerticle(vertx);
         Verticle filenameResolverVerticle = new FilenameResolverVerticle();
         Verticle receiverVerticle = new DccReceiverVerticle(botMessaging);
         Verticle eventLoggerVerticle = new EventLoggerVerticle();
@@ -67,6 +71,14 @@ public class Starter {
         deploy(vertx, receiverVerticle);
 //        deploy(vertx, notificationVerticle);
         deploy(vertx, filenameResolverVerticle);
+    }
+
+
+    private static Verticle getSearchVerticle(Vertx vertx) {
+        SearchGateway searchGateway = new IxircSearchGateway(vertx);
+//        SearchGateway searchGateway = new SunXDccSearchGateway(vertx);
+        ListMatchingPacks listMatchingPacks = new ListMatchingPacksImpl(searchGateway);
+        return new SearchVerticle(listMatchingPacks);
     }
 
     private static Verticle getBotVerticle(BotMessaging botMessaging, EventDispatcher eventDispatcher) {

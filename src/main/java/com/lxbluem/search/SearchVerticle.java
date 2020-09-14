@@ -1,13 +1,14 @@
 package com.lxbluem.search;
 
+import com.lxbluem.common.domain.Pack;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.SerializedRequest;
+import com.lxbluem.search.domain.callback.Callback;
+import com.lxbluem.search.domain.ports.ListMatchingPacks;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.rxjava.core.Vertx;
-import io.vertx.rxjava.ext.web.client.WebClient;
-import io.vertx.rxjava.ext.web.codec.BodyCodec;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,54 +17,89 @@ import java.util.Map;
 
 import static io.vertx.core.http.HttpMethod.GET;
 
+/*
+ for compatibility reasons, the search verticle has multiple response mappings:
+ - ixirc
+   @com.lxbluem.search.adapters.ixirc.IxircSearchGateway:
+   -> @JsonObject
+   -> @com.lxbluem.search.adapters.ixirc.IxircResponse
+   -> @com.lxbluem.search.domain.ports.SearchGateway.SearchResponse
+
+   @ListMatchingPacks:
+   -> @com.lxbluem.search.domain.ports.ListMatchingPacks.ListMatchingPacksResponse
+
+   @Verticle:
+   -> @com.lxbluem.common.domain.Pack
+   -> @JsonObject
+
+   TODO: shorten this mapping chain
+ */
+
+
 public class SearchVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(SearchVerticle.class);
-    private static final String START_SEARCH = "onStartSearch";
+
+    private final ListMatchingPacks listMatchingPacks;
+
+    public SearchVerticle(ListMatchingPacks listMatchingPacks) {
+        this.listMatchingPacks = listMatchingPacks;
+    }
 
     @Override
-    public void start() {
-        registerRoute(GET, "/search", this::handleSearchRequest);
+    public void start(Future<Void> startFuture) {
+        registerRoute(GET, "/search", this::handleRoutedHttpSearchRequest)
+                .setHandler(startFuture);
     }
 
-    private void handleSearchRequest(SerializedRequest request, Promise<JsonObject> responseHandler) {
+    private void handleRoutedHttpSearchRequest(SerializedRequest request, Promise<JsonObject> responseHandler) {
+        ListMatchingPacks.Command command = getSearchCommand(request, responseHandler);
+        Callback<ListMatchingPacks.ListMatchingPacksResponse> presenter = searchResponsePresenter(responseHandler);
+        listMatchingPacks.handle(command, presenter);
+    }
+
+    // temporarily map to ixirc Pack list response
+    private Callback<ListMatchingPacks.ListMatchingPacksResponse> searchResponsePresenter(Promise<JsonObject> responseHandler) {
+        return Callback.of(searchResponse -> {
+            JsonArray packResults = new JsonArray();
+            searchResponse.getResults().forEach(responsePack -> {
+                Pack pack = Pack.builder()
+                        .serverHostName(responsePack.getServerHostName())
+                        .serverPort(responsePack.getServerPort())
+                        .networkName(responsePack.getNetworkName())
+                        .channelName(responsePack.getChannelName())
+                        .packNumber(responsePack.getPackNumber())
+                        .nickName(responsePack.getNickName())
+                        .packName(responsePack.getPackName())
+                        .packGets(responsePack.getPackGets())
+                        .age(responsePack.getAge())
+                        .sizeBytes(responsePack.getSizeBytes())
+                        .lastAdvertised(responsePack.getLast())
+                        .build();
+                packResults.add(JsonObject.mapFrom(pack));
+            });
+            JsonObject response = new JsonObject()
+                    .put("pn", searchResponse.getCurrentPage())
+                    .put("pc", searchResponse.isHasMore()
+                            ? searchResponse.getCurrentPage() + 2
+                            : searchResponse.getCurrentPage())
+                    .put("results", packResults);
+            responseHandler.complete(response);
+        }, responseHandler::fail);
+    }
+
+    private ListMatchingPacks.Command getSearchCommand(SerializedRequest request, Promise<JsonObject> responseHandler) {
         Map<String, String> params = request.getParams();
 
-        String pageNum = params.get("pn");
-        if (StringUtils.isEmpty(pageNum) || pageNum.equalsIgnoreCase("undefined")) {
-            pageNum = "0";
-        }
+        String pageNumParam = params.getOrDefault("pn", "0");
+        int pageNumber = 0;
+        if (isValidPageNumber(pageNumParam))
+            pageNumber = Integer.parseInt(pageNumParam);
 
-        String query = params.get("q");
-        if (StringUtils.isEmpty(query)) {
-            responseHandler.fail("query is empty");
-            return;
-        }
-
-        doSearch(query, pageNum, responseHandler);
+        String searchTerm = params.getOrDefault("q", "");
+        return new ListMatchingPacks.Command(searchTerm, pageNumber);
     }
 
-    private void doSearch(String query, String pageNum, Promise<JsonObject> responseHandler) {
-        WebClientOptions clientOptions = new WebClientOptions()
-                .setFollowRedirects(true);
-        WebClient client = WebClient.create(vertx, clientOptions);
-
-        LOG.info("search for {}, page {}", query, pageNum);
-
-        client.get("ixirc.com", "/api/")
-                .addQueryParam("q", query)
-                .addQueryParam("pn", pageNum)
-                .as(BodyCodec.jsonObject())
-                .rxSend()
-                .subscribe(
-                        httpResponse -> responseHandler.complete(httpResponse.body()),
-                        throwable -> {
-                            LOG.error("could not complete request: {}", throwable.getMessage());
-                            responseHandler.fail(throwable);
-                        }
-                );
-    }
-
-    public static void main(String[] args) {
-        Vertx.vertx().deployVerticle(new SearchVerticle());
+    private boolean isValidPageNumber(String pageNumParam) {
+        return !StringUtils.isEmpty(pageNumParam) && StringUtils.containsOnly(pageNumParam, "0123456789");
     }
 }

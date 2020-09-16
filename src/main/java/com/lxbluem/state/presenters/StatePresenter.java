@@ -24,10 +24,7 @@ public class StatePresenter implements Consumer<Map<String, State>> {
     public void accept(Map<String, State> stateMap) {
         stateMap.forEach((botname, state) -> bots.put(botname, new JsonObject()
                 .put("started", state.getStartedTimestamp())
-                .put("duration", state.getEndedTimestamp() > 0
-                        ? state.getEndedTimestamp() - state.getStartedTimestamp()
-                        : Instant.now(clock).toEpochMilli() - state.getStartedTimestamp()
-                )
+                .put("duration", getDuration(state))
                 .put("timestamp", state.getTimestamp())
                 .put("speed", state.getMovingAverage().average())
                 .put("dccstate", state.getDccState())
@@ -39,5 +36,12 @@ public class StatePresenter implements Consumer<Map<String, State>> {
                 .put("bytesTotal", state.getBytesTotal())
                 .put("bytes", state.getBytes())
                 .put("pack", JsonObject.mapFrom(state.getPack()))));
+    }
+
+    private long getDuration(State state) {
+        if (state.getEndedTimestamp() > 0)
+            return state.getEndedTimestamp() - state.getStartedTimestamp();
+
+        return Instant.now(clock).toEpochMilli() - state.getStartedTimestamp();
     }
 }

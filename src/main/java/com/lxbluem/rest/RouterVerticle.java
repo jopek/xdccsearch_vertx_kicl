@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,18 +78,21 @@ public class RouterVerticle extends AbstractVerticle {
                 socket.write(returnMessage.encode());
             };
 
-            vertx.eventBus().consumer(Address.STATE.address(), messageHandler);
-            vertx.eventBus().consumer(Address.REMOVED_STALE_BOTS.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_INITIALIZED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_NOTICE.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_NICK_UPDATED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_EXITED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_QUEUED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.BOT_FAILED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.DCC_INITIALIZE.address(), messageHandler);
-            vertx.eventBus().consumer(Address.DCC_STARTED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.DCC_PROGRESSED.address(), messageHandler);
-            vertx.eventBus().consumer(Address.DCC_FINISHED.address(), messageHandler);
+            Arrays.asList(
+                    Address.STATE,
+                    Address.REMOVED_STALE_BOTS,
+                    Address.BOT_INITIALIZED,
+                    Address.BOT_NOTICE,
+                    Address.BOT_NICK_UPDATED,
+                    Address.BOT_EXITED,
+                    Address.BOT_QUEUED,
+                    Address.BOT_FAILED,
+                    Address.DCC_INITIALIZE,
+                    Address.DCC_STARTED,
+                    Address.DCC_PROGRESSED,
+                    Address.DCC_FINISHED,
+                    Address.DCC_FAILED
+            ).forEach(address -> vertx.eventBus().consumer(address.address(), messageHandler));
         });
     }
 

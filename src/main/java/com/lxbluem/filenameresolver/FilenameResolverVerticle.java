@@ -13,14 +13,16 @@ import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 public class FilenameResolverVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(FilenameResolverVerticle.class);
     private final ResolvePackName resolver;
+    private final SyncStorageFromFs syncStorageFromFs;
 
     public FilenameResolverVerticle(ResolvePackName resolver, SyncStorageFromFs syncStorageFromFs) {
         this.resolver = resolver;
-        syncStorageFromFs.execute();
+        this.syncStorageFromFs = syncStorageFromFs;
     }
 
     @Override
     public Completable rxStart() {
+        syncStorageFromFs.execute();
         vertx.eventBus().<JsonObject>consumer(FILENAME_RESOLVE.address())
                 .toObservable()
                 .subscribe(message -> {

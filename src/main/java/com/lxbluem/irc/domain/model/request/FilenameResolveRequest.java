@@ -11,4 +11,5 @@ import java.io.Serializable;
 @EqualsAndHashCode
 public class FilenameResolveRequest implements Serializable {
     private final String filename;
+    private final long filesize;
 }

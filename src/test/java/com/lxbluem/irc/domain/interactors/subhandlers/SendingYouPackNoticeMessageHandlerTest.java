@@ -18,7 +18,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
-public class CompareIncomingPackWithRequestedPackTest {
+public class SendingYouPackNoticeMessageHandlerTest {
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler handler;
@@ -30,7 +30,7 @@ public class CompareIncomingPackWithRequestedPackTest {
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
         StateStorage stateStorage = new InMemoryStateStorage();
-        handler = new CompareIncomingPackWithRequestedPack(botStorage, stateStorage);
+        handler = new SendingYouPackNoticeMessageHandler(botStorage, stateStorage);
 
         initializeStorages(botStorage, stateStorage);
     }
@@ -65,6 +65,20 @@ public class CompareIncomingPackWithRequestedPackTest {
 
         assertTrue(handled);
         assertTrue(state.isRemoteSendsCorrectPack());
+        assertTrue(state.isPackResumable());
+        verifyZeroInteractions(ircBot);
+    }
+
+    @Test
+    public void incoming_pack_matches_requested_pack_not_resumable() {
+        String noticeMessage = "** Sending you pack #1 (\"test1.bin\"), which is <1kB.";
+        NoticeMessageCommand command = new NoticeMessageCommand("Andy", "keex", noticeMessage);
+
+        boolean handled = handler.handle(command);
+
+        assertTrue(handled);
+        assertTrue(state.isRemoteSendsCorrectPack());
+        assertFalse(state.isPackResumable());
         verifyZeroInteractions(ircBot);
     }
 

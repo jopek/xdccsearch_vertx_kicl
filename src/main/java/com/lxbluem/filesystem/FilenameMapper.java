@@ -62,6 +62,9 @@ public class FilenameMapper {
     }
 
     public String getFsFilename(String packFilename, int suffix) {
+        return getFsFilename(packFilename, suffix, true);
+    }
+    public String getFsFilename(String packFilename, int suffix, boolean addPartSuffix) {
         List<String> nameElements = getNameElements(packFilename);
         int size = nameElements.size();
 
@@ -73,7 +76,10 @@ public class FilenameMapper {
             nameElements.add(String.format("_x%dx_", suffix));
             nameElements.add(extension);
         }
-        nameElements.add(PART);
+
+        if (addPartSuffix)
+            nameElements.add(PART);
+
         return StringUtils.join(nameElements, '.');
     }
 

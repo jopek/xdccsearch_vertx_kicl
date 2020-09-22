@@ -41,10 +41,16 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
         if (!ctcpQuery.isValid())
             return;
 
+        /*
+            in  DCC SEND <filename> <ip> 0 <filesize> <token>
+            out DCC RESUME <filename> 0 <position> <token>
+            in  DCC ACCEPT <filename> 0 <position> <token>
+            out DCC SEND <filename> <peer-ip> <port> <filesize> <token>
+         */
+
         botStorage.get(botNickName).ifPresent(bot ->
                 stateStorage.get(botNickName).ifPresent(state -> {
 
-                    String packName = state.getPack().getPackName();
                     String incomingFilename = ctcpQuery.getFilename();
                     String packNickName = state.getPack().getNickName();
 
@@ -60,6 +66,14 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
                                 ctcpQuery.getToken()
                         );
 
+                        // DCC RESUME <filename> <port> <position>
+                        long position = 0;
+                        String dccResumeRequest = format("DCC RESUME %s %d %d",
+                                incomingFilename,
+                                passiveDccSocketPort,
+                                position
+                        );
+
                         bot.sendCtcpMessage(packNickName, dccSendRequest);
                     };
 
@@ -69,7 +83,7 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
                         botMessaging.ask(DCC_INITIALIZE, query, passiveDccSocketPortConsumer);
                     };
 
-                    FilenameResolveRequest resolveRequest = new FilenameResolveRequest(incomingFilename);
+                    FilenameResolveRequest resolveRequest = new FilenameResolveRequest(incomingFilename, ctcpQuery.getSize());
                     state.saveCtcpHandshake(
                             () -> botMessaging.ask(FILENAME_RESOLVE, resolveRequest, filenameResolverConsumer)
                     );

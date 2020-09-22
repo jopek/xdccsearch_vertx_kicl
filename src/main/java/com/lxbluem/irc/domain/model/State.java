@@ -28,6 +28,7 @@ public class State {
     private final Runnable decoratedRequestHook;
     private boolean remoteSendsCorrectPack;
     private Runnable ctcpHandshake;
+    private boolean packResumable;
 
     public State(Pack pack, Runnable requestHook) {
         this.pack = pack;
@@ -80,6 +81,10 @@ public class State {
 
         return remoteUserSeen && allChannelsJoined && !nickRegistryRequired
                 || remoteUserSeen && allChannelsJoined && nickRegistered;
+    }
+
+    public void packIsResumable() {
+        this.packResumable = true;
     }
 
     public void nickRegistryRequired() {

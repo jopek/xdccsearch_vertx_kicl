@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 //@Ignore
-public class FilenameResolverTest {
+public class ResolvePackNameTest {
 
     private static final String PATH = "downloads";
 
@@ -66,7 +66,11 @@ public class FilenameResolverTest {
         booleanFutureCaptor.getValue().handle(Future.succeededFuture(true));
 
         verify(fileSystem).readDir(eq(PATH), fileListFutureCaptor.capture());
-        List<String> filenameList = Arrays.asList("biene maja", "biene maja._x1x_", "biene maja._x2x_.part");
+        List<String> filenameList = Arrays.asList(
+                "biene maja",
+                "biene maja._x1x_",
+                "biene maja._x2x_.part"
+        );
         fileListFutureCaptor.getValue().handle(Future.succeededFuture(filenameList));
 
         filenameList.forEach(filename -> {
@@ -90,7 +94,7 @@ public class FilenameResolverTest {
     }
 
     @Test
-    public void give_valid_new_packname_file_exists() throws Exception {
+    public void give_valid_new_packname_file_exists() {
         verify(fileSystem).exists(eq(PATH), booleanFutureCaptor.capture());
         booleanFutureCaptor.getValue().handle(Future.succeededFuture(true));
 
@@ -117,7 +121,7 @@ public class FilenameResolverTest {
     }
 
     @Test
-    public void give_valid_new_packname_file_does_not_exist() throws Exception {
+    public void give_valid_new_packname_file_does_not_exist() {
         verify(fileSystem).exists(eq(PATH), booleanFutureCaptor.capture());
         booleanFutureCaptor.getValue().handle(Future.succeededFuture(true));
 

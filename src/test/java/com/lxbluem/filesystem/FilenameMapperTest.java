@@ -2,11 +2,14 @@ package com.lxbluem.filesystem;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 
 public class FilenameMapperTest {
 
-    private FilenameMapper mapper = new FilenameMapper();
+    private final FilenameMapper mapper = new FilenameMapper();
 
     @Test
     public void name_to_packname() {
@@ -37,5 +40,13 @@ public class FilenameMapperTest {
         assertEquals("filename._x200x_.txt.part", mapper.getFsFilename("filename.txt", 200));
     }
 
+    @Test
+    public void name() {
+        List<Integer> ints = Arrays.asList();
+        int suffix = ints
+                .stream()
+                .reduce(10, Math::max);
 
+        assertEquals(10, suffix);
+    }
 }

@@ -25,8 +25,10 @@ public class DccCtcpQuery implements Serializable {
     private final int token;
     private final boolean isValid;
     private final TransferType transferType;
+    private final HandshakeType handshakeType;
 
     public enum TransferType {ACTIVE, PASSIVE}
+    public enum HandshakeType {SEND, ACCEPT}
 
     public static DccCtcpQuery fromQueryString(String incomingCtcpQuery) {
         Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) (\\S+) (\\d+) (\\d+) (\\d+)( \\d+)?");
@@ -51,7 +53,12 @@ public class DccCtcpQuery implements Serializable {
             transferType = TransferType.PASSIVE;
         }
 
+        HandshakeType handshakeType = HandshakeType.SEND;
+        if (matcher.group(1).equalsIgnoreCase("ACCEPT"))
+            handshakeType = HandshakeType.ACCEPT;
+
         return DccCtcpQuery.builder()
+                .handshakeType(handshakeType)
                 .filename(matcher.group(2))
                 .ip(Long.parseLong(matcher.group(3)))
                 .parsedIp(transformLongToIpString(Long.parseLong(matcher.group(3))))

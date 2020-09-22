@@ -6,7 +6,12 @@ import com.lxbluem.common.adapter.EventbusEventDispatcher;
 import com.lxbluem.common.domain.ports.BotMessaging;
 import com.lxbluem.common.domain.ports.EventDispatcher;
 import com.lxbluem.eventlogger.EventLoggerVerticle;
-import com.lxbluem.filesystem.FilenameResolverVerticle;
+import com.lxbluem.filenameresolver.FilenameResolverVerticle;
+import com.lxbluem.filenameresolver.adapters.InMemoryEntityStorage;
+import com.lxbluem.filenameresolver.domain.interactors.FileSystemBlockingImpl;
+import com.lxbluem.filenameresolver.domain.interactors.ResolvePackNameImpl;
+import com.lxbluem.filenameresolver.domain.interactors.SyncStorageFromFsImpl;
+import com.lxbluem.filesystem.FilenameMapper;
 import com.lxbluem.irc.DccReceiverVerticle;
 import com.lxbluem.irc.NewBotVerticle;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
@@ -36,6 +41,7 @@ import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.jackson.DatabindCodec;
+import io.vertx.rxjava.core.file.FileSystem;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
@@ -56,7 +62,7 @@ public class Starter {
         Verticle stateVerticle = getStateVerticle(clock);
         Verticle botVerticle = getBotVerticle(botMessaging, eventDispatcher);
         Verticle searchVerticle = getSearchVerticle(vertx);
-        Verticle filenameResolverVerticle = new FilenameResolverVerticle();
+        Verticle filenameResolverVerticle = getFilenameResolverVerticle(FileSystem.newInstance(vertx.fileSystem()));
         Verticle receiverVerticle = new DccReceiverVerticle(botMessaging);
         Verticle eventLoggerVerticle = new EventLoggerVerticle();
         Verticle notificationVerticle = new ExternalNotificationVerticle();
@@ -71,6 +77,15 @@ public class Starter {
         deploy(vertx, receiverVerticle);
 //        deploy(vertx, notificationVerticle);
         deploy(vertx, filenameResolverVerticle);
+    }
+
+    private static Verticle getFilenameResolverVerticle(FileSystem vertxFileSystem) {
+        FilenameMapper filenameMapper = new FilenameMapper();
+        FileSystemBlockingImpl fileSystem = new FileSystemBlockingImpl(vertxFileSystem);
+        InMemoryEntityStorage storage = new InMemoryEntityStorage();
+        String downloadsPath = "downloads";
+        ResolvePackNameImpl resolvePackName = new ResolvePackNameImpl(filenameMapper, fileSystem, storage, downloadsPath);
+        return new FilenameResolverVerticle(resolvePackName, new SyncStorageFromFsImpl(fileSystem, storage, downloadsPath));
     }
 
 
@@ -93,7 +108,7 @@ public class Starter {
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
         noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher));
-        noticeMessageHandler.registerMessageHandler(new CompareIncomingPackWithRequestedPack(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new SendingYouPackNoticeMessageHandler(botStorage, stateStorage));
 
         PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher);

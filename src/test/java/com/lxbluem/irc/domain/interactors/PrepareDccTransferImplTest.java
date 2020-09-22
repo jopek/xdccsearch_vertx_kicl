@@ -133,7 +133,7 @@ public class PrepareDccTransferImplTest {
 
         prepareDccTransfer.handle(new PrepareDccTransferCommand(botNick, ctcpQuery, 0L));
 
-        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
+        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin", 6L)), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 
@@ -163,7 +163,7 @@ public class PrepareDccTransferImplTest {
 
         prepareDccTransfer.handle(new PrepareDccTransferCommand(botNick, ctcpQuery, 3232260865L));
 
-        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin")), consumerArgumentCaptor.capture());
+        verify(botMessaging).ask(eq(Address.FILENAME_RESOLVE), eq(new FilenameResolveRequest("test1.bin", 6L)), consumerArgumentCaptor.capture());
         Consumer<Map<String, Object>> resolvedFilenameConsumer = consumerArgumentCaptor.getValue();
         resolvedFilenameConsumer.accept(Collections.singletonMap("filename", "test1._x0x_.bin"));
 

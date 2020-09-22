@@ -2,21 +2,25 @@ package com.lxbluem.filesystem;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.FileSystemException;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
 
 public class FilenameResolver {
 
-    private String path;
-    private FileSystem fileSystem;
+    private final String path;
+    private final FileSystem fileSystem;
     private final FilenameMapper filenameMapper;
-    private Set<FileEntity> filesOnDisk = new HashSet<>();
+    private final Set<FileEntity> filesOnDisk = new HashSet<>();
 
     public FilenameResolver(Vertx vertx, String path, FilenameMapper filenameMapper) {
         this.path = path;
@@ -27,9 +31,7 @@ public class FilenameResolver {
     }
 
     private void prefillEntitySet() {
-        Future<List<FileEntity>> fileEntitiesFuture = entitiesOnDisk();
-
-        fileEntitiesFuture
+        entitiesOnDisk()
                 .setHandler(all -> {
                     if (all.succeeded()) {
                         List<FileEntity> result = all.result();
@@ -72,9 +74,9 @@ public class FilenameResolver {
     }
 
     private Future<Boolean> dirExists() {
-        Future<Boolean> exitsFuture = Future.future();
-        fileSystem.exists(path, exitsFuture);
-        return exitsFuture;
+        Promise<Boolean> exists = Promise.promise();
+        fileSystem.exists(path, exists.future());
+        return exists.future();
     }
 
     private Future<Void> mkdir(String path) {
@@ -120,36 +122,28 @@ public class FilenameResolver {
         return fileEntityFuture;
     }
 
-    public Future<List<FileEntity>> getPackFilesFromDisk(String packname) {
-        List<FileEntity> fileEntities = filesOnDisk.stream()
-                .filter(fe -> fe.getPackname().equalsIgnoreCase(packname))
-                .collect(toList());
-        return Future.succeededFuture(fileEntities);
-    }
-
     public Future<String> getFileNameForPackName(String requestedPackName) {
         List<FileEntity> fileEntities = filesOnDisk.stream()
-                .filter(fileEntityOnDisk -> {
-                    String fePackname = fileEntityOnDisk.getPackname();
-                    return fePackname.equalsIgnoreCase(requestedPackName);
-                })
+                .filter(fileEntityOnDisk -> fileEntityOnDisk.getPackname()
+                        .equalsIgnoreCase(requestedPackName)
+                )
                 .collect(toList());
 
-        Optional<FileEntity> fileEntity = fileEntities
-                .stream()
-                .max(Comparator.comparingInt(FileEntity::getSuffix));
+        int suffix = getSuffix(fileEntities);
+        filesOnDisk.add(new FileEntity(requestedPackName, path, suffix, 0, 0, 0));
+        String fsFilename = filenameMapper.getFsFilename(path + "/" + requestedPackName, suffix);
+        return Future.succeededFuture(fsFilename);
+    }
 
-        Integer suffix = fileEntity
+    private int getSuffix(List<FileEntity> fileEntities) {
+        int suffix = fileEntities
+                .stream()
+                .max(Comparator.comparingInt(FileEntity::getSuffix))
                 .map(FileEntity::getSuffix)
                 .orElse(0);
 
         if (!fileEntities.isEmpty())
             suffix++;
-
-        filesOnDisk.add(new FileEntity(requestedPackName, path, suffix, 0, 0, 0));
-
-        String fsFilename = filenameMapper.getFsFilename(path + "/" + requestedPackName, suffix);
-
-        return Future.succeededFuture(fsFilename);
+        return suffix;
     }
 }

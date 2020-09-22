@@ -9,12 +9,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandler.SubHandler {
+public class SendingYouPackNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
     private final BotStorage botStorage;
     private final StateStorage stateStorage;
     public static final Pattern PATTERN = Pattern.compile("\\*\\* sending you pack #\\d+ \\(\"(.*?)\"\\)", Pattern.CASE_INSENSITIVE);
 
-    public CompareIncomingPackWithRequestedPack(BotStorage botStorage, StateStorage stateStorage) {
+    public SendingYouPackNoticeMessageHandler(BotStorage botStorage, StateStorage stateStorage) {
         this.botStorage = botStorage;
         this.stateStorage = stateStorage;
     }
@@ -39,6 +39,8 @@ public class CompareIncomingPackWithRequestedPack implements NoticeMessageHandle
                             handledThisCommand.set(true);
 
                             String incomingPackName = matcher.group(1);
+                            if (noticeMessage.toLowerCase().contains("resume supported"))
+                                state.packIsResumable();
 
                             String packName = state.getPack().getPackName();
                             if (!(incomingPackName.equalsIgnoreCase(packName))) {

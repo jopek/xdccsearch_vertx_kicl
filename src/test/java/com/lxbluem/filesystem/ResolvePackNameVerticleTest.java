@@ -15,7 +15,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class FilenameResolverVerticleTest {
+public class ResolvePackNameVerticleTest {
     private Vertx vertx;
 
     @Before

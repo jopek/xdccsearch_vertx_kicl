@@ -32,17 +32,17 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
                 .collect(Collectors.toList());
         List<FileEntity> allFileEntities = fileEntityStorage.getAll();
 
-        allFileEntities.stream()
+        List<FileEntity> toRemove = allFileEntities.stream()
                 .filter(fileEntity -> !directoryListing.contains(fileEntity.getFilenameOnDisk()))
-                .forEach(fileEntityStorage::remove);
+                .collect(Collectors.toList());
+        fileEntityStorage.removeAll(toRemove);
 
-        allFileEntities
+        List<FileEntity> toAdd = allFileEntities
                 .stream()
                 .filter(FileEntity::isInUse)
                 .filter(fileEntity -> directoryListing.contains(fileEntity.getFilenameOnDisk()))
-                .forEach(fileEntity -> {
-                    fileEntity.setInUse(false);
-                    fileEntityStorage.save(fileEntity);
-                });
+                .peek(fileEntity -> fileEntity.setInUse(false))
+                .collect(Collectors.toList());
+        fileEntityStorage.saveAll(toAdd);
     }
 }

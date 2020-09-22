@@ -14,4 +14,5 @@ public interface FileEntityStorage {
     List<FileEntity> findByNameAndSize(String filename, long filesize);
     Optional<FileEntity> findByFileName(String filename);
     void remove(FileEntity fileEntity);
+    void removeAll(Collection<FileEntity> toBeRemoved);
 }

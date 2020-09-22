@@ -51,4 +51,9 @@ public class InMemoryEntityStorage implements FileEntityStorage {
     public void remove(FileEntity fileEntity) {
         filesOnDisk.remove(fileEntity);
     }
+
+    @Override
+    public void removeAll(Collection<FileEntity> toBeRemoved) {
+        filesOnDisk.removeAll(toBeRemoved);
+    }
 }

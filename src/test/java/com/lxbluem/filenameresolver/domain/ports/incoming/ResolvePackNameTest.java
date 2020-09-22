@@ -1,12 +1,12 @@
 package com.lxbluem.filenameresolver.domain.ports.incoming;
 
 import com.lxbluem.filenameresolver.adapters.InMemoryEntityStorage;
+import com.lxbluem.filenameresolver.domain.interactors.FilenameMapper;
 import com.lxbluem.filenameresolver.domain.interactors.ResolvePackNameImpl;
 import com.lxbluem.filenameresolver.domain.model.FileEntity;
 import com.lxbluem.filenameresolver.domain.ports.incoming.ResolvePackName.Response;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
-import com.lxbluem.filesystem.FilenameMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;

@@ -4,7 +4,6 @@ import com.lxbluem.filenameresolver.domain.model.FileEntity;
 import com.lxbluem.filenameresolver.domain.ports.incoming.ResolvePackName;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
-import com.lxbluem.filesystem.FilenameMapper;
 import rx.Single;
 
 import java.util.Comparator;
@@ -112,10 +111,10 @@ public class ResolvePackNameImpl implements ResolvePackName {
     }
 
     private String nonCanonical(String canonicalPath) {
-        int lastIndexOf = canonicalPath.lastIndexOf(downloadsPath);
+        int lastIndexOf = canonicalPath.lastIndexOf("/");
         if (lastIndexOf == -1)
             return canonicalPath;
-        return canonicalPath.substring(lastIndexOf + downloadsPath.length() + 1);
+        return canonicalPath.substring(lastIndexOf + 1);
     }
 }
 

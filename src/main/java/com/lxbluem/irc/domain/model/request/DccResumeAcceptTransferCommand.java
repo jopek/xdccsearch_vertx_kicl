@@ -7,8 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 @Builder
 @Getter
-public class PrepareDccTransferCommand {
+public class DccResumeAcceptTransferCommand {
     private final String botNickName;
-    private final DccCtcpQuery ctcpQuery;
     private final long localIp;
 }

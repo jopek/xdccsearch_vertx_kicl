@@ -110,7 +110,7 @@ public class Starter {
         noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new SendingYouPackNoticeMessageHandler(botStorage, stateStorage));
 
-        PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging);
+        PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging, exitBot);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher);
         JoinMentionedChannelsImpl joinMentionedChannels = new JoinMentionedChannelsImpl(botStorage, stateStorage);
         RegisterNickName registerNickName = new RegisterNickNameImpl(botStorage);

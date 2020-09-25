@@ -229,13 +229,32 @@ public class KittehIrcBot implements IrcBot {
 
     @Handler
     public void onPrivateCTCPQuery(PrivateCtcpQueryEvent event) {
-        DccCtcpQuery dccCtcpQuery = DccCtcpQuery.fromQueryString(event.getMessage());
+        String message = event.getMessage();
         long localIp = event.getClient()
                 .getUser()
                 .map(User::getHost)
                 .map(this::transformIpToLong)
                 .orElse(0L);
-        prepareDccTransfer.handle(new PrepareDccTransferCommand(botName, dccCtcpQuery, localIp));
+
+        if (isSend(message)) {
+            CtcpDccSend ctcpDccSend = CtcpDccSend.fromQueryString(message);
+            DccSendTransferCommand command = new DccSendTransferCommand(botName, ctcpDccSend, localIp);
+            prepareDccTransfer.handle(command);
+        }
+
+        if (isAccept(message)) {
+            DccResumeAcceptTransferCommand command = new DccResumeAcceptTransferCommand(botName, localIp);
+            prepareDccTransfer.handle(command);
+        }
+    }
+
+    private boolean isSend(String message) {
+        String[] split = message.trim().split("\\s+");
+        return split[1].equals("SEND");
+    }
+    private boolean isAccept(String message) {
+        String[] split = message.trim().split("\\s+");
+        return split[1].equals("ACCEPT");
     }
 
     private long transformIpToLong(String ipString) {

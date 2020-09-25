@@ -125,12 +125,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
         String filename = message.getString("filename");
         String botname = message.getString("bot");
         long filesize = message.getLong("size", 0L);
+        long continueFromPosition = message.getLong("continueFromPosition", 0L);
 
         AtomicReference<File> file = new AtomicReference<>(new File(filename));
         AtomicReference<RandomAccessFile> fileOutput = new AtomicReference<>(null);
         try {
             fileOutput.set(new RandomAccessFile(file.get().getCanonicalPath(), "rw"));
-            fileOutput.get().seek(0);
+            fileOutput.get().seek(continueFromPosition);
         } catch (IOException error) {
             LOG.error("error opening file before transfer", error);
             botMessaging.notify(DCC_FAILED.address(), botname, error);
@@ -141,12 +142,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
                 socket -> {
                     final JsonObject extra = new JsonObject()
                             .put("filenameOnDisk", filename)
+                            .put("continueFromPosition", continueFromPosition)
                             .put("bytesTotal", filesize);
                     botMessaging.notify(DCC_STARTED.address(), botname, extra);
                     LOG.info("starting transfer of {}", filename);
 
                     byte[] outBuffer = new byte[4];
-                    final long[] bytesTransferredValue = {0};
+                    final long[] bytesTransferredValue = {continueFromPosition};
                     final long[] totalBytesValue = {filesize};
                     final long[] lastProgressAt = {0};
 
@@ -187,6 +189,7 @@ public class DccReceiverVerticle extends AbstractVerticle {
             bytesTransferedValue[0] = bytesTransfered;
 
             try {
+                // FIXME: write CHUNKS!
                 file.write(buffer.getDelegate().getBytes(), 0, buffer.length());
             } catch (IOException e) {
                 e.printStackTrace();

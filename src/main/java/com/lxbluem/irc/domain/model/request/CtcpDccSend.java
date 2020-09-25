@@ -6,16 +6,13 @@ import lombok.Getter;
 import lombok.ToString;
 
 import java.io.Serializable;
-import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @AllArgsConstructor
 @Builder
 @Getter
 @ToString
-public class DccCtcpQuery implements Serializable {
+public class CtcpDccSend implements Serializable {
 
     private final String filename;
     private final long ip;
@@ -25,17 +22,19 @@ public class DccCtcpQuery implements Serializable {
     private final int token;
     private final boolean isValid;
     private final TransferType transferType;
-    private final HandshakeType handshakeType;
 
     public enum TransferType {ACTIVE, PASSIVE}
-    public enum HandshakeType {SEND, ACCEPT}
 
-    public static DccCtcpQuery fromQueryString(String incomingCtcpQuery) {
-        Pattern pattern = Pattern.compile("DCC (SEND|ACCEPT) (\\S+) (\\d+) (\\d+) (\\d+)( \\d+)?");
-        Matcher matcher = pattern.matcher(incomingCtcpQuery);
+    //       0   1       2          3          4        5        6
+    //      DCC SEND   <filename> <sender-ip> <port> <filesize> <token>
+    //      DCC ACCEPT <filename> 0 <position> <token>
+//(ACCEPT) (\S+) (\d+) (\d+)( \d+)?)
 
-        if (!matcher.find()) {
-            return DccCtcpQuery.builder()
+    public static CtcpDccSend fromQueryString(String incomingCtcpQuery) {
+        String[] ctcp = incomingCtcpQuery.trim().split("\\s+");
+
+        if (!(ctcp.length == 6 || ctcp.length == 7) || !ctcp[1].equalsIgnoreCase("send")) {
+            return CtcpDccSend.builder()
                     .filename("")
                     .transferType(TransferType.ACTIVE)
                     .isValid(false)
@@ -43,27 +42,22 @@ public class DccCtcpQuery implements Serializable {
                     .build();
         }
 
-        int port = Integer.parseInt(matcher.group(4));
+        int port = Integer.parseInt(ctcp[4]);
 
         TransferType transferType = TransferType.ACTIVE;
         int token = 0;
 
         if (port == 0) {
-            token = Objects.nonNull(matcher.group(6)) ? Integer.parseInt(matcher.group(6).trim()) : 0;
+            token = ctcp.length == 7 ? Integer.parseInt(ctcp[6]) : 0;
             transferType = TransferType.PASSIVE;
         }
 
-        HandshakeType handshakeType = HandshakeType.SEND;
-        if (matcher.group(1).equalsIgnoreCase("ACCEPT"))
-            handshakeType = HandshakeType.ACCEPT;
-
-        return DccCtcpQuery.builder()
-                .handshakeType(handshakeType)
-                .filename(matcher.group(2))
-                .ip(Long.parseLong(matcher.group(3)))
-                .parsedIp(transformLongToIpString(Long.parseLong(matcher.group(3))))
+        return CtcpDccSend.builder()
+                .filename(ctcp[2])
+                .ip(Long.parseLong(ctcp[3]))
+                .parsedIp(transformLongToIpString(Long.parseLong(ctcp[3])))
                 .port(port)
-                .size(Long.parseLong(matcher.group(5)))
+                .size(Long.parseLong(ctcp[5].trim()))
                 .transferType(transferType)
                 .token(token)
                 .isValid(true)

@@ -13,19 +13,25 @@ public class DccInitializeRequest implements Serializable {
     private String ip;
     private int port;
     private long size;
+    private long continueFromPosition;
     private String filename;
     private int token;
     private String bot;
 
-    public static DccInitializeRequest from(DccCtcpQuery query, String botNickName, String resolvedFilename) {
+    public static DccInitializeRequest from(
+            CtcpDccSend query,
+            String botNickName,
+            String resolvedFilename,
+            long continueFromPosition) {
         return DccInitializeRequest.builder()
                 .bot(botNickName)
                 .filename(resolvedFilename)
                 .ip(query.getParsedIp())
                 .port(query.getPort())
-                .passive(query.getTransferType().equals(DccCtcpQuery.TransferType.PASSIVE))
+                .passive(query.getTransferType().equals(CtcpDccSend.TransferType.PASSIVE))
                 .token(query.getToken())
                 .size(query.getSize())
+                .continueFromPosition(continueFromPosition)
                 .build();
     }
 }

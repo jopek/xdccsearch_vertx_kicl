@@ -1,6 +1,7 @@
 package com.lxbluem.irc.domain.model;
 
 import com.lxbluem.common.domain.Pack;
+import com.lxbluem.irc.domain.model.request.CtcpDccSend;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -29,6 +30,9 @@ public class State {
     private boolean remoteSendsCorrectPack;
     private Runnable ctcpHandshake;
     private boolean packResumable;
+    private String resolvedFilename;
+    private long resolvedFilePartialSize;
+    private CtcpDccSend initialDccSendQuery;
 
     public State(Pack pack, Runnable requestHook) {
         this.pack = pack;
@@ -103,6 +107,10 @@ public class State {
         return pack;
     }
 
+    public void resolvedFilename(String resolvedFilename) {
+        this.resolvedFilename = resolvedFilename;
+    }
+
     public void removeReferencedChannel(String channelName) {
         referencedChannelNames.remove(channelName);
         if (isRequestingPackPossible()) {
@@ -136,5 +144,13 @@ public class State {
 
     public void saveCtcpHandshake(Runnable ctcpHandshake) {
         this.ctcpHandshake = ctcpHandshake;
+    }
+
+    public void resolvedFilePartialSize(long filesize) {
+        this.resolvedFilePartialSize = filesize;
+    }
+
+    public void initialDccSendQuery(CtcpDccSend initialDccSendQuery) {
+        this.initialDccSendQuery = initialDccSendQuery;
     }
 }

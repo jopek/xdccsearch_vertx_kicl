@@ -23,12 +23,7 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
     public void execute() {
         List<String> directoryListing = fileSystem.readDir(downloadsPath)
                 .stream()
-                .map(canonicalPath -> {
-                    int lastIndexOf = canonicalPath.lastIndexOf(downloadsPath);
-                    if (lastIndexOf == -1)
-                        return canonicalPath;
-                    return canonicalPath.substring(lastIndexOf + downloadsPath.length() + 1);
-                })
+                .map(this::basename)
                 .collect(Collectors.toList());
         List<FileEntity> allFileEntities = fileEntityStorage.getAll();
 
@@ -44,5 +39,12 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
                 .peek(fileEntity -> fileEntity.setInUse(false))
                 .collect(Collectors.toList());
         fileEntityStorage.saveAll(toAdd);
+    }
+
+    private String basename(String canonicalPath) {
+        int lastIndexOf = canonicalPath.lastIndexOf("/");
+        if (lastIndexOf == -1)
+            return canonicalPath;
+        return canonicalPath.substring(lastIndexOf + 1);
     }
 }

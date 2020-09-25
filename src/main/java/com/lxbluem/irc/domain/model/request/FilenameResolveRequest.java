@@ -10,6 +10,6 @@ import java.io.Serializable;
 @Getter
 @EqualsAndHashCode
 public class FilenameResolveRequest implements Serializable {
-    private final String filename;
-    private final long filesize;
+    private final String packname;
+    private final long packsize;
 }

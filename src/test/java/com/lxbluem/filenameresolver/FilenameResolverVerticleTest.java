@@ -57,11 +57,11 @@ public class FilenameResolverVerticleTest {
     @Test
     public void synchronise_storage_on_verticle_start(TestContext testContext) {
         when(fileSystem.readDir("downloads")).thenReturn(Arrays.asList(
-                "/canonical/path/file._x0x_.bin.part",
-                "/canonical/path/file._x1x_.bin.part",
-                "/canonical/path/file2._x0x_.bin",
-                "/canonical/path/file2._x1x_.bin.part",
-                "/canonical/path/file2._x2x_.bin"
+                "/canonical/path/downloads/file._x0x_.bin.part",
+                "/canonical/path/downloads/file._x1x_.bin.part",
+                "/canonical/path/downloads/file2._x0x_.bin",
+                "/canonical/path/downloads/file2._x1x_.bin.part",
+                "/canonical/path/downloads/file2._x2x_.bin"
         ));
         storage.save(new FileEntity("file.bin", 1000L, "file._x0x_.bin.part", true));
         storage.save(new FileEntity("file.bin", 2000L, "file._x1x_.bin.part", true));
@@ -87,8 +87,8 @@ public class FilenameResolverVerticleTest {
     @Test
     public void name(TestContext testContext) {
         JsonObject message = new JsonObject()
-                .put("filename", "file1a")
-                .put("filesize", 2000L);
+                .put("packname", "file1a")
+                .put("packsize", 2000L);
 
         Async async = testContext.async();
         vertx.deployVerticle(verticle, testContext.asyncAssertSuccess(event -> async.complete()));

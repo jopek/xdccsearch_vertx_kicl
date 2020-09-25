@@ -27,8 +27,8 @@ public class FilenameResolverVerticle extends AbstractVerticle {
                 .toObservable()
                 .subscribe(message -> {
                     JsonObject body = message.body();
-                    String requestedFilename = body.getString("filename");
-                    long requestedFileSize = body.getLong("filesize");
+                    String requestedFilename = body.getString("packname");
+                    long requestedFileSize = body.getLong("packsize");
 
                     resolver.execute(requestedFilename, requestedFileSize)
                             .subscribe(response -> {

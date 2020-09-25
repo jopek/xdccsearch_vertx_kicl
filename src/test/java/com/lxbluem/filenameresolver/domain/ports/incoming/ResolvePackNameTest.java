@@ -108,6 +108,37 @@ public class ResolvePackNameTest {
     }
 
     @Test
+    public void filename_present__position_eof__complete__multiple_2() {
+        when(fileSystem.readDir("downloads"))
+                .thenReturn(Arrays.asList(
+                        "/canonical/path/to/downloads/test3-1m._x0x_.bin",
+                        "/canonical/path/to/downloads/test3-1m._x0x_.bin.part",
+                        "/canonical/path/to/downloads/test3-1m._x1x_.bin",
+                        "/canonical/path/to/downloads/test3-1m._x2x_.bin.part",
+                        "/canonical/path/to/downloads/test3-1m._x3x_.bin.part",
+                        "/canonical/path/to/downloads/test3-1m._x4x_.bin",
+                        "/canonical/path/to/downloads/test3-1m._x5x_.bin",
+                        "/canonical/path/to/downloads/test3-1m.bin"
+                ));
+
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x0x_.bin")).thenReturn(137_240L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x0x_.bin.part")).thenReturn(67_160L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x1x_.bin")).thenReturn(1_048_576L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x2x_.bin.part")).thenReturn(39_420L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x3x_.bin.part")).thenReturn(51_100L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x4x_.bin")).thenReturn(1_048_576L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m._x5x_.bin")).thenReturn(55_480L);
+        when(fileSystem.fileSize("/canonical/path/to/downloads/test3-1m.bin")).thenReturn(1_048_576L);
+
+        Response expected = new Response("downloads/test3-1m.bin", 1_048_576L, true);
+
+        resolvePackName.execute("test3-1m.bin", 1_048_576L)
+                .test()
+                .assertValue(expected)
+                .unsubscribe();
+    }
+
+    @Test
     public void filename_present__position_eof__complete__multiple__not_matching_size() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
@@ -159,8 +190,8 @@ public class ResolvePackNameTest {
     @Test
     public void filename_present__position_in_file__incomplete__not_in_use() {
         when(fileSystem.readDir("downloads"))
-                .thenReturn(Arrays.asList("someFile._x0x_.part"));
-        when(fileSystem.fileSize("someFile._x0x_.part"))
+                .thenReturn(Arrays.asList("/path/downloads/someFile._x0x_.part"));
+        when(fileSystem.fileSize("/path/downloads/someFile._x0x_.part"))
                 .thenReturn(5_000L);
         fileEntityStorage.save(new FileEntity("someFile", 10_000L, "someFile._x0x_.part", false));
 

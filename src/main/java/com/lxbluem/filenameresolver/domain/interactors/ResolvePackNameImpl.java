@@ -36,7 +36,7 @@ public class ResolvePackNameImpl implements ResolvePackName {
     public Single<Response> execute(String requestedFilename, long requestedFileSize) {
         List<String> packFilesOnDisk = fs.readDir(downloadsPath)
                 .stream()
-                .filter(f -> filenameMapper.createPackName(nonCanonical(f))
+                .filter(f -> filenameMapper.createPackName(basename(f))
                         .equalsIgnoreCase(requestedFilename)
                 )
                 .collect(toList());
@@ -63,10 +63,9 @@ public class ResolvePackNameImpl implements ResolvePackName {
 
 
         if (complete.size() > 0) {
-            String packFilename = complete.get(complete.size() - 1);
-            String fsFilename = filenameMapper.getFsFilename(requestedFilename, filenameMapper.createPackSuffix(packFilename), false);
-            String path = String.format("%s/%s", downloadsPath, fsFilename);
-            Response response = new Response(path, fileSizes.get(packFilename), true);
+            String fullPath = complete.get(complete.size() - 1);
+            String path = String.format("%s/%s", downloadsPath, basename(fullPath));
+            Response response = new Response(path, fileSizes.get(fullPath), true);
             return Single.just(response);
         }
 
@@ -81,19 +80,24 @@ public class ResolvePackNameImpl implements ResolvePackName {
 
 
             List<String> unusedPartials = partials.stream()
-                    .filter(packFileOnDisk -> !fileEntityMap.getOrDefault(packFileOnDisk, FileEntity.builder()
-                            .inUse(true)
+                    .filter(packFileOnDisk -> !fileEntityMap.getOrDefault(basename(packFileOnDisk), FileEntity.builder()
+                            .inUse(false)
                             .build()).isInUse())
-                    .sorted(Comparator.comparingLong(fileSizes::get))
+                    .sorted(Comparator.comparingLong(fileSizes::get).reversed())
                     .collect(toList());
 
-            int newSuffix = suffix;
-            if (unusedPartials.isEmpty())
-                newSuffix++;
-
-            String fsFilename = filenameMapper.getFsFilename(requestedFilename, newSuffix);
-            String path = String.format("%s/%s", downloadsPath, fsFilename);
-            Response response = new Response(path, fileSizes.getOrDefault(fsFilename, 0L), false);
+            Response response;
+            String fsFilename;
+            if (unusedPartials.isEmpty()) {
+                fsFilename = filenameMapper.getFsFilename(requestedFilename, suffix + 1);
+                String path = String.format("%s/%s", downloadsPath, fsFilename);
+                response = new Response(path, fileSizes.getOrDefault(fsFilename, 0L), false);
+            } else {
+                String fullPath = unusedPartials.get(0);
+                fsFilename = basename(fullPath);
+                String path = String.format("%s/%s", downloadsPath, fsFilename);
+                response = new Response(path, fileSizes.getOrDefault(fullPath, 0L), false);
+            }
 
             storage.save(new FileEntity(requestedFilename, requestedFileSize, fsFilename, true));
 
@@ -110,7 +114,7 @@ public class ResolvePackNameImpl implements ResolvePackName {
         return Single.just(response);
     }
 
-    private String nonCanonical(String canonicalPath) {
+    private String basename(String canonicalPath) {
         int lastIndexOf = canonicalPath.lastIndexOf("/");
         if (lastIndexOf == -1)
             return canonicalPath;

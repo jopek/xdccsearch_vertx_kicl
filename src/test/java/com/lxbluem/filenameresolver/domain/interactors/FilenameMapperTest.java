@@ -1,4 +1,4 @@
-package com.lxbluem.filesystem;
+package com.lxbluem.filenameresolver.domain.interactors;
 
 import org.junit.Test;
 

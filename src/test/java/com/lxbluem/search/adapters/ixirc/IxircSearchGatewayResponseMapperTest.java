@@ -56,6 +56,8 @@ public class IxircSearchGatewayResponseMapperTest {
                         .packNumber(4879)
                         .packGets(1)
                         .sizeBytes(2899102924L)
+                        .age(1598544436)
+                        .last(1599600559)
                         .build()))
                 .build();
 
@@ -81,6 +83,8 @@ public class IxircSearchGatewayResponseMapperTest {
                         .packNumber(4879)
                         .packGets(1)
                         .sizeBytes(2899102924L)
+                        .age(1598544436)
+                        .last(1599600559)
                         .build()))
                 .build();
 

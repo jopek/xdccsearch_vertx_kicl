@@ -147,7 +147,6 @@ public class StateVerticleTest {
                         .put("bytesTotal", 0)
                         .put("bytes", 0)
                         .put("pack", new JsonObject()
-                                .put("pid", 0)
                                 .put("cname", "#download")
                                 .put("n", 5)
                                 .put("name", "")

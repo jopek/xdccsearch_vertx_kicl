@@ -19,7 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,13 +37,12 @@ public class FailureNoticeMessageHandlerTest {
     @Before
     public void setUp() {
         requestHookExecuted = new AtomicInteger();
-        Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
         StateStorage stateStorage = new InMemoryStateStorage();
         eventDispatcher = mock(EventDispatcher.class);
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
-        noticeMessageHandler = new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher);
+        noticeMessageHandler = new FailureNoticeMessageHandler(exitBot, eventDispatcher);
 
         initialiseStorages(botStorage, stateStorage);
     }

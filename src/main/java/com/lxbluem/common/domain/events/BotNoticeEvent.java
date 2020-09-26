@@ -1,13 +1,11 @@
 package com.lxbluem.common.domain.events;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @NoArgsConstructor
 @ToString
+@EqualsAndHashCode(callSuper = true)
 public class BotNoticeEvent extends BotEvent {
     private String message;
     private String remoteNick;

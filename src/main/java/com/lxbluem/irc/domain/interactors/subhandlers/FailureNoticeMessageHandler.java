@@ -6,14 +6,12 @@ import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
-import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
-import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHandler {
     private final ExitBot exitBot;
     private final EventDispatcher eventDispatcher;
 
-    public FailureNoticeMessageHandler(BotStorage botStorage, StateStorage stateStorage, ExitBot exitBot, EventDispatcher eventDispatcher) {
+    public FailureNoticeMessageHandler(ExitBot exitBot, EventDispatcher eventDispatcher) {
         this.exitBot = exitBot;
         this.eventDispatcher = eventDispatcher;
     }
@@ -28,7 +26,6 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
         if (lowerCaseNoticeMessage.contains("download connection failed")
                 || (lowerCaseNoticeMessage.contains("closing connection") && !lowerCaseNoticeMessage.contains("transfer canceled by user"))
                 || lowerCaseNoticeMessage.contains("connection refused")
-                || lowerCaseNoticeMessage.contains("you already requested that pack")
         ) {
             BotFailedEvent failedEvent = new BotFailedEvent(botNickName, noticeMessage);
             eventDispatcher.dispatch(failedEvent);

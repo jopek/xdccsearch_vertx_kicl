@@ -99,16 +99,18 @@ public class Starter {
     private static Verticle getBotVerticle(BotMessaging botMessaging, EventDispatcher eventDispatcher) {
         BotStorage botStorage = new InMemoryBotStorage();
         StateStorage stateStorage = new InMemoryStateStorage();
+        ScheduledTaskExecutionImpl scheduledTaskExecution = new ScheduledTaskExecutionImpl();
         ExitBot exitBot = new ExitBotImpl(botStorage, stateStorage, eventDispatcher);
 
         NoticeMessageHandler noticeMessageHandler = new NoticeMessageHandlerImpl(eventDispatcher);
-        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(botStorage, stateStorage, exitBot, eventDispatcher));
+        noticeMessageHandler.registerMessageHandler(new FailureNoticeMessageHandler(exitBot, eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new JoinMoreChannelsNoticeMessageHandler(botStorage, stateStorage));
         noticeMessageHandler.registerMessageHandler(new NickNameRegisteredNoticeMessageHandler(stateStorage));
         noticeMessageHandler.registerMessageHandler(new QueuedNoticeMessageHandler(eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new RegisterNickNameNoticeMessageHandler(botStorage, stateStorage));
         noticeMessageHandler.registerMessageHandler(new XdccSearchPackResponseMessageHandler(botStorage, stateStorage, eventDispatcher));
         noticeMessageHandler.registerMessageHandler(new SendingYouPackNoticeMessageHandler(botStorage, stateStorage));
+        noticeMessageHandler.registerMessageHandler(new AlreadyDownloadedNoticeMessageHandler(botStorage, stateStorage, eventDispatcher, scheduledTaskExecution));
 
         PrepareDccTransfer prepareDccTransfer = new PrepareDccTransferImpl(botStorage, stateStorage, botMessaging, exitBot);
         LookForPackUser lookForPackUser = new LookForPackUserImpl(stateStorage, exitBot, eventDispatcher);

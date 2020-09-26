@@ -8,6 +8,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.junit.Before;
@@ -21,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 public class SearchVerticleTest {
     private Vertx vertx;
 
-    private final String searchAddress = "NewSearchVerticle:GET:/search";
+    private final String searchAddress = "SearchVerticle:GET:/search";
 
     @Before
     public void setUp(TestContext context) {
@@ -32,7 +33,9 @@ public class SearchVerticleTest {
         SearchGateway searchGateway = new IxircSearchGateway(vertx);
         ListMatchingPacks listMatchingPacks = new ListMatchingPacksImpl(searchGateway);
         Verticle verticle = new SearchVerticle(listMatchingPacks);
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
+        Async async = context.async();
+        vertx.deployVerticle(verticle, context.asyncAssertSuccess(v->async.complete()));
+        async.await();
     }
 
     @Test(timeout = 30_000)

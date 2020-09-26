@@ -1,13 +1,11 @@
 package com.lxbluem;
 
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -16,7 +14,7 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
 
-@Ignore
+//@Ignore
 public class GeneralQuickTest {
     @Test
     public void stringutils() {
@@ -85,10 +83,7 @@ public class GeneralQuickTest {
     @Test
     public void promises() {
         Promise<String> promise = Promise.promise();
-        Future<String> future = promise.future().onComplete(s-> System.out.println(s.result()));
-//        future.
-
-//        future.compose()
+        promise.future().onComplete(s -> System.out.println(s.result()));
         promise.complete("lala");
     }
 

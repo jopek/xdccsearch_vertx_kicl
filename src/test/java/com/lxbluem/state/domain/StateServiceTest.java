@@ -6,10 +6,17 @@ import com.lxbluem.state.domain.model.BotState;
 import com.lxbluem.state.domain.model.DccState;
 import com.lxbluem.state.domain.model.MovingAverage;
 import com.lxbluem.state.domain.model.State;
-import com.lxbluem.state.domain.model.request.*;
+import com.lxbluem.state.domain.model.request.DccFinishRequest;
+import com.lxbluem.state.domain.model.request.DccProgressRequest;
+import com.lxbluem.state.domain.model.request.DccStartRequest;
+import com.lxbluem.state.domain.model.request.ExitRequest;
+import com.lxbluem.state.domain.model.request.FailRequest;
+import com.lxbluem.state.domain.model.request.InitRequest;
+import com.lxbluem.state.domain.model.request.NoticeMessageRequest;
+import com.lxbluem.state.domain.model.request.RenameBotRequest;
 import com.lxbluem.state.domain.ports.StateRepository;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -23,23 +30,25 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.lxbluem.state.domain.StateService.AVG_SIZE_SEC;
 import static com.lxbluem.state.domain.model.DccState.FAIL;
 import static com.lxbluem.state.domain.model.DccState.INIT;
-import static junit.framework.TestCase.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class StateServiceTest {
+class StateServiceTest {
 
     private StateService ut;
     private StateRepository stateRepository;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
     private final Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         stateRepository = new InMemoryStateRepository();
         ut = new StateService(stateRepository, clock);
     }
 
     @Test
-    public void initialize_state() {
+    void initialize_state() {
         String botName = "Andy";
         Pack pack = Pack.builder()
                 .channelName("#someChannel")
@@ -73,7 +82,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void notice_messages_added_to_state() {
+    void notice_messages_added_to_state() {
         String botName = "Andy";
         State state = initialStateWithPack(botName, null);
         stateRepository.saveStateByBotName(botName, state);
@@ -94,7 +103,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void rename_bot_renames_bot_and_holds_name_history() {
+    void rename_bot_renames_bot_and_holds_name_history() {
         State state = initialStateWithPack("Andy", null);
         stateRepository.saveStateByBotName("Andy", state);
 
@@ -119,7 +128,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void rename_bot_creates_state_when_no_old_state() {
+    void rename_bot_creates_state_when_no_old_state() {
         RenameBotRequest renameBotRequest;
 
         renameBotRequest = new RenameBotRequest("Andy", "Karl", "bot Andy renamed to Karl", 9999L);
@@ -134,7 +143,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void exit() {
+    void exit() {
         ExitRequest exitRequest = new ExitRequest("Andy", "bot Andy exited", 9999L);
 
         stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
@@ -150,7 +159,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void dcc_start() {
+    void dcc_start() {
         DccStartRequest dccStartRequest = new DccStartRequest("Andy", 1233123L, "filenameOn.disk", 9999L);
 
         stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
@@ -167,7 +176,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void dcc_progress() {
+    void dcc_progress() {
         DccProgressRequest dccProgressRequest = new DccProgressRequest("Andy", 5555L, 9999L);
 
         State initialState = initialStateWithPack("Andy", null);
@@ -187,7 +196,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void dcc_finish() {
+    void dcc_finish() {
         DccFinishRequest dccFinishRequest = new DccFinishRequest("Andy", 9999L);
 
         State initialState = initialStateWithPack("Andy", null);
@@ -203,7 +212,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void fail() {
+    void fail() {
         FailRequest failRequest = new FailRequest("Andy", "failed because reasons.", 9999L);
 
         stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
@@ -219,7 +228,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void get_state_entries() {
+    void get_state_entries() {
 
         stateRepository.saveStateByBotName("Andy", initialStateWithPack("Andy", null));
         stateRepository.saveStateByBotName("Karl", initialStateWithPack("Karl", null));
@@ -240,7 +249,7 @@ public class StateServiceTest {
     }
 
     @Test
-    public void clear_finished() {
+    void clear_finished() {
         State stateAndy = initialStateWithPack("Andy", null);
         stateAndy.setDccState(DccState.INIT);
         stateRepository.saveStateByBotName("Andy", stateAndy);

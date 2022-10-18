@@ -16,8 +16,8 @@ import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
@@ -26,12 +26,19 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
-public class ExitBotImplTest {
+class ExitBotImplTest {
 
     private StateStorage stateStorage;
     private BotMessaging botMessaging;
@@ -46,8 +53,8 @@ public class ExitBotImplTest {
     private State state;
 
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         stateStorage = new InMemoryStateStorage();
@@ -62,7 +69,7 @@ public class ExitBotImplTest {
     }
 
     @Test
-    public void exit_before_executing() {
+    void exit_before_executing() {
         state.channelReferences("#download", Arrays.asList());
 
         exitBot.handle(new RequestedExitCommand("Andy"));
@@ -70,7 +77,7 @@ public class ExitBotImplTest {
         verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
         verify(eventDispatcher, times(1)).dispatch(any(BotExitedEvent.class));
-        verifyZeroInteractions(ircBot, botMessaging, eventDispatcher);
+        verifyNoInteractions(ircBot, botMessaging, eventDispatcher);
 
         state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
 
@@ -78,7 +85,7 @@ public class ExitBotImplTest {
     }
 
     @Test
-    public void terminte_bot_manually_with_running_tranfer() {
+    void terminte_bot_manually_with_running_tranfer() {
         state.dccTransferRunning();
         exitBot.handle(new RequestedExitCommand("Andy"));
 
@@ -101,7 +108,7 @@ public class ExitBotImplTest {
     }
 
     @Test
-    public void terminte_bot_finished_dcc_with_running_tranfer() {
+    void terminte_bot_finished_dcc_with_running_tranfer() {
         state.dccTransferRunning();
         exitBot.handle(new DccFinishedExitCommand("Andy", "transfer finished"));
 
@@ -124,7 +131,7 @@ public class ExitBotImplTest {
     }
 
     @Test
-    public void terminte_bot_manually_without_running_tranfer() {
+    void terminte_bot_manually_without_running_tranfer() {
         exitBot.handle(new RequestedExitCommand("Andy"));
 
         verify(ircBot, never()).cancelDcc("keex");
@@ -145,16 +152,17 @@ public class ExitBotImplTest {
         assertEquals("Andy", sentMesssage.getBot());
     }
 
-    @Test(expected = BotNotFoundException.class)
-    public void terminate_bot_manually_for_missing_bot() {
-        exitBot.handle(new RequestedExitCommand("nonexistent"));
+    @Test
+    void terminate_bot_manually_for_missing_bot() {
+        RequestedExitCommand nonexistent = new RequestedExitCommand("nonexistent");
+        assertThrows(BotNotFoundException.class, () -> exitBot.handle(nonexistent));
         verify(ircBot).terminate();
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }
 
     @Test
-    public void terminate_bot() {
+    void terminate_bot() {
         state.dccTransferRunning();
         exitBot.handle(new ReasonedExitCommand("Andy", "failure"));
         verify(ircBot).cancelDcc("keex");

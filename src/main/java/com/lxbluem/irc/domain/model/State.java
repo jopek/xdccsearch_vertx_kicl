@@ -48,6 +48,14 @@ public class State {
         }
     }
 
+    public boolean isSamePackNumber(int incomingPackNumber) {
+        return incomingPackNumber == getPack().getPackNumber();
+    }
+
+    public boolean matchesRemoteUser(String remoteName) {
+        return remoteName.equalsIgnoreCase(getRemoteUser());
+    }
+
     public Set<String> channelReferences(String channelName, Collection<String> channelNames) {
         //IMPLICITLY JOINED - Join event does not always get fired
         joinedChannels.add(channelName.toLowerCase());
@@ -152,5 +160,9 @@ public class State {
 
     public void initialDccSendQuery(CtcpDccSend initialDccSendQuery) {
         this.initialDccSendQuery = initialDccSendQuery;
+    }
+
+    public void updatePackCoreInformation(int incomingPackNumber, String incomingPackName) {
+        pack.updateNumberAndName(incomingPackNumber, incomingPackName);
     }
 }

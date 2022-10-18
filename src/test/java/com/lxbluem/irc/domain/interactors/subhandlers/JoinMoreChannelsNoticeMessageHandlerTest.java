@@ -10,12 +10,12 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -24,11 +24,16 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-@RunWith(MockitoJUnitRunner.class)
-public class JoinMoreChannelsNoticeMessageHandlerTest {
+@ExtendWith(MockitoExtension.class)
+class JoinMoreChannelsNoticeMessageHandlerTest {
 
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
@@ -39,8 +44,8 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
     @Captor
     private ArgumentCaptor<Collection<String>> stringCollectionCaptor;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         requestHookExecuted = new AtomicInteger();
         Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
@@ -73,7 +78,7 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
     }
 
     @Test
-    public void notice_message_handler_more_channels_required() {
+    void notice_message_handler_more_channels_required() {
         String botNick = "Andy";
         String remoteNick = "Zombie";
         String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";
@@ -90,7 +95,7 @@ public class JoinMoreChannelsNoticeMessageHandlerTest {
     }
 
     @Test
-    public void notice_message_handler_more_channels_required_after_request() {
+    void notice_message_handler_more_channels_required_after_request() {
         String botNick = "Andy";
         String remoteNick = "Zombie";
         String noticeMessage = "[#DOWNLOAD] \u00034!!!WARNING!!! YOU MUST IDLE IN #ZW-CHAT - IF YOU ATTEMPT TO DOWNLOAD WITHOUT BEING IN #ZW-CHAT YOU WILL BE BANNED!\n";

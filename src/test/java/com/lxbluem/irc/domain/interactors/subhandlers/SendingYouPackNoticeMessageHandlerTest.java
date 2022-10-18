@@ -9,25 +9,32 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-public class SendingYouPackNoticeMessageHandlerTest {
+
+@ExtendWith(MockitoExtension.class)
+class SendingYouPackNoticeMessageHandlerTest {
+    @Mock
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler handler;
     private State state;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         requestHookExecuted = new AtomicInteger();
-        ircBot = mock(IrcBot.class);
+//        ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
         StateStorage stateStorage = new InMemoryStateStorage();
         handler = new SendingYouPackNoticeMessageHandler(botStorage, stateStorage);
@@ -57,7 +64,7 @@ public class SendingYouPackNoticeMessageHandlerTest {
     }
 
     @Test
-    public void incoming_pack_matches_requested_pack() {
+    void incoming_pack_matches_requested_pack() {
         String noticeMessage = "** Sending you pack #1 (\"test1.bin\"), which is <1kB. (resume supported)";
         NoticeMessageCommand command = new NoticeMessageCommand("Andy", "keex", noticeMessage);
 
@@ -66,11 +73,11 @@ public class SendingYouPackNoticeMessageHandlerTest {
         assertTrue(handled);
         assertTrue(state.isRemoteSendsCorrectPack());
         assertTrue(state.isPackResumable());
-        verifyZeroInteractions(ircBot);
+        verifyNoInteractions(ircBot);
     }
 
     @Test
-    public void incoming_pack_matches_requested_pack_not_resumable() {
+    void incoming_pack_matches_requested_pack_not_resumable() {
         String noticeMessage = "** Sending you pack #1 (\"test1.bin\"), which is <1kB.";
         NoticeMessageCommand command = new NoticeMessageCommand("Andy", "keex", noticeMessage);
 
@@ -79,11 +86,11 @@ public class SendingYouPackNoticeMessageHandlerTest {
         assertTrue(handled);
         assertTrue(state.isRemoteSendsCorrectPack());
         assertFalse(state.isPackResumable());
-        verifyZeroInteractions(ircBot);
+        verifyNoInteractions(ircBot);
     }
 
     @Test
-    public void incoming_pack_does_not_match_requested_pack() {
+    void incoming_pack_does_not_match_requested_pack() {
         String noticeMessage = "** Sending you pack #1 (\"some_other.bin\"), which is <1kB. (resume supported)";
         NoticeMessageCommand command = new NoticeMessageCommand("Andy", "keex", noticeMessage);
 

@@ -9,16 +9,21 @@ import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
-import com.lxbluem.irc.domain.ports.outgoing.*;
+import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.reactivex.ext.unit.Async;
+import io.vertx.reactivex.ext.unit.TestContext;
 import lombok.Data;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -26,15 +31,15 @@ import java.util.Iterator;
 
 import static org.mockito.Mockito.mock;
 
-@RunWith(VertxUnitRunner.class)
-public class NewBotVerticleDeploymentTest {
+@ExtendWith(VertxExtension.class)
+class NewBotVerticleDeploymentTest {
 
     private Vertx vertx;
     private IrcBot mockBot;
     private NewBotVerticle verticle;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         vertx = Vertx.vertx();
 
         String botNickName = "Andy";
@@ -58,8 +63,9 @@ public class NewBotVerticleDeploymentTest {
         verticle = new NewBotVerticle(initializeBot, exitBot, toggleDccTransferStarted);
     }
 
-    @Test(timeout = 30_000)
-    public void register_route(TestContext context) {
+    @Test
+    @Timeout(value = 3)
+    void register_route(TestContext context) {
         @Data
         class ExpectedRouteRegistry {
             final String path;

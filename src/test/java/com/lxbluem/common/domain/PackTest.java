@@ -1,13 +1,13 @@
 package com.lxbluem.common.domain;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class PackTest {
+class PackTest {
 
     @Test
-    public void testEquality() {
+    void testEquality() {
         Pack pack1 = Pack.builder()
                 .channelName("#someChannel")
                 .networkName("someNetwork")

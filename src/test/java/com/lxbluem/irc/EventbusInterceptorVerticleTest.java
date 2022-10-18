@@ -1,18 +1,26 @@
 package com.lxbluem.irc;
 
-import io.vertx.core.*;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Verticle;
+import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryContext;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.reactivex.ext.unit.Async;
+import io.vertx.reactivex.ext.unit.TestContext;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(VertxUnitRunner.class)
-public class EventbusInterceptorVerticleTest {
-    @Test(timeout = 5000)
-    public void name(TestContext context) {
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@ExtendWith(VertxExtension.class)
+class EventbusInterceptorVerticleTest {
+    @Test
+    @Timeout(5)
+    void interceptMessages(TestContext context) {
         Vertx vertx = Vertx.vertx();
         vertx.eventBus().addOutboundInterceptor(interceptor("out"));
         vertx.eventBus().addInboundInterceptor(interceptor("in"));
@@ -23,6 +31,8 @@ public class EventbusInterceptorVerticleTest {
         async.await();
         vertx.eventBus()
                 .request("topic", "TEST", context.asyncAssertSuccess(m -> System.out.println(m.body())));
+
+        assertTrue(async.isCompleted());
 
     }
 

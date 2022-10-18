@@ -10,26 +10,29 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class NickNameRegisteredNoticeMessageHandlerTest {
+class NickNameRegisteredNoticeMessageHandlerTest {
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
     private AtomicInteger requestHookExecuted;
     private NoticeMessageHandler.SubHandler noticeMessageHandler;
     private State state;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         requestHookExecuted = new AtomicInteger();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
@@ -61,7 +64,7 @@ public class NickNameRegisteredNoticeMessageHandlerTest {
     }
 
     @Test
-    public void notice_message_handler_nickserv_registered_nick_request() {
+    void notice_message_handler_nickserv_registered_nick_request() {
         String botNick = "Andy";
         String remoteNick = "nickserv";
         String noticeMessage = "nickname Andy registered";

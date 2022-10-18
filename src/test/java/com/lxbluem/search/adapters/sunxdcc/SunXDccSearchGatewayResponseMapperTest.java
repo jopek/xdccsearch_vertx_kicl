@@ -3,12 +3,12 @@ package com.lxbluem.search.adapters.sunxdcc;
 import com.lxbluem.search.domain.ports.SearchGateway;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SunXDccSearchGatewayResponseMapperTest {
+class SunXDccSearchGatewayResponseMapperTest {
 
     JsonObject INPUT = new JsonObject()
             .put("botrec", new JsonArray(asList(
@@ -45,7 +45,7 @@ public class SunXDccSearchGatewayResponseMapperTest {
             )));
 
     @Test
-    public void mapToPack() {
+    void mapToPack() {
         SunXDccResponse sunXDccResponse = INPUT.mapTo(SunXDccResponse.class);
 
         SearchGateway.SearchResponse mapped = SunXDccResponseMapper.mapToSearchResponse(sunXDccResponse, 3);
@@ -83,7 +83,7 @@ public class SunXDccSearchGatewayResponseMapperTest {
     }
 
     @Test
-    public void filesize_mapping() {
+    void filesize_mapping() {
         assertEquals(2048, SunXDccResponseMapper.textRepresentationToBytes("[  2K]"));
         assertEquals(1 << 20, SunXDccResponseMapper.textRepresentationToBytes("[  1M]"));
         assertEquals(3.5 * (1 << 20), SunXDccResponseMapper.textRepresentationToBytes("[3.5M]"), 0.1);

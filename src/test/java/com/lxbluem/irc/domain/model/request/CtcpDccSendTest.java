@@ -1,13 +1,16 @@
 package com.lxbluem.irc.domain.model.request;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.lxbluem.irc.domain.model.request.CtcpDccSend.TransferType.PASSIVE;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CtcpDccSendTest {
+class CtcpDccSendTest {
     @Test
-    public void createValidDccSendCtcpQuery() {
+    void createValidDccSendCtcpQuery() {
         //                             DCC SEND <filename> <sender-ip> 0 <filesize> <token>
         String incomingDccCtcpQuery = "DCC SEND test1.bin 3232260964 50000 6";
 
@@ -25,7 +28,7 @@ public class CtcpDccSendTest {
     }
 
     @Test
-    public void createValidReverseDccSendCtcpQuery() {
+    void createValidReverseDccSendCtcpQuery() {
         //                             DCC SEND <filename> <sender-ip> 0 <filesize> <token>
         String incomingDccCtcpQuery = "DCC SEND test1.bin 3232260964 0 6 111";
 
@@ -53,7 +56,7 @@ public class CtcpDccSendTest {
     }
 
     @Test
-    public void name() {
+    void name() {
         assertTrue(isAccept("DCC ACCEPT test1.bin 0 6 1"));
         assertFalse(isSend("DCC ACCEPT test1.bin 0 6 1"));
 
@@ -63,7 +66,7 @@ public class CtcpDccSendTest {
     }
 
     @Test
-    public void createValidDccCtcpQuery_from_invalid_input() {
+    void createValidDccCtcpQuery_from_invalid_input() {
         String incomingDccCtcpQuery = "asd";
 
         CtcpDccSend ctcpDccSend = CtcpDccSend.fromQueryString(incomingDccCtcpQuery);
@@ -80,8 +83,10 @@ public class CtcpDccSendTest {
     }
 
     @Test
-    public void parseIp() {
+    void parseIp() {
         String ipString = CtcpDccSend.transformLongToIpString(3232260865L);
         System.out.println(ipString);
+
+        assertNotNull(ipString);
     }
 }

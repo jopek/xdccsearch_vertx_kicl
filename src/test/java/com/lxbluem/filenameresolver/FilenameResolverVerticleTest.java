@@ -11,32 +11,32 @@ import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.reactivex.ext.unit.Async;
+import io.vertx.reactivex.ext.unit.TestContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@RunWith(VertxUnitRunner.class)
-public class FilenameResolverVerticleTest {
+@ExtendWith(VertxExtension.class)
+class FilenameResolverVerticleTest {
     private Vertx vertx;
     private Verticle verticle;
     private FileSystemBlocking fileSystem;
     private InMemoryEntityStorage storage;
 
-    @Before
-    public void setUp(TestContext testContext) {
+    @BeforeEach
+    void setUp(TestContext testContext) {
         vertx = Vertx.vertx();
 
         FilenameMapper filenameMapper = new FilenameMapper();
@@ -49,13 +49,13 @@ public class FilenameResolverVerticleTest {
         verticle = new FilenameResolverVerticle(resolvePackName, syncStorageFromFs);
     }
 
-    @After
-    public void tearDown(TestContext testContext) {
+    @AfterEach
+    void tearDown(TestContext testContext) {
         vertx.close(testContext.asyncAssertSuccess());
     }
 
     @Test
-    public void synchronise_storage_on_verticle_start(TestContext testContext) {
+    void synchronise_storage_on_verticle_start(TestContext testContext) {
         when(fileSystem.readDir("downloads")).thenReturn(Arrays.asList(
                 "/canonical/path/downloads/file._x0x_.bin.part",
                 "/canonical/path/downloads/file._x1x_.bin.part",
@@ -85,7 +85,7 @@ public class FilenameResolverVerticleTest {
     }
 
     @Test
-    public void name(TestContext testContext) {
+    void name(TestContext testContext) {
         JsonObject message = new JsonObject()
                 .put("packname", "file1a")
                 .put("packsize", 2000L);

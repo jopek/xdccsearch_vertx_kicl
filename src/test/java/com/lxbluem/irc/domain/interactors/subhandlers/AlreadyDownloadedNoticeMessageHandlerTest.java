@@ -10,20 +10,23 @@ import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-public class AlreadyDownloadedNoticeMessageHandlerTest {
+class AlreadyDownloadedNoticeMessageHandlerTest {
 
     private AlreadyDownloadedNoticeMessageHandler handler;
     private IrcBot ircBot;
     private ManualScheduledTaskExecution scheduledExecution;
     private EventbusEventDispatcher eventDispatcher;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         StateStorage stateStorage = new InMemoryStateStorage();
         BotStorage botStorage = new InMemoryBotStorage();
         scheduledExecution = new ManualScheduledTaskExecution();
@@ -57,7 +60,7 @@ public class AlreadyDownloadedNoticeMessageHandlerTest {
     }
 
     @Test
-    public void no_request_if_timer_not_elapsed() {
+    void no_request_if_timer_not_elapsed() {
         handler.handle(new NoticeMessageCommand("Andy", "", "you already requested that pack"));
         verify(ircBot, never()).requestDccPack("keex", 5);
 
@@ -66,27 +69,27 @@ public class AlreadyDownloadedNoticeMessageHandlerTest {
                 .remoteNick("")
                 .noticeMessage("you already requested that pack - retrying in 1min")
                 .build();
-        verify(eventDispatcher).dispatch(eq(expected));
+        verify(eventDispatcher).dispatch(expected);
     }
 
     @Test
-    public void request_when_elapsed() {
+    void request_when_elapsed() {
         handler.handle(new NoticeMessageCommand("Andy", "", "you already requested that pack"));
 
         scheduledExecution.runTask();
 
         verify(ircBot).requestDccPack("keex", 5);
 
-        verify(eventDispatcher).dispatch(eq(BotNoticeEvent.builder()
+        verify(eventDispatcher).dispatch(BotNoticeEvent.builder()
                 .botNickName("Andy")
                 .remoteNick("")
                 .noticeMessage("you already requested that pack - retrying in 1min")
-                .build()));
+                .build());
 
-        verify(eventDispatcher).dispatch(eq(BotNoticeEvent.builder()
+        verify(eventDispatcher).dispatch(BotNoticeEvent.builder()
                 .botNickName("Andy")
                 .remoteNick("")
                 .noticeMessage("retrying to request pack")
-                .build()));
+                .build());
     }
 }

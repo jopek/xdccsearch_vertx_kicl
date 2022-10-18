@@ -14,8 +14,8 @@ import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
@@ -25,10 +25,16 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class LookForPackUserImplTest {
+class LookForPackUserImplTest {
     private EventDispatcher eventDispatcher;
     private final Instant fixedInstant = Instant.parse("2020-08-10T10:11:22Z");
     private StateStorage stateStorage;
@@ -39,8 +45,8 @@ public class LookForPackUserImplTest {
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
 
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         botStorage = new InMemoryBotStorage();
         stateStorage = new InMemoryStateStorage();
         Clock clock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
@@ -70,7 +76,7 @@ public class LookForPackUserImplTest {
     }
 
     @Test
-    public void users_in_channel() {
+    void users_in_channel() {
         List<String> usersInChannel = asList("operator", "keex", "doomsman", "hellbaby");
         LookForPackUserCommand command = new LookForPackUserCommand("Andy", "#download", usersInChannel);
         this.lookForPackUser.handle(command);
@@ -83,7 +89,7 @@ public class LookForPackUserImplTest {
     }
 
     @Test
-    public void users_in_channel__remoteUser_of_target_channel_missing() {
+    void users_in_channel__remoteUser_of_target_channel_missing() {
         lookForPackUser.handle(new LookForPackUserCommand("Andy", "#download", asList("operator", "doomsman", "hellbaby")));
 
         ArgumentCaptor<BotEvent> messageSentCaptor = ArgumentCaptor.forClass(BotEvent.class);

@@ -32,33 +32,32 @@ public class AlreadyDownloadedNoticeMessageHandler implements NoticeMessageHandl
     @Override
     public boolean handle(NoticeMessageCommand command) {
         String botNickName = command.getBotNickName();
-        String remoteName = command.getRemoteName();
         String noticeMessage = command.getNoticeMessage();
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
-        if (lowerCaseNoticeMessage.contains("you already requested that pack")) {
-            String eventMessage = noticeMessage + " - retrying in 1min";
-            BotNoticeEvent noticeEvent = new BotNoticeEvent(botNickName, "", eventMessage);
-            eventDispatcher.dispatch(noticeEvent);
-
-            BotNoticeEvent retryingMessage = BotNoticeEvent.builder()
-                    .botNickName(botNickName)
-                    .remoteNick("")
-                    .noticeMessage("retrying to request pack")
-                    .build();
-
-            botStorage.get(botNickName).ifPresent(bot ->
-                    stateStorage.get(botNickName).ifPresent(state -> {
-                        Pack pack = state.getPack();
-                        Runnable execution = () -> {
-                            eventDispatcher.dispatch(retryingMessage);
-                            bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
-                        };
-                        scheduledTaskExecution.scheduleTask(botNickName, execution, 1L, TimeUnit.MINUTES);
-                    }));
-            return true;
+        if (!lowerCaseNoticeMessage.contains("you already requested that pack")) {
+            return false;
         }
-        return false;
+        String eventMessage = noticeMessage + " - retrying in 1min";
+        BotNoticeEvent noticeEvent = new BotNoticeEvent(botNickName, "", eventMessage);
+        eventDispatcher.dispatch(noticeEvent);
+
+        BotNoticeEvent retryingMessage = BotNoticeEvent.builder()
+                .botNickName(botNickName)
+                .remoteNick("")
+                .noticeMessage("retrying to request pack")
+                .build();
+
+        botStorage.get(botNickName).ifPresent(bot ->
+                stateStorage.get(botNickName).ifPresent(state -> {
+                    Pack pack = state.getPack();
+                    Runnable execution = () -> {
+                        eventDispatcher.dispatch(retryingMessage);
+                        bot.requestDccPack(pack.getNickName(), pack.getPackNumber());
+                    };
+                    scheduledTaskExecution.scheduleTask(botNickName, execution, 1L, TimeUnit.MINUTES);
+                }));
+        return true;
     }
 
 }

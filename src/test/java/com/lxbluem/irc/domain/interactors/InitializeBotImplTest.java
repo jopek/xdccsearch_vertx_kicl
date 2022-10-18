@@ -10,19 +10,28 @@ import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.outgoing.*;
-import org.junit.Before;
-import org.junit.Test;
+import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
-public class InitializeBotImplTest {
+class InitializeBotImplTest {
     private StateStorage stateStorage;
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
@@ -32,8 +41,8 @@ public class InitializeBotImplTest {
     private final NameGenerator nameGenerator = mock(NameGenerator.class);
     private InitializeBot initializeBot;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         BotFactory botFactory = () -> ircBot;
@@ -63,7 +72,7 @@ public class InitializeBotImplTest {
     }
 
     @Test
-    public void initialize_service_for_bot() {
+    void initialize_service_for_bot() {
         assertFalse(stateStorage.get("Andy").isPresent());
         assertFalse(botStorage.get("Andy").isPresent());
 
@@ -72,7 +81,7 @@ public class InitializeBotImplTest {
         ArgumentCaptor<Event> messageCaptor = ArgumentCaptor.forClass(Event.class);
         verify(eventDispatcher).dispatch(messageCaptor.capture());
         verify(ircBot).connect(any(BotConnectionDetails.class));
-        verify(ircBot).joinChannel(eq("#download"));
+        verify(ircBot).joinChannel("#download");
 
         verifyNoMoreInteractions(botMessaging, ircBot);
 

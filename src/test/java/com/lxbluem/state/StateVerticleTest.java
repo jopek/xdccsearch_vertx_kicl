@@ -8,15 +8,16 @@ import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.ports.StateRepository;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.reactivex.ext.unit.Async;
+import io.vertx.reactivex.ext.unit.TestContext;
 import io.vertx.rxjava.core.Vertx;
 import lombok.Data;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -26,29 +27,30 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(VertxUnitRunner.class)
-public class StateVerticleTest {
+@ExtendWith(VertxExtension.class)
+class StateVerticleTest {
     private Vertx vertx;
     private StateVerticle verticle;
     private Clock clock;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         vertx = Vertx.vertx();
         clock = Clock.fixed(Instant.parse("2020-01-30T18:00:00.00Z"), ZoneId.systemDefault());
         StateRepository stateRepository = new InMemoryStateRepository();
         verticle = new StateVerticle(new StateService(stateRepository, clock), clock);
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
     }
 
 
     @Test
-    public void register_route(TestContext context) {
+    void register_route(TestContext context) {
         @Data
         class ExpectedRouteRegistry {
             final String path;
@@ -91,17 +93,20 @@ public class StateVerticleTest {
     }
 
     @Test
-    public void state_to_json_serialisation() {
+    void state_to_json_serialisation() {
         State build = State.builder().build();
         Map<String, State> map = new HashMap<>();
         map.put("a", build);
 
         JsonObject jsonObject = new JsonObject();
         map.forEach((k, v) -> jsonObject.put(k, JsonObject.mapFrom(v)));
+
+        assertThat(map).isNotEmpty();
     }
 
-    @Test(timeout = 3_000)
-    public void initialise_state(TestContext context) {
+    @Test
+    @Timeout(value = 30)
+    void initialise_state(TestContext context) {
 
         vertx.eventBus().addOutboundInterceptor(
                 dc -> {

@@ -6,22 +6,22 @@ import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.SkipProtectedChannelCommand;
 import com.lxbluem.irc.domain.ports.incoming.SkipProtectedChannel;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SkipProtectedChannelImplTest {
+class SkipProtectedChannelImplTest {
 
     private StateStorage stateStorage;
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         stateStorage = new InMemoryStateStorage();
         initialiseStorages();
     }
@@ -44,7 +44,7 @@ public class SkipProtectedChannelImplTest {
     }
 
     @Test
-    public void channel_requires_account_registry__account_register_nick() {
+    void channel_requires_account_registry__account_register_nick() {
         State state = stateStorage.get("Andy").get();
         String botNick = "Andy";
         String numericCommandMessage = "You need to be identified to a registered account to join this channel";

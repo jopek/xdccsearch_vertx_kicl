@@ -5,30 +5,30 @@ import com.lxbluem.filenameresolver.domain.model.FileEntity;
 import com.lxbluem.filenameresolver.domain.ports.incoming.SyncStorageFromFs;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
-public class SyncStorageFromFsImplTest {
+class SyncStorageFromFsImplTest {
     private FileSystemBlocking fileSystem;
     private FileEntityStorage storage;
     private SyncStorageFromFs uut;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         fileSystem = Mockito.mock(FileSystemBlocking.class);
         storage = new InMemoryEntityStorage();
         uut = new SyncStorageFromFsImpl(fileSystem, storage, "downloads");
     }
 
     @Test
-    public void setUsageToFalse() {
+    void setUsageToFalse() {
         when(fileSystem.readDir("downloads")).thenReturn(Arrays.asList(
                 "File._x0x_.part",
                 "File._x1x_.part",
@@ -57,7 +57,7 @@ public class SyncStorageFromFsImplTest {
     }
 
     @Test
-    public void remove_non_existent_partials() {
+    void remove_non_existent_partials() {
         when(fileSystem.readDir("downloads")).thenReturn(Arrays.asList(
                 "/path/to/a/downloads/directory/downloads/File._x0x_.part",
                 "/path/to/a/downloads/directory/downloads/AnotherFile._x0x_.part"

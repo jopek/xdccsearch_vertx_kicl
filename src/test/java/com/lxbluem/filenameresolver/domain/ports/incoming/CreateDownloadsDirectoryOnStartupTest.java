@@ -2,24 +2,27 @@ package com.lxbluem.filenameresolver.domain.ports.incoming;
 
 import com.lxbluem.filenameresolver.domain.interactors.CreateDownloadsDirectoryOnStartupImpl;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystem;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import rx.Single;
 
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class CreateDownloadsDirectoryOnStartupTest {
+class CreateDownloadsDirectoryOnStartupTest {
     private FileSystem fileSystem;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         fileSystem = mock(FileSystem.class);
     }
 
 
     @Test
-    public void create_downloadsDir_because_it_does_not_exist() {
+    void create_downloadsDir_because_it_does_not_exist() {
         when(fileSystem.fileOrDirExists("downloads"))
                 .thenReturn(Single.just(false));
         when(fileSystem.mkdir("downloads"))
@@ -28,17 +31,17 @@ public class CreateDownloadsDirectoryOnStartupTest {
         new CreateDownloadsDirectoryOnStartupImpl(fileSystem, "downloads")
                 .execute();
 
-        verify(fileSystem).mkdir(eq("downloads"));
+        verify(fileSystem).mkdir("downloads");
     }
 
     @Test
-    public void no_downloadsDir_creation_because_it_exists_already() {
+    void no_downloadsDir_creation_because_it_exists_already() {
         when(fileSystem.fileOrDirExists("downloads"))
                 .thenReturn(Single.just(true));
 
         new CreateDownloadsDirectoryOnStartupImpl(fileSystem, "downloads").execute();
 
-        verify(fileSystem, never()).mkdir(eq("downloads"));
+        verify(fileSystem, never()).mkdir("downloads");
     }
 
 

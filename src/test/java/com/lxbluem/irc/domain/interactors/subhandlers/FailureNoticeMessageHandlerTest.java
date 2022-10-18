@@ -15,18 +15,22 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class FailureNoticeMessageHandlerTest {
+class FailureNoticeMessageHandlerTest {
 
     private NoticeMessageHandler.SubHandler noticeMessageHandler;
     private EventDispatcher eventDispatcher;
@@ -34,8 +38,8 @@ public class FailureNoticeMessageHandlerTest {
     private AtomicInteger requestHookExecuted;
 
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         requestHookExecuted = new AtomicInteger();
         ircBot = mock(IrcBot.class);
         BotStorage botStorage = new InMemoryBotStorage();
@@ -67,7 +71,7 @@ public class FailureNoticeMessageHandlerTest {
     }
 
     @Test
-    public void notice_message_handler_closing_connection_by_user() {
+    void notice_message_handler_closing_connection_by_user() {
         String botNick = "Andy";
         String remoteNick = "keex";
         String noticeMessage = "closing connection: transfer canceled by user";
@@ -79,7 +83,7 @@ public class FailureNoticeMessageHandlerTest {
     }
 
     @Test
-    public void notice_message_handler_connection_refused() {
+    void notice_message_handler_connection_refused() {
         String botNick = "Andy";
         String remoteNick = "keex";
         String noticeMessage = "connection refused";

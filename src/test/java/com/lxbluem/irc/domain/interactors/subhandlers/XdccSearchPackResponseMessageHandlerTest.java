@@ -11,18 +11,20 @@ import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class XdccSearchPackResponseMessageHandlerTest {
+class XdccSearchPackResponseMessageHandlerTest {
 
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
@@ -31,8 +33,8 @@ public class XdccSearchPackResponseMessageHandlerTest {
     private State state;
 
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         requestHookExecuted = new AtomicInteger();
         Clock clock = Clock.systemDefaultZone();
         ircBot = mock(IrcBot.class);
@@ -67,7 +69,7 @@ public class XdccSearchPackResponseMessageHandlerTest {
 
 
     @Test
-    public void search_request_response() {
+    void search_request_response() {
         state.requestSearchListing();
         assertTrue(state.isSearchRequested());
 

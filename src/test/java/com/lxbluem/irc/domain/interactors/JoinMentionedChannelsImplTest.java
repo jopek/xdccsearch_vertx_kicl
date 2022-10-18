@@ -8,23 +8,25 @@ import com.lxbluem.irc.domain.model.request.JoinMentionedChannelsCommand;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-@RunWith(MockitoJUnitRunner.class)
-public class JoinMentionedChannelsImplTest {
+@ExtendWith(MockitoExtension.class)
+class JoinMentionedChannelsImplTest {
 
     private StateStorage stateStorage;
     private IrcBot ircBot;
@@ -35,8 +37,8 @@ public class JoinMentionedChannelsImplTest {
     private final AtomicInteger requestHookExecuted = new AtomicInteger();
     private JoinMentionedChannelsImpl joinMentionedChannels;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         ircBot = mock(IrcBot.class);
         stateStorage = new InMemoryStateStorage();
         botStorage = new InMemoryBotStorage();
@@ -66,7 +68,7 @@ public class JoinMentionedChannelsImplTest {
     }
 
     @Test
-    public void channel_topic() {
+    void channel_topic() {
         String topic = "join #room; for #help, otherwise [#voice] ";
         JoinMentionedChannelsCommand command = new JoinMentionedChannelsCommand("Andy", "#download", topic);
         joinMentionedChannels.handle(command);
@@ -79,7 +81,7 @@ public class JoinMentionedChannelsImplTest {
     }
 
     @Test
-    public void channel_topic__no_other_channels_referenced() {
+    void channel_topic__no_other_channels_referenced() {
         String topic = "lalalal";
         JoinMentionedChannelsCommand command = new JoinMentionedChannelsCommand("Andy", "#download", topic);
         joinMentionedChannels.handle(command);

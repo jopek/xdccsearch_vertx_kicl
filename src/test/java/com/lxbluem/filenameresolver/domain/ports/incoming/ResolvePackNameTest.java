@@ -7,25 +7,27 @@ import com.lxbluem.filenameresolver.domain.model.FileEntity;
 import com.lxbluem.filenameresolver.domain.ports.incoming.ResolvePackName.Response;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
-public class ResolvePackNameTest {
+class ResolvePackNameTest {
 
     private ResolvePackName resolvePackName;
     private FileSystemBlocking fileSystem;
     private FileEntityStorage fileEntityStorage;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         fileSystem = Mockito.mock(FileSystemBlocking.class);
         fileEntityStorage = new InMemoryEntityStorage();
         FilenameMapper filenameMapper = new FilenameMapper();
@@ -33,7 +35,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_not_present() {
+    void filename_not_present() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Collections.emptyList());
 
@@ -45,7 +47,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_not_present_amongst_others() {
+    void filename_not_present_amongst_others() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "otherFile._x0x_.part",
@@ -66,7 +68,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_eof__complete() {
+    void filename_present__position_eof__complete() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList("someFile._x1x_"));
         when(fileSystem.fileSize("someFile._x1x_"))
@@ -84,7 +86,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_eof__complete__multiple() {
+    void filename_present__position_eof__complete__multiple() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "someFile._x0x_",
@@ -108,7 +110,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_eof__complete__multiple_2() {
+    void filename_present__position_eof__complete__multiple_2() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "/canonical/path/to/downloads/test3-1m._x0x_.bin",
@@ -139,7 +141,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_eof__complete__multiple__not_matching_size() {
+    void filename_present__position_eof__complete__multiple__not_matching_size() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "someFile._x0x_",
@@ -162,7 +164,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_eof__complete__multiple__not_matching_size_and_partial() {
+    void filename_present__position_eof__complete__multiple__not_matching_size_and_partial() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "someFile._x0x_",
@@ -188,7 +190,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_in_file__incomplete__not_in_use() {
+    void filename_present__position_in_file__incomplete__not_in_use() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList("/path/downloads/someFile._x0x_.part"));
         when(fileSystem.fileSize("/path/downloads/someFile._x0x_.part"))
@@ -208,7 +210,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_in_file__incomplete__not_in_use__multiple() {
+    void filename_present__position_in_file__incomplete__not_in_use__multiple() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "someFile._x0x_.part",
@@ -235,7 +237,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_in_file__incomplete__in_use() {
+    void filename_present__position_in_file__incomplete__in_use() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList("someFile._x0x_.part"));
         when(fileSystem.fileSize("someFile._x0x_.part"))
@@ -257,7 +259,7 @@ public class ResolvePackNameTest {
     }
 
     @Test
-    public void filename_present__position_in_file__incomplete__in_use__multiple() {
+    void filename_present__position_in_file__incomplete__in_use__multiple() {
         when(fileSystem.readDir("downloads"))
                 .thenReturn(Arrays.asList(
                         "someFile._x0x_.part",

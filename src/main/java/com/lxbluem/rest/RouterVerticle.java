@@ -8,7 +8,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.BridgeEventType;
 import io.vertx.ext.bridge.PermittedOptions;
-import io.vertx.ext.web.handler.sockjs.BridgeOptions;
+import io.vertx.ext.web.handler.sockjs.SockJSBridgeOptions;
 import io.vertx.rxjava.core.AbstractVerticle;
 import io.vertx.rxjava.core.buffer.Buffer;
 import io.vertx.rxjava.core.eventbus.Message;
@@ -47,7 +47,7 @@ public class RouterVerticle extends AbstractVerticle {
         router.mountSubRouter("/api", api);
 
         vertx.createHttpServer()
-                .requestHandler(router::accept)
+                .requestHandler(router)
                 .listen(8080, event -> {
                     if (event.succeeded()) {
                         LOG.info("listening on port {}  [deployid:{}]", event.result().actualPort(), deploymentID());
@@ -58,11 +58,6 @@ public class RouterVerticle extends AbstractVerticle {
                 });
 
         vertx.eventBus().consumer(ROUTE_ADD.address(), message -> setupRouter(api, message));
-    }
-
-    private void unroute(Router router, Message<Object> message) {
-        String target = ((JsonObject) message.body()).getString("target");
-        verticleCounter.get(target).decrementAndGet();
     }
 
     private Router sockjsHandler() {
@@ -98,7 +93,10 @@ public class RouterVerticle extends AbstractVerticle {
 
     private Router eventBusHandler() {
         PermittedOptions permitted = new PermittedOptions().setAddressRegex(".*");
-        BridgeOptions options = new BridgeOptions().addOutboundPermitted(permitted);
+
+        SockJSBridgeOptions options = new SockJSBridgeOptions()
+                .addInboundPermitted(permitted)
+                .addOutboundPermitted(permitted);
         return SockJSHandler
                 .create(vertx)
                 .bridge(options, event -> {

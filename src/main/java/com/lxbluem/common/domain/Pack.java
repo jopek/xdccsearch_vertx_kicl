@@ -68,4 +68,9 @@ public class Pack {
     public boolean isNickNameMissing() {
         return nickName == null || nickName.isEmpty();
     }
+
+    public void updateNumberAndName(int incomingPackNumber, String incomingPackName) {
+        setPackNumber(incomingPackNumber);
+        setPackName(incomingPackName);
+    }
 }

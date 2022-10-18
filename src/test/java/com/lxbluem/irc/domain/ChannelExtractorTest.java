@@ -1,17 +1,17 @@
 package com.lxbluem.irc.domain;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ChannelExtractorTest {
+class ChannelExtractorTest {
 
     @Test
-    public void regular_topic() {
+    void regular_topic() {
         String topic = "@notAChannel #thisIsAChannel -> #thisToo: '#ddd'";
         Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
 
@@ -20,7 +20,7 @@ public class ChannelExtractorTest {
     }
 
     @Test
-    public void skip_help_channels() {
+    void skip_help_channels() {
         String topic = "#lala #help";
         Set<String> mentionedChannels = ChannelExtractor.getMentionedChannels(topic);
 

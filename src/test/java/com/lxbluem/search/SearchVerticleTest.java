@@ -8,24 +8,25 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.rxjava.ext.unit.Async;
+import io.vertx.rxjava.ext.unit.TestContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(VertxUnitRunner.class)
-public class SearchVerticleTest {
+@ExtendWith(VertxExtension.class)
+class SearchVerticleTest {
     private Vertx vertx;
 
     private final String searchAddress = "SearchVerticle:GET:/search";
 
-    @Before
-    public void setUp(TestContext context) {
+    @BeforeEach
+    void setUp(TestContext context) {
         vertx = Vertx.vertx();
 
         IxircSearchGateway.Configuration config = new IxircSearchGateway.Configuration(12321, "localhost", "");
@@ -34,12 +35,13 @@ public class SearchVerticleTest {
         ListMatchingPacks listMatchingPacks = new ListMatchingPacksImpl(searchGateway);
         Verticle verticle = new SearchVerticle(listMatchingPacks);
         Async async = context.async();
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess(v->async.complete()));
+        vertx.deployVerticle(verticle, context.asyncAssertSuccess(v -> async.complete()));
         async.await();
     }
 
-    @Test(timeout = 30_000)
-    public void verticle_does_http_request(TestContext context) {
+    @Test
+    @Timeout(value = 30)
+    void verticle_does_http_request(TestContext context) {
         vertx.createHttpServer()
                 .requestHandler(r -> {
                     MultiMap params = r.params();
@@ -70,8 +72,9 @@ public class SearchVerticleTest {
 
     }
 
-    @Test(timeout = 30_000)
-    public void verticle_does_returns_error_when_no_searchterm_provided(TestContext context) {
+    @Test
+    @Timeout(value = 30)
+    void verticle_does_returns_error_when_no_searchterm_provided(TestContext context) {
         final JsonObject searchMessage = new JsonObject()
                 .put("method", "GET")
                 .put("params", new JsonObject());

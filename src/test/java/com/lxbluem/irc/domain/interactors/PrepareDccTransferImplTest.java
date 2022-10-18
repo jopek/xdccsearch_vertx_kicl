@@ -7,19 +7,23 @@ import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.domain.model.State;
-import com.lxbluem.irc.domain.model.request.*;
+import com.lxbluem.irc.domain.model.request.CtcpDccSend;
+import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
+import com.lxbluem.irc.domain.model.request.DccResumeAcceptTransferCommand;
+import com.lxbluem.irc.domain.model.request.DccSendTransferCommand;
+import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -28,12 +32,16 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class PrepareDccTransferImplTest {
+@ExtendWith(MockitoExtension.class)
+class PrepareDccTransferImplTest {
     private BotMessaging botMessaging;
     private EventDispatcher eventDispatcher;
     private IrcBot ircBot;
@@ -45,8 +53,8 @@ public class PrepareDccTransferImplTest {
     private PrepareDccTransfer prepareDccTransfer;
     private State state;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         eventDispatcher = mock(EventDispatcher.class);
@@ -85,7 +93,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_invalid_ctcp_query() {
+    void incoming_invalid_ctcp_query() {
         String botNick = "Andy";
         String incoming_message = "crrrrrap";
         CtcpDccSend ctcpQuery = CtcpDccSend.fromQueryString(incoming_message);
@@ -96,7 +104,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_requests_search_for_expected_filename() {
+    void incoming_ctcp_query_requests_search_for_expected_filename() {
         state.remoteSendsCorrectPack();
 
         String botNick = "Andy";
@@ -112,7 +120,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_requests_search_for_unexpected_filename() {
+    void incoming_ctcp_query_requests_search_for_unexpected_filename() {
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
         String incoming_message = "DCC SEND unexpected_filename.txt 3232260964 50000 6";
@@ -125,7 +133,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_active_dcc() {
+    void incoming_ctcp_query_active_dcc() {
         state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
@@ -159,7 +167,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_passive_dcc() {
+    void incoming_ctcp_query_passive_dcc() {
         state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size> <token>
@@ -195,7 +203,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_active_dcc__resume() {
+    void incoming_ctcp_query_active_dcc__resume() {
         state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
@@ -221,7 +229,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_active_dcc__resume_accepted() {
+    void incoming_ctcp_query_active_dcc__resume_accepted() {
         state.resolvedFilename("test1._x0x_.bin");
         state.resolvedFilePartialSize(3000L);
         String botNick = "Andy";
@@ -249,7 +257,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_passive_dcc__resume() {
+    void incoming_ctcp_query_passive_dcc__resume() {
         state.remoteSendsCorrectPack();
         String botNick = "Andy";
         // DCC SEND <filename> <ip> <port> <file size>
@@ -275,7 +283,7 @@ public class PrepareDccTransferImplTest {
     }
 
     @Test
-    public void incoming_ctcp_query_passive_dcc__resume_accepted() {
+    void incoming_ctcp_query_passive_dcc__resume_accepted() {
         state.resolvedFilename("test1._x0x_.bin");
         state.resolvedFilePartialSize(3000L);
         String botNick = "Andy";

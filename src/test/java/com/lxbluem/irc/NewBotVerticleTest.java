@@ -15,18 +15,23 @@ import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
-import com.lxbluem.irc.domain.ports.outgoing.*;
+import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryContext;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.reactivex.ext.unit.Async;
+import io.vertx.reactivex.ext.unit.TestContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
@@ -34,12 +39,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-@RunWith(VertxUnitRunner.class)
-public class NewBotVerticleTest {
+@ExtendWith(VertxExtension.class)
+class NewBotVerticleTest {
 
     private Vertx vertx;
     private IrcBot mockBot;
@@ -49,8 +54,8 @@ public class NewBotVerticleTest {
             .put("method", "POST")
             .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"remoteBotName\",  \"n\": 1}");
 
-    @Before
-    public void setUp(TestContext context) {
+    @BeforeEach
+    void setUp(TestContext context) {
         vertx = Vertx.vertx();
 
         vertx.eventBus().addOutboundInterceptor(interceptor("out"));
@@ -77,8 +82,9 @@ public class NewBotVerticleTest {
         vertx.deployVerticle(verticle, context.asyncAssertSuccess());
     }
 
-    @Test(timeout = 3_000)
-    public void startTransfer_bot_connects_to_irc(TestContext context) {
+    @Test
+    @Timeout(value = 3_000)
+    void startTransfer_bot_connects_to_irc(TestContext context) {
         vertx.eventBus()
                 .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     context.assertEquals("Andy", m.body().getString("bot"));
@@ -107,8 +113,9 @@ public class NewBotVerticleTest {
         assertEquals("#download", captor.getValue());
     }
 
-    @Test(timeout = 3_000)
-    public void stopTransfer_fails_when_bot_missing(TestContext context) {
+    @Test()
+    @Timeout(value = 3_000)
+    void stopTransfer_fails_when_bot_missing(TestContext context) {
         JsonObject stopMessage = new JsonObject()
                 .put("method", "DELETE")
                 .put("params", new JsonObject().put("botname", "missing"));
@@ -119,8 +126,9 @@ public class NewBotVerticleTest {
                 ));
     }
 
-    @Test(timeout = 3_000)
-    public void stopTransfer_via_request(TestContext context) {
+    @Test()
+    @Timeout(value = 3_000)
+    void stopTransfer_via_request(TestContext context) {
         vertx.eventBus()
                 .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     context.assertEquals("Andy", m.body().getString("bot"));
@@ -150,8 +158,9 @@ public class NewBotVerticleTest {
                 }));
     }
 
-    @Test(timeout = 3_000)
-    public void stopTransfer_because_dcc_transfer_finished(TestContext context) {
+    @Test()
+    @Timeout(value = 3_000)
+    void stopTransfer_because_dcc_transfer_finished(TestContext context) {
         vertx.eventBus()
                 .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     context.assertEquals("Andy", m.body().getString("bot"));
@@ -174,8 +183,9 @@ public class NewBotVerticleTest {
 
     }
 
-    @Test(timeout = 3_000)
-    public void stopTransfer_because_dcc_transfer_failed(TestContext context) {
+    @Test()
+    @Timeout(value = 3_000)
+    void stopTransfer_because_dcc_transfer_failed(TestContext context) {
         vertx.eventBus()
                 .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     context.assertEquals("Andy", m.body().getString("bot"));
@@ -198,8 +208,9 @@ public class NewBotVerticleTest {
 
     }
 
-    @Test(timeout = 3_000)
-    public void stopTransfer_via_request_cancels_transfer_when_dcc_transfer_started(TestContext context) {
+    @Test()
+    @Timeout(value = 3_000)
+    void stopTransfer_via_request_cancels_transfer_when_dcc_transfer_started(TestContext context) {
         vertx.eventBus()
                 .<JsonObject>request(startAddress, startMessage, context.asyncAssertSuccess(m -> {
                     context.assertEquals("Andy", m.body().getString("bot"));

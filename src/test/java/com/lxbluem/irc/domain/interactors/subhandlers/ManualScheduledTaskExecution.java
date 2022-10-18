@@ -4,7 +4,7 @@ import com.lxbluem.irc.domain.ports.outgoing.ScheduledTaskExecution;
 
 import java.util.concurrent.TimeUnit;
 
-public class ManualScheduledTaskExecution implements ScheduledTaskExecution {
+class ManualScheduledTaskExecution implements ScheduledTaskExecution {
 
     private Runnable task;
 

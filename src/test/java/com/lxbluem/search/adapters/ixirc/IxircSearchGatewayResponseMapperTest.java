@@ -3,13 +3,13 @@ package com.lxbluem.search.adapters.ixirc;
 import com.lxbluem.search.domain.ports.SearchGateway;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class IxircSearchGatewayResponseMapperTest {
+class IxircSearchGatewayResponseMapperTest {
 
     private final JsonObject INPUT = new JsonObject()
             .put("c", 61)
@@ -40,7 +40,7 @@ public class IxircSearchGatewayResponseMapperTest {
                     ));
 
     @Test
-    public void map() {
+    void map() {
         SearchGateway.SearchResponse mapped = IxircResponseMapper.mapToSearchResponse(INPUT);
 
         SearchGateway.SearchResponse expected = SearchGateway.SearchResponse.builder()
@@ -65,7 +65,7 @@ public class IxircSearchGatewayResponseMapperTest {
     }
 
     @Test
-    public void map_no_more_results() {
+    void map_no_more_results() {
         JsonObject modifiedCopy = INPUT.copy().put("pn", 2);
 
         SearchGateway.SearchResponse mapped = IxircResponseMapper.mapToSearchResponse(modifiedCopy);

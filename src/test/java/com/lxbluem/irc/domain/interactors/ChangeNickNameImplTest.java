@@ -8,19 +8,22 @@ import com.lxbluem.irc.domain.ports.incoming.ChangeNickName;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
-public class ChangeNickNameImplTest {
+class ChangeNickNameImplTest {
 
     private IrcBot ircBot;
     private BotStorage botStorage;
@@ -29,8 +32,8 @@ public class ChangeNickNameImplTest {
     private ChangeNickName changeNickName;
     private NameGenerator nameGenerator;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         nameGenerator = mock(NameGenerator.class);
         eventDispatcher = mock(EventDispatcher.class);
         botStorage = new InMemoryBotStorage();
@@ -42,13 +45,13 @@ public class ChangeNickNameImplTest {
     }
 
     @Test
-    public void register_new_nick_when_rejected() {
+    void register_new_nick_when_rejected() {
         when(nameGenerator.getNick()).thenReturn("Randy");
 
         ChangeNickNameCommand command = new ChangeNickNameCommand("Andy", "something happened; serverMessages; more serverMessages");
         changeNickName.handle(command);
 
-        verify(ircBot).changeNickname(eq("Randy"));
+        verify(ircBot).changeNickname("Randy");
 
         // VERIFY this assumption
 //        assertFalse(botStorage.get("Andy").isPresent());

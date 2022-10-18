@@ -2,7 +2,7 @@ package com.lxbluem.irc.domain;
 
 import com.lxbluem.common.domain.Pack;
 import com.lxbluem.irc.domain.model.State;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -11,12 +11,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class StateTest {
+class StateTest {
 
     @Test
-    public void allConditionsMet() {
+    void allConditionsMet() {
         Pack pack = getPack();
 
         Runnable runnable = () -> {
@@ -32,7 +36,7 @@ public class StateTest {
     }
 
     @Test
-    public void allConditionsMet_different_caseInsensitive() {
+    void allConditionsMet_different_caseInsensitive() {
         Pack pack = getPack();
 
         State state = new State(pack, () -> {
@@ -48,7 +52,7 @@ public class StateTest {
     }
 
     @Test
-    public void not_all_channels_joined() {
+    void not_all_channels_joined() {
         Pack pack = getPack();
 
         State state = new State(pack, () -> {
@@ -61,7 +65,7 @@ public class StateTest {
     }
 
     @Test
-    public void no_joined_channels() {
+    void no_joined_channels() {
         Pack pack = getPack();
 
         State state = new State(pack, () -> {
@@ -72,7 +76,7 @@ public class StateTest {
     }
 
     @Test
-    public void allConditionsMet_registry_required() {
+    void allConditionsMet_registry_required() {
         Pack pack = getPack();
 
         State state = new State(pack, () -> {
@@ -92,7 +96,7 @@ public class StateTest {
     }
 
     @Test
-    public void allConditionsMet_withExecHook() {
+    void allConditionsMet_withExecHook() {
         Pack pack = getPack();
         AtomicBoolean atomicBoolean = new AtomicBoolean();
         State state = new State(pack, () -> atomicBoolean.set(true));
@@ -106,7 +110,7 @@ public class StateTest {
     }
 
     @Test
-    public void setTests() {
+    void setTests() {
         Set<Integer> set1;
         Set<Integer> set2;
 
@@ -129,7 +133,7 @@ public class StateTest {
     }
 
     @Test
-    public void request_only_once() {
+    void request_only_once() {
         Pack pack = getPack();
         AtomicInteger atomicInteger = new AtomicInteger();
         State state = new State(pack, atomicInteger::incrementAndGet);
@@ -146,7 +150,7 @@ public class StateTest {
     }
 
     @Test
-    public void remove_channel_joined() {
+    void remove_channel_joined() {
         Pack pack = getPack();
         AtomicInteger atomicInteger = new AtomicInteger();
         State state = new State(pack, atomicInteger::incrementAndGet);
@@ -163,7 +167,7 @@ public class StateTest {
     }
 
     @Test
-    public void missingRemoteBotUser() {
+    void missingRemoteBotUser() {
         Pack pack = getPack();
         State state = new State(pack, () -> {
         });
@@ -175,7 +179,7 @@ public class StateTest {
     }
 
     @Test
-    public void hashcodes_DefaultDccBotState() {
+    void hashcodes_DefaultDccBotState() {
         Pack pack = getPack();
         State state = new State(pack, () -> {
         });
@@ -190,7 +194,7 @@ public class StateTest {
     }
 
     @Test
-    public void hashcodes_HookedDccBotState() {
+    void hashcodes_HookedDccBotState() {
         Pack pack = getPack();
         State state = new State(pack, () -> {
         });
@@ -204,8 +208,8 @@ public class StateTest {
         assertNotEquals(initialHash, afterChannelRefsHash);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void remoteNickNameIsNull() {
+    @Test
+    void remoteNickNameIsNull() {
         Pack pack = Pack.builder()
                 .networkName("nn")
                 .serverHostName("192.168.99.100")

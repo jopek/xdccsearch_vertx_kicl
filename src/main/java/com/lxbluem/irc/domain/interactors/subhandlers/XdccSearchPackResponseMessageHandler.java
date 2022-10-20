@@ -41,7 +41,6 @@ public class XdccSearchPackResponseMessageHandler implements NoticeMessageHandle
         if (noticeMessage.toLowerCase().contains("searching for")) {
             return true;
         }
-
         if (!state.isSearchRequested())
             return false;
 

@@ -4,14 +4,11 @@ import com.lxbluem.filenameresolver.domain.ports.incoming.ResolvePackName;
 import com.lxbluem.filenameresolver.domain.ports.incoming.SyncStorageFromFs;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import rx.Completable;
 
 import static com.lxbluem.common.infrastructure.Address.FILENAME_RESOLVE;
 
 public class FilenameResolverVerticle extends AbstractVerticle {
-    private static final Logger LOG = LoggerFactory.getLogger(FilenameResolverVerticle.class);
     private final ResolvePackName resolver;
     private final SyncStorageFromFs syncStorageFromFs;
 
@@ -35,8 +32,7 @@ public class FilenameResolverVerticle extends AbstractVerticle {
                                 JsonObject jsonResponse = new JsonObject()
                                         .put("filename", response.getFilename())
                                         .put("position", response.getFilesize())
-                                        .put("isComplete", response.isComplete())
-                                        ;
+                                        .put("isComplete", response.isComplete());
                                 message.reply(jsonResponse);
                             });
                 });

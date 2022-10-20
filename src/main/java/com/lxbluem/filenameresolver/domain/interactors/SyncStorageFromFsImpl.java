@@ -6,7 +6,6 @@ import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileSystemBlocking;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class SyncStorageFromFsImpl implements SyncStorageFromFs {
     private final FileSystemBlocking fileSystem;
@@ -24,20 +23,21 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
         List<String> directoryListing = fileSystem.readDir(downloadsPath)
                 .stream()
                 .map(this::basename)
-                .collect(Collectors.toList());
+                .toList();
         List<FileEntity> allFileEntities = fileEntityStorage.getAll();
 
         List<FileEntity> toRemove = allFileEntities.stream()
                 .filter(fileEntity -> !directoryListing.contains(fileEntity.getFilenameOnDisk()))
-                .collect(Collectors.toList());
+                .toList();
         fileEntityStorage.removeAll(toRemove);
 
         List<FileEntity> toAdd = allFileEntities
                 .stream()
                 .filter(FileEntity::isInUse)
                 .filter(fileEntity -> directoryListing.contains(fileEntity.getFilenameOnDisk()))
-                .peek(fileEntity -> fileEntity.setInUse(false))
-                .collect(Collectors.toList());
+                .toList();
+        toAdd.forEach(fileEntity -> fileEntity.setInUse(false));
+
         fileEntityStorage.saveAll(toAdd);
     }
 

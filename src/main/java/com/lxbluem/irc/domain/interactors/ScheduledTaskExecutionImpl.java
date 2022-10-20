@@ -14,9 +14,6 @@ public class ScheduledTaskExecutionImpl implements ScheduledTaskExecution {
     private final ScheduledExecutorService timerService = Executors.newSingleThreadScheduledExecutor();
     private final Map<String, ScheduledFuture<?>> botScheduledTasks = new HashMap<>();
 
-    public ScheduledTaskExecutionImpl() {
-    }
-
     @Override
     public void scheduleTask(String botNickName, Runnable task, long delay, TimeUnit timeUnit) {
         ScheduledFuture<?> schedule = timerService.schedule(() -> {

@@ -1,6 +1,14 @@
 package com.lxbluem.common.infrastructure;
 
-import com.lxbluem.common.domain.events.*;
+import com.lxbluem.common.domain.events.BotDccPackRequestedEvent;
+import com.lxbluem.common.domain.events.BotExitedEvent;
+import com.lxbluem.common.domain.events.BotFailedEvent;
+import com.lxbluem.common.domain.events.BotInitializedEvent;
+import com.lxbluem.common.domain.events.BotNoticeEvent;
+import com.lxbluem.common.domain.events.BotRenamedEvent;
+import com.lxbluem.common.domain.events.DccQueuedEvent;
+import com.lxbluem.common.domain.events.DummyEvent;
+import com.lxbluem.common.domain.events.Event;
 
 public enum Address {
     ROUTE_ADD("route", DummyEvent.class),

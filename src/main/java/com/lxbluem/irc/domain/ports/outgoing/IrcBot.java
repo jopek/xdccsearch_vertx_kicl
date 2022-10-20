@@ -26,4 +26,6 @@ public interface IrcBot {
     void stopSearchListing(String remoteBotName);
 
     void startSearchListing(String remoteBotName, String packname);
+
+    String getBotName();
 }

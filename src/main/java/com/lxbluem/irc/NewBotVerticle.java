@@ -24,7 +24,9 @@ import rx.functions.Action1;
 
 import java.util.Map;
 
-import static com.lxbluem.common.infrastructure.Address.*;
+import static com.lxbluem.common.infrastructure.Address.DCC_FAILED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
+import static com.lxbluem.common.infrastructure.Address.DCC_STARTED;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 
@@ -47,7 +49,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     public void start(Future<Void> start) {
         registerRoute(POST, "/xfers", this::startTransfer);
         registerRoute(DELETE, "/xfers/:botname", this::stopTransfer)
-                .setHandler(start);
+                .onComplete(start);
 
         handle(DCC_STARTED, this::dccStarted);
         handle(DCC_FINISHED, this::dccFinished);
@@ -60,7 +62,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
             InitializeBotCommand initializeBotCommand = new InitializeBotCommand(pack);
             String botNickName = initializeBot.handle(initializeBotCommand);
             result.complete(new JsonObject().put("bot", botNickName));
-            System.out.println(">>>>>>>>>");
+            LOG.debug(">>>>>>>>>");
         } catch (Exception t) {
             result.fail(t);
         }

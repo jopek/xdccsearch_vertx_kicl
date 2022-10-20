@@ -1,7 +1,12 @@
 package com.lxbluem.irc.domain.interactors;
 
 import com.lxbluem.common.domain.ports.BotMessaging;
-import com.lxbluem.irc.domain.model.request.*;
+import com.lxbluem.irc.domain.model.request.CtcpDccSend;
+import com.lxbluem.irc.domain.model.request.DccInitializeRequest;
+import com.lxbluem.irc.domain.model.request.DccResumeAcceptTransferCommand;
+import com.lxbluem.irc.domain.model.request.DccSendTransferCommand;
+import com.lxbluem.irc.domain.model.request.FilenameResolveRequest;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
@@ -66,7 +71,7 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
                     String packNickName = state.getPack().getNickName();
                     AtomicLong positionInPartialDownload = new AtomicLong();
 
-                    Consumer<Map<String, Object>> filenameResolverConsumer = (filenameAnswerMap) -> {
+                    Consumer<Map<String, Object>> filenameResolverConsumer = filenameAnswerMap -> {
                         String resolvedFilename = String.valueOf(filenameAnswerMap.getOrDefault("filename", ""));
                         positionInPartialDownload.set((Long) filenameAnswerMap.getOrDefault("position", 0L));
                         boolean isComplete = (Boolean) filenameAnswerMap.getOrDefault("isComplete", false);
@@ -119,7 +124,7 @@ public class PrepareDccTransferImpl implements PrepareDccTransfer {
     }
 
     private Consumer<Map<String, Object>> finishReverseDccSend(IrcBot bot, CtcpDccSend ctcpQuery, long localIp, String packNickName) {
-        return (answer) -> {
+        return answer -> {
             int passiveDccSocketPort = (int) answer.getOrDefault("port", 0);
             String dccSendRequest = format("DCC SEND %s %d %d %d %d",
                     ctcpQuery.getFilename(),

@@ -1,6 +1,13 @@
 package com.lxbluem.irc.adapters;
 
-import com.lxbluem.irc.domain.ports.incoming.*;
+import com.lxbluem.irc.domain.ports.incoming.ChangeNickName;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.JoinMentionedChannels;
+import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
+import com.lxbluem.irc.domain.ports.incoming.RegisterNickName;
+import com.lxbluem.irc.domain.ports.incoming.SkipProtectedChannel;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 

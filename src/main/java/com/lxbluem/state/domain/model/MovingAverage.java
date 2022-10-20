@@ -21,7 +21,7 @@ public class MovingAverage {
 
     public double average() {
         int index;
-        if (q.size() > 0)
+        if (!q.isEmpty())
             index = q.size() - 1;
         else
             return 0;
@@ -29,14 +29,13 @@ public class MovingAverage {
         Progress lastElement = q.get(index);
 
         Progress reference = q.stream()
-                .filter(p -> p.time + secondsToSave * 1000 < lastElement.time)
+                .filter(p -> p.time + secondsToSave * 1000L < lastElement.time)
                 .findFirst()
                 .orElse(q.get(0));
 
         long dt = lastElement.time - reference.time;
-        double avg = (dt == 0) ? lastElement.size : 1d * (lastElement.size - reference.size) / dt;
 
-        return avg;
+        return (dt == 0) ? lastElement.size : 1d * (lastElement.size - reference.size) / dt;
     }
 
     public void addValue(Progress val) {

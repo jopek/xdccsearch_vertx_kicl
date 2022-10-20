@@ -1,7 +1,24 @@
 package com.lxbluem.irc.adapters;
 
-import com.lxbluem.irc.domain.model.request.*;
-import com.lxbluem.irc.domain.ports.incoming.*;
+import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
+import com.lxbluem.irc.domain.model.request.ChangeNickNameCommand;
+import com.lxbluem.irc.domain.model.request.CtcpDccSend;
+import com.lxbluem.irc.domain.model.request.DccResumeAcceptTransferCommand;
+import com.lxbluem.irc.domain.model.request.DccSendTransferCommand;
+import com.lxbluem.irc.domain.model.request.JoinMentionedChannelsCommand;
+import com.lxbluem.irc.domain.model.request.LookForPackUserCommand;
+import com.lxbluem.irc.domain.model.request.NoticeMessageCommand;
+import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
+import com.lxbluem.irc.domain.model.request.RegisterNickNameCommand;
+import com.lxbluem.irc.domain.model.request.SkipProtectedChannelCommand;
+import com.lxbluem.irc.domain.ports.incoming.ChangeNickName;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.JoinMentionedChannels;
+import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
+import com.lxbluem.irc.domain.ports.incoming.RegisterNickName;
+import com.lxbluem.irc.domain.ports.incoming.SkipProtectedChannel;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import lombok.extern.slf4j.Slf4j;
 import net.engio.mbassy.listener.Handler;
@@ -20,16 +37,18 @@ import org.kitteh.irc.client.library.exception.KittehNagException;
 import org.kitteh.irc.client.library.feature.filter.NumericFilter;
 
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class KittehIrcBot implements IrcBot {
 
     private final boolean isDebugging;
     private Client client;
-    private String botName;
     private final ExitBot exitBot;
     private final NoticeMessageHandler noticeMessageHandler;
     private final PrepareDccTransfer prepareDccTransfer;
@@ -62,14 +81,13 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void connect(BotConnectionDetails connectionDetails) {
-        botName = connectionDetails.botNick();
         client = Client.builder()
                 .server()
                 .host(connectionDetails.serverHostName())
                 .port(connectionDetails.serverPort())
                 .secure(false)
                 .then()
-                .nick(botName)
+                .nick(connectionDetails.botNick())
                 .name(connectionDetails.name())
                 .user(connectionDetails.user())
                 .realName(connectionDetails.realName())
@@ -79,7 +97,7 @@ public class KittehIrcBot implements IrcBot {
         Consumer<Exception> exceptionConsumer = e -> {
             if (e instanceof KittehNagException)
                 return;
-            ReasonedExitCommand exitCommand = new ReasonedExitCommand(botName, e.getMessage());
+            ReasonedExitCommand exitCommand = new ReasonedExitCommand(connectionDetails.botNick(), e.getMessage());
             exitBot.handle(exitCommand);
         };
         client.getExceptionListener().setConsumer(exceptionConsumer);
@@ -91,9 +109,9 @@ public class KittehIrcBot implements IrcBot {
                 if (line.contains(" 352 ")) return;
                 if (line.contains(" 353 ")) return;
                 if (line.contains(" 354 ")) return;
-                System.out.println("           " + sdf.format(new Date()) + ' ' + "[I] " + line);
+                log.debug("           " + sdf.format(new Date()) + ' ' + "[I] " + line);
             });
-            client.setOutputListener(line -> System.out.println("           " + sdf.format(new Date()) + ' ' + "[O] " + line));
+            client.setOutputListener(line -> log.debug("           " + sdf.format(new Date()) + ' ' + "[O] " + line));
         }
 
         client.connect();
@@ -107,7 +125,7 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void joinChannel(String... channelNames) {
-        System.out.println("JOIN CHANNELS: " + String.join(", ", channelNames));
+        log.info("JOIN CHANNELS: " + String.join(", ", channelNames));
         if (channelNames.length > 0)
             client.addChannel(channelNames);
     }
@@ -165,17 +183,19 @@ public class KittehIrcBot implements IrcBot {
                 .getUsers()
                 .stream()
                 .map(User::getNick)
-                .collect(Collectors.toList());
+                .toList();
         String channelName = channel.getName();
-        lookForPackUser.handle(new LookForPackUserCommand(botName, channelName, users));
+        lookForPackUser.handle(new LookForPackUserCommand(event.getClient().getName(), channelName, users));
     }
 
     @Handler
+    @SuppressWarnings("unused")
     public void onMotd(ClientReceiveMotdEvent event) {
-        registerNickName.handle(new RegisterNickNameCommand(botName));
+        registerNickName.handle(new RegisterNickNameCommand(event.getClient().getName()));
     }
 
     @Handler
+    @SuppressWarnings("unused")
     public void onChannelTopic(ChannelTopicEvent event) {
         String channelName = event.getChannel().getName();
         String topic = event
@@ -189,17 +209,21 @@ public class KittehIrcBot implements IrcBot {
 
     @NumericFilter(474)
     @Handler
+    @SuppressWarnings("unused")
     public void onBanFromChannel(ClientReceiveNumericEvent event) {
-        System.out.printf("BANNED: BOT:%s EVENT:%s\n", botName, event);
+        String name = event.getClient().getName();
+        log.warn("BANNED: BOT:{} EVENT:{}", name, event);
         List<String> parameters = event.getParameters();
         String message = parameters.get(2);
-        exitBot.handle(new ReasonedExitCommand(botName, message));
+        exitBot.handle(new ReasonedExitCommand(name, message));
     }
 
     @NumericFilter(477)
     @Handler
+    @SuppressWarnings("unused")
     public void onAccountNeededJoinChannel(ClientReceiveNumericEvent event) {
-        System.out.printf("CHANNEL NEEDS REGISTRATION:%s EVENT:%s\n", botName, event);
+        String name = event.getClient().getName();
+        log.info("CHANNEL NEEDS REGISTRATION:{} EVENT:{}", name, event);
         List<String> parameters = event.getParameters();
         String botNickName = parameters.get(0);
         String attemptedChannel = parameters.get(1);
@@ -209,6 +233,7 @@ public class KittehIrcBot implements IrcBot {
     }
 
     @Handler
+    @SuppressWarnings("unused")
     public void onNickRejected(NickRejectedEvent event) {
         String serverMessages = event.getSource().getMessage();
         String attemptedNick = event.getAttemptedNick();
@@ -218,6 +243,7 @@ public class KittehIrcBot implements IrcBot {
     }
 
     @Handler
+    @SuppressWarnings("unused")
     public void onPrivateNotice(PrivateNoticeEvent event) {
         String remoteNick = event.getActor().getNick();
         String botName = event.getClient().getNick();
@@ -228,9 +254,11 @@ public class KittehIrcBot implements IrcBot {
     }
 
     @Handler
+    @SuppressWarnings("unused")
     public void onPrivateCTCPQuery(PrivateCtcpQueryEvent event) {
         String message = event.getMessage();
-        long localIp = event.getClient()
+        Client eventClient = event.getClient();
+        long localIp = eventClient
                 .getUser()
                 .map(User::getHost)
                 .map(this::transformIpToLong)
@@ -238,12 +266,12 @@ public class KittehIrcBot implements IrcBot {
 
         if (isSend(message)) {
             CtcpDccSend ctcpDccSend = CtcpDccSend.fromQueryString(message);
-            DccSendTransferCommand command = new DccSendTransferCommand(botName, ctcpDccSend, localIp);
+            DccSendTransferCommand command = new DccSendTransferCommand(eventClient.getNick(), ctcpDccSend, localIp);
             prepareDccTransfer.handle(command);
         }
 
         if (isAccept(message)) {
-            DccResumeAcceptTransferCommand command = new DccResumeAcceptTransferCommand(botName, localIp);
+            DccResumeAcceptTransferCommand command = new DccResumeAcceptTransferCommand(eventClient.getNick(), localIp);
             prepareDccTransfer.handle(command);
         }
     }
@@ -252,6 +280,7 @@ public class KittehIrcBot implements IrcBot {
         String[] split = message.trim().split("\\s+");
         return split[1].equals("SEND");
     }
+
     private boolean isAccept(String message) {
         String[] split = message.trim().split("\\s+");
         return split[1].equals("ACCEPT");
@@ -270,4 +299,8 @@ public class KittehIrcBot implements IrcBot {
         }
     }
 
+    @Override
+    public String getBotName() {
+        return client.getName();
+    }
 }

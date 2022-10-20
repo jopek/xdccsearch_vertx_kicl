@@ -65,13 +65,13 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
     }
 
     private void sendNotification(JsonObject requestPayload) {
-        LOG.debug("send request to {}",
-                format("%s://%s:%d%s",
-                        clientConfig.getBoolean("useSsl") ? "https" : "http",
-                        clientConfig.getString("host"),
-                        clientConfig.getInteger("port"),
-                        clientConfig.getString("uri")
-                ));
+        String message = format("%s://%s:%d%s",
+                Boolean.TRUE.equals(clientConfig.getBoolean("useSsl")) ? "https" : "http",
+                clientConfig.getString("host"),
+                clientConfig.getInteger("port"),
+                clientConfig.getString("uri")
+        );
+        LOG.debug("send request to {}", message);
 
         client
                 .post(
@@ -84,7 +84,7 @@ public class ExternalNotificationVerticle extends AbstractVerticle {
                     if (clientResponse.succeeded()) {
                         LOG.info("successful post: {}", clientResponse.result().body());
                     } else {
-                        LOG.warn("failure to post: {}", clientResponse.cause());
+                        LOG.warn("failure to post", clientResponse.cause());
                     }
                 });
     }

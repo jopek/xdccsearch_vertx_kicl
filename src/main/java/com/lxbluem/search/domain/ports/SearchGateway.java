@@ -1,7 +1,11 @@
 package com.lxbluem.search.domain.ports;
 
 import com.lxbluem.search.domain.callback.Callback;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 
 import java.util.List;
 

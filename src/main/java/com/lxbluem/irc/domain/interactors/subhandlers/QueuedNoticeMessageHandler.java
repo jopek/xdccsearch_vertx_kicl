@@ -15,7 +15,6 @@ public class QueuedNoticeMessageHandler implements NoticeMessageHandler.SubHandl
     @Override
     public boolean handle(NoticeMessageCommand command) {
         String botNickName = command.getBotNickName();
-        String remoteName = command.getRemoteName();
         String noticeMessage = command.getNoticeMessage();
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();

@@ -1,11 +1,13 @@
 package com.lxbluem.common.domain.events;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@EqualsAndHashCode
 public class BotExitedEvent extends BotEvent {
     private String message;
 

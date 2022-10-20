@@ -3,8 +3,12 @@ package com.lxbluem.filenameresolver.adapters;
 import com.lxbluem.filenameresolver.domain.model.FileEntity;
 import com.lxbluem.filenameresolver.domain.ports.outgoing.FileEntityStorage;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class InMemoryEntityStorage implements FileEntityStorage {
     private final Set<FileEntity> filesOnDisk = new HashSet<>();
@@ -29,7 +33,7 @@ public class InMemoryEntityStorage implements FileEntityStorage {
     public List<FileEntity> findByName(String filename) {
         return filesOnDisk.stream()
                 .filter(fileEntity -> fileEntity.getPackname().equalsIgnoreCase(filename))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -37,7 +41,7 @@ public class InMemoryEntityStorage implements FileEntityStorage {
         return filesOnDisk.stream()
                 .filter(fileEntity -> fileEntity.getPackname().equalsIgnoreCase(filename))
                 .filter(fileEntity -> fileEntity.getPacksize() == filesize)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

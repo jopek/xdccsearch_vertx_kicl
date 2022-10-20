@@ -5,5 +5,6 @@ import com.lxbluem.irc.domain.model.request.DccSendTransferCommand;
 
 public interface PrepareDccTransfer {
     void handle(DccSendTransferCommand command);
+
     void handle(DccResumeAcceptTransferCommand command);
 }

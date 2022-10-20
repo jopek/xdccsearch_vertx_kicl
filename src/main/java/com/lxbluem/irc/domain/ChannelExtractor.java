@@ -5,6 +5,9 @@ import java.util.Set;
 
 public class ChannelExtractor {
 
+    private ChannelExtractor() {
+    }
+
     public static Set<String> getMentionedChannels(String topic) {
         Set<String> channels = new HashSet<>();
 

@@ -22,7 +22,6 @@ public class JoinMoreChannelsNoticeMessageHandler implements NoticeMessageHandle
     @Override
     public boolean handle(NoticeMessageCommand command) {
         String botNickName = command.getBotNickName();
-        String remoteName = command.getRemoteName();
         String noticeMessage = command.getNoticeMessage();
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();
 

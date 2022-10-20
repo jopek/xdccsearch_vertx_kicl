@@ -5,10 +5,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class IxircResponseMapper {
-    private IxircResponseMapper(){}
+    private IxircResponseMapper() {
+    }
 
     public static SearchGateway.SearchResponse mapToSearchResponse(JsonObject jsonObject) {
         JsonArray ixircResults = jsonObject.getJsonArray("results", new JsonArray());
@@ -34,7 +34,7 @@ public class IxircResponseMapper {
                             .build();
 
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return SearchGateway.SearchResponse.builder()
                 .hasMore(hasMore)

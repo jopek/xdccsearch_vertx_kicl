@@ -6,8 +6,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rxjava.core.AbstractVerticle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -17,8 +15,6 @@ import static com.lxbluem.common.infrastructure.Address.ROUTE_REMOVE;
 import static java.lang.String.format;
 
 public abstract class AbstractRouteVerticle extends AbstractVerticle {
-    private final Logger LOG = LoggerFactory.getLogger(getClass());
-
     protected Future<Void> registerRoute(
             HttpMethod httpMethod,
             String route,

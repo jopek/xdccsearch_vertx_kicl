@@ -12,7 +12,7 @@ public interface BotMessaging {
     /**
      * @deprecated instead use {@link BotMessaging#notify(Address, Event)}()}
      */
-    @Deprecated
+    @Deprecated()
     void notify(String address, String botName);
 
     /**

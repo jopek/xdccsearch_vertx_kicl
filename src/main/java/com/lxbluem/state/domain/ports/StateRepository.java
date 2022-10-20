@@ -6,7 +6,10 @@ import java.util.Map;
 
 public interface StateRepository {
     State getStateByBotName(String botName);
+
     State saveStateByBotName(String botName, State state);
+
     Map<String, State> getStateEntries();
+
     State removeStateByBotName(String botname);
 }

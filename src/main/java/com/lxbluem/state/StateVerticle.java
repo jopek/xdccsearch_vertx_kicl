@@ -1,11 +1,22 @@
 package com.lxbluem.state;
 
-import com.lxbluem.common.domain.events.*;
+import com.lxbluem.common.domain.events.BotExitedEvent;
+import com.lxbluem.common.domain.events.BotFailedEvent;
+import com.lxbluem.common.domain.events.BotInitializedEvent;
+import com.lxbluem.common.domain.events.BotNoticeEvent;
+import com.lxbluem.common.domain.events.BotRenamedEvent;
 import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.state.domain.StateService;
-import com.lxbluem.state.domain.model.request.*;
+import com.lxbluem.state.domain.model.request.DccFinishRequest;
+import com.lxbluem.state.domain.model.request.DccProgressRequest;
+import com.lxbluem.state.domain.model.request.DccStartRequest;
+import com.lxbluem.state.domain.model.request.ExitRequest;
+import com.lxbluem.state.domain.model.request.FailRequest;
+import com.lxbluem.state.domain.model.request.InitRequest;
+import com.lxbluem.state.domain.model.request.NoticeMessageRequest;
+import com.lxbluem.state.domain.model.request.RenameBotRequest;
 import com.lxbluem.state.presenters.StatePresenter;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Promise;
@@ -26,6 +37,8 @@ import static io.vertx.core.http.HttpMethod.GET;
 
 public class StateVerticle extends AbstractRouteVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(StateVerticle.class);
+    public static final String TIMESTAMP_MSG_KEY = "timestamp";
+    public static final String BOT_MSG_KEY = "bot";
 
     private final StateService service;
     private final Clock clock;
@@ -38,9 +51,9 @@ public class StateVerticle extends AbstractRouteVerticle {
     @Override
     public void start(Promise<Void> start) {
         CompositeFuture.all(
-                registerRoute(DELETE, "/state", this::clearFinished),
-                registerRoute(GET, "/state", this::getState)
-        )
+                        registerRoute(DELETE, "/state", this::clearFinished),
+                        registerRoute(GET, "/state", this::getState)
+                )
                 .onComplete(unused -> start.complete());
 
         handle(BOT_INITIALIZED, this::init);
@@ -106,9 +119,9 @@ public class StateVerticle extends AbstractRouteVerticle {
 
     private void dccStart(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
+        String bot = body.getString(BOT_MSG_KEY);
         String filenameOnDisk = body.getString("filenameOnDisk");
-        long timestamp = body.getLong("timestamp");
+        long timestamp = body.getLong(TIMESTAMP_MSG_KEY);
         long bytesTotal = body.getLong("bytesTotal");
         service.dccStart(new DccStartRequest(bot, bytesTotal, filenameOnDisk, timestamp));
     }
@@ -116,15 +129,15 @@ public class StateVerticle extends AbstractRouteVerticle {
     private void dccProgress(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
         long bytes = body.getLong("bytes", 0L);
-        String bot = body.getString("bot");
-        long timestamp = body.getLong("timestamp", 1L);
+        String bot = body.getString(BOT_MSG_KEY);
+        long timestamp = body.getLong(TIMESTAMP_MSG_KEY, 1L);
         service.dccProgress(new DccProgressRequest(bot, bytes, timestamp));
     }
 
     private void dccFinish(Message<JsonObject> eventMessage) {
         JsonObject body = eventMessage.body();
-        String bot = body.getString("bot");
-        long timestamp = body.getLong("timestamp");
+        String bot = body.getString(BOT_MSG_KEY);
+        long timestamp = body.getLong(TIMESTAMP_MSG_KEY);
         service.dccFinish(new DccFinishRequest(bot, timestamp));
     }
 

@@ -26,7 +26,14 @@ import java.io.RandomAccessFile;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.lxbluem.common.infrastructure.Address.*;
+import static com.lxbluem.common.infrastructure.Address.BOT_EXITED;
+import static com.lxbluem.common.infrastructure.Address.BOT_FAILED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FAILED;
+import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
+import static com.lxbluem.common.infrastructure.Address.DCC_INITIALIZE;
+import static com.lxbluem.common.infrastructure.Address.DCC_PROGRESSED;
+import static com.lxbluem.common.infrastructure.Address.DCC_STARTED;
+import static com.lxbluem.common.infrastructure.Address.DCC_TERMINATED;
 
 public class DccReceiverVerticle extends AbstractVerticle {
     private static final int PORT = 3400;
@@ -49,12 +56,13 @@ public class DccReceiverVerticle extends AbstractVerticle {
         netServer = vertx.createNetServer(new NetServerOptions().setReceiveBufferSize(bufferSize));
 
         PublishSubject<NetSocket> serverSocketSubject = PublishSubject.create();
-        Action1<NetSocket> logConnection = netSocket -> LOG.info("SOCKET connect stream : l:{}:{} r:{}:{}",
-                netSocket.remoteAddress().host(),
-                netSocket.remoteAddress().port(),
-                netSocket.localAddress().host(),
-                netSocket.localAddress().port()
-        );
+        Action1<NetSocket> logConnection = netSocket -> {
+            String remoteHost = netSocket.remoteAddress().host();
+            int remotePort = netSocket.remoteAddress().port();
+            String localHost = netSocket.localAddress().host();
+            int localPort = netSocket.localAddress().port();
+            LOG.info("SOCKET connect stream : l:{}:{} r:{}:{}", remoteHost, remotePort, localHost, localPort);
+        };
         netServer.connectStream()
                 .toObservable()
                 .doOnNext(logConnection)
@@ -234,8 +242,14 @@ public class DccReceiverVerticle extends AbstractVerticle {
     }
 
     private void removePartExtension(File file) {
-        String filename = file.getPath().replace(".part", "");
-        boolean renameSucceeded = file.renameTo(new File(filename));
+        String originalName = file.getName();
+        String newName = file.getPath().replace(".part", "");
+        boolean renamedTo = file.renameTo(new File(newName));
+        if (renamedTo) {
+            LOG.info("rename of {} to {}", originalName, newName);
+            return;
+        }
+        LOG.warn("could not rename");
     }
 
     private static class InitMessageConnection {

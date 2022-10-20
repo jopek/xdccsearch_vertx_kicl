@@ -10,8 +10,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -37,8 +35,6 @@ import static io.vertx.core.http.HttpMethod.GET;
 
 
 public class SearchVerticle extends AbstractRouteVerticle {
-    private static final Logger LOG = LoggerFactory.getLogger(SearchVerticle.class);
-
     private final ListMatchingPacks listMatchingPacks;
 
     public SearchVerticle(ListMatchingPacks listMatchingPacks) {
@@ -48,11 +44,11 @@ public class SearchVerticle extends AbstractRouteVerticle {
     @Override
     public void start(Future<Void> startFuture) {
         registerRoute(GET, "/search", this::handleRoutedHttpSearchRequest)
-                .setHandler(startFuture);
+                .onComplete(startFuture);
     }
 
     private void handleRoutedHttpSearchRequest(SerializedRequest request, Promise<JsonObject> responseHandler) {
-        ListMatchingPacks.Command command = getSearchCommand(request, responseHandler);
+        ListMatchingPacks.Command command = getSearchCommand(request);
         Callback<ListMatchingPacks.ListMatchingPacksResponse> presenter = searchResponsePresenter(responseHandler);
         listMatchingPacks.handle(command, presenter);
     }
@@ -87,7 +83,7 @@ public class SearchVerticle extends AbstractRouteVerticle {
         }, responseHandler::fail);
     }
 
-    private ListMatchingPacks.Command getSearchCommand(SerializedRequest request, Promise<JsonObject> responseHandler) {
+    private ListMatchingPacks.Command getSearchCommand(SerializedRequest request) {
         Map<String, String> params = request.getParams();
 
         String pageNumParam = params.getOrDefault("pn", "0");

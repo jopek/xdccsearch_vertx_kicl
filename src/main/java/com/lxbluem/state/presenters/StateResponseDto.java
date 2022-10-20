@@ -11,9 +11,11 @@ import java.util.Map;
 //@Setter
 //@Builder
 @Data
-public class StateResponseDto  {
+public class StateResponseDto {
     private final Map<String, StateResponseDto.StateEntry> map;
-    @Data @Builder
+
+    @Data
+    @Builder
     static class StateEntry {
         private long started;
         private long duration;

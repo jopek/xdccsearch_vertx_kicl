@@ -5,7 +5,14 @@ import com.lxbluem.state.domain.model.BotState;
 import com.lxbluem.state.domain.model.MovingAverage;
 import com.lxbluem.state.domain.model.Progress;
 import com.lxbluem.state.domain.model.State;
-import com.lxbluem.state.domain.model.request.*;
+import com.lxbluem.state.domain.model.request.DccFinishRequest;
+import com.lxbluem.state.domain.model.request.DccProgressRequest;
+import com.lxbluem.state.domain.model.request.DccStartRequest;
+import com.lxbluem.state.domain.model.request.ExitRequest;
+import com.lxbluem.state.domain.model.request.FailRequest;
+import com.lxbluem.state.domain.model.request.InitRequest;
+import com.lxbluem.state.domain.model.request.NoticeMessageRequest;
+import com.lxbluem.state.domain.model.request.RenameBotRequest;
 import com.lxbluem.state.domain.ports.StateRepository;
 
 import java.time.Clock;
@@ -16,8 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import static com.lxbluem.state.domain.model.DccState.*;
-import static java.util.stream.Collectors.toList;
+import static com.lxbluem.state.domain.model.DccState.FAIL;
+import static com.lxbluem.state.domain.model.DccState.FINISH;
+import static com.lxbluem.state.domain.model.DccState.INIT;
+import static com.lxbluem.state.domain.model.DccState.PROGRESS;
+import static com.lxbluem.state.domain.model.DccState.START;
 
 public class StateService {
 
@@ -173,7 +183,7 @@ public class StateService {
                                 || entry.getValue().getBotState().equals(BotState.EXIT)
                 )
                 .map(Map.Entry::getKey)
-                .collect(toList());
+                .toList();
 
         bots.forEach(stateRepository::removeStateByBotName);
         presenter.accept(bots);

@@ -17,9 +17,32 @@ import com.lxbluem.irc.NewBotVerticle;
 import com.lxbluem.irc.adapters.InMemoryBotStorage;
 import com.lxbluem.irc.adapters.InMemoryStateStorage;
 import com.lxbluem.irc.adapters.KittehIrcBotFactory;
-import com.lxbluem.irc.domain.interactors.*;
-import com.lxbluem.irc.domain.interactors.subhandlers.*;
-import com.lxbluem.irc.domain.ports.incoming.*;
+import com.lxbluem.irc.domain.interactors.ChangeNickNameImpl;
+import com.lxbluem.irc.domain.interactors.ExitBotImpl;
+import com.lxbluem.irc.domain.interactors.InitializeBotImpl;
+import com.lxbluem.irc.domain.interactors.JoinMentionedChannelsImpl;
+import com.lxbluem.irc.domain.interactors.LookForPackUserImpl;
+import com.lxbluem.irc.domain.interactors.NoticeMessageHandlerImpl;
+import com.lxbluem.irc.domain.interactors.PrepareDccTransferImpl;
+import com.lxbluem.irc.domain.interactors.RegisterNickNameImpl;
+import com.lxbluem.irc.domain.interactors.ScheduledTaskExecutionImpl;
+import com.lxbluem.irc.domain.interactors.SkipProtectedChannelImpl;
+import com.lxbluem.irc.domain.interactors.ToggleDccTransferStartedImpl;
+import com.lxbluem.irc.domain.interactors.subhandlers.AlreadyDownloadedNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.FailureNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.JoinMoreChannelsNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.NickNameRegisteredNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.QueuedNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.RegisterNickNameNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.SendingYouPackNoticeMessageHandler;
+import com.lxbluem.irc.domain.interactors.subhandlers.XdccSearchPackResponseMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.ExitBot;
+import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
+import com.lxbluem.irc.domain.ports.incoming.LookForPackUser;
+import com.lxbluem.irc.domain.ports.incoming.NoticeMessageHandler;
+import com.lxbluem.irc.domain.ports.incoming.PrepareDccTransfer;
+import com.lxbluem.irc.domain.ports.incoming.RegisterNickName;
+import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
 import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
@@ -148,7 +171,7 @@ public class Starter {
 
     private static void deploy(Vertx vertx, Verticle verticle) {
         vertx.deployVerticle(verticle, deploymentId ->
-            logDeployment(verticle, deploymentId));
+                logDeployment(verticle, deploymentId));
     }
 
     private static void deployWithHook(Vertx vertx, Verticle verticle, Handler<AsyncResult<String>> hook) {

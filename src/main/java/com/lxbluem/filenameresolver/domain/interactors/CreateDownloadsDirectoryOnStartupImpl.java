@@ -17,11 +17,11 @@ public class CreateDownloadsDirectoryOnStartupImpl implements CreateDownloadsDir
     public void execute() {
         fileSystem.fileOrDirExists(downloadsPath)
                 .flatMap(exists -> {
-                    if (!exists)
+                    if (Boolean.FALSE.equals(exists))
                         return fileSystem
                                 .mkdir(downloadsPath);
                     return Single.just(null);
                 })
-        .subscribe();
+                .subscribe();
     }
 }

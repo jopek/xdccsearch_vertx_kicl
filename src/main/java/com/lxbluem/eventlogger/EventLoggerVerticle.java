@@ -15,8 +15,8 @@ public class EventLoggerVerticle extends AbstractVerticle {
         EventBus eventBus = vertx.eventBus();
 
         eventBus.addOutboundInterceptor(handler -> {
-            Message message = handler.message();
-            LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
+                    Message<Object> message = handler.message();
+                    LOG.trace("A:[{}] RA:[{}] H:[{}] B:[{}]",
                             message.address(),
                             message.replyAddress(),
                             message.headers(),

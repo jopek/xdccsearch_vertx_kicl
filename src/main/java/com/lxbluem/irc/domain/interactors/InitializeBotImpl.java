@@ -8,7 +8,11 @@ import com.lxbluem.irc.domain.model.State;
 import com.lxbluem.irc.domain.model.request.BotConnectionDetails;
 import com.lxbluem.irc.domain.model.request.InitializeBotCommand;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
-import com.lxbluem.irc.domain.ports.outgoing.*;
+import com.lxbluem.irc.domain.ports.outgoing.BotFactory;
+import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
+import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
+import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 import java.util.function.Consumer;
 

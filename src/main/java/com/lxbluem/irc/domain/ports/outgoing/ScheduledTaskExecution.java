@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit;
 
 public interface ScheduledTaskExecution {
 
-  void scheduleTask(String botNickName, Runnable task, long l, TimeUnit minutes);
+    void scheduleTask(String botNickName, Runnable task, long l, TimeUnit minutes);
 
-  void stop(String botNickName);
+    void stop(String botNickName);
 }

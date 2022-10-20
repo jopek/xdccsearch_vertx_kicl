@@ -19,7 +19,6 @@ public class FailureNoticeMessageHandler implements NoticeMessageHandler.SubHand
     @Override
     public boolean handle(NoticeMessageCommand command) {
         String botNickName = command.getBotNickName();
-        String remoteName = command.getRemoteName();
         String noticeMessage = command.getNoticeMessage();
 
         String lowerCaseNoticeMessage = noticeMessage.toLowerCase();

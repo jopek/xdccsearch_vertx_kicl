@@ -26,7 +26,7 @@ class FileSystemBlockingTest {
     }
 
     @Test
-    @Disabled
+    @Disabled("disabled because it expects the downloads folder to exist - debugging helper test")
     void readdir() {
         List<String> downloads = fs.readDir("downloads");
         System.out.println(String.join("\n", downloads));

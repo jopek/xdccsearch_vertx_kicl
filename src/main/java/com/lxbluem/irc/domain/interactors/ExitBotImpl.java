@@ -9,6 +9,7 @@ import com.lxbluem.irc.domain.model.request.ReasonedExitCommand;
 import com.lxbluem.irc.domain.model.request.RequestedExitCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
+import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
 public class ExitBotImpl implements ExitBot {
@@ -28,9 +29,9 @@ public class ExitBotImpl implements ExitBot {
     @Override
     public void handle(RequestedExitCommand requestedExitCommand) {
         String botNickName = requestedExitCommand.getBotNickName();
-        botStorage.get(botNickName)
+        IrcBot ircBot = botStorage.get(botNickName)
                 .orElseThrow(() -> new BotNotFoundException(botNickName));
-        commonExit(botNickName, "requested shutdown");
+        commonExit(ircBot.getBotName(), "requested shutdown");
     }
 
     @Override

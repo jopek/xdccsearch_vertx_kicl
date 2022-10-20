@@ -64,6 +64,7 @@ public class FilenameMapper {
     public String getFsFilename(String packFilename, int suffix) {
         return getFsFilename(packFilename, suffix, true);
     }
+
     public String getFsFilename(String packFilename, int suffix, boolean addPartSuffix) {
         List<String> nameElements = getNameElements(packFilename);
         int size = nameElements.size();
@@ -99,7 +100,7 @@ public class FilenameMapper {
 
         return split.stream()
                 .filter(s -> !noPatternMatch(s, p, patternCount))
-                .map(s -> s.replaceAll("[^0-9]", ""))
+                .map(s -> s.replaceAll("\\D", ""))
                 .map(Integer::parseInt)
                 .findFirst()
                 .orElse(0);

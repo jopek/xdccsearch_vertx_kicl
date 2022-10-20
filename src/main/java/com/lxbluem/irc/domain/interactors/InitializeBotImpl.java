@@ -55,14 +55,14 @@ public class InitializeBotImpl implements InitializeBot {
     }
 
     private BotConnectionDetails connectionDetailsFromPack(Pack pack, String botNickName) {
-        return BotConnectionDetails.builder()
-                .botNick(botNickName)
-                .name("name_" + botNickName)
-                .user("user_" + botNickName)
-                .realName("realname_" + botNickName)
-                .serverHostName(pack.getServerHostName())
-                .serverPort(pack.getServerPort())
-                .build();
+        return new BotConnectionDetails(
+                pack.getServerHostName(),
+                pack.getServerPort(),
+                botNickName,
+                "name_" + botNickName,
+                "user_" + botNickName,
+                "realname_" + botNickName
+        );
     }
 
     private Runnable dccRequestHook(String botNickName, Pack pack) {

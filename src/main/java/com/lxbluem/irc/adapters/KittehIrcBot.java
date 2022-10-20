@@ -62,17 +62,17 @@ public class KittehIrcBot implements IrcBot {
 
     @Override
     public void connect(BotConnectionDetails connectionDetails) {
-        botName = connectionDetails.getBotNick();
+        botName = connectionDetails.botNick();
         client = Client.builder()
                 .server()
-                .host(connectionDetails.getServerHostName())
-                .port(connectionDetails.getServerPort())
+                .host(connectionDetails.serverHostName())
+                .port(connectionDetails.serverPort())
                 .secure(false)
                 .then()
                 .nick(botName)
-                .name(connectionDetails.getName())
-                .user(connectionDetails.getUser())
-                .realName(connectionDetails.getRealName())
+                .name(connectionDetails.name())
+                .user(connectionDetails.user())
+                .realName(connectionDetails.realName())
                 .build();
 
         client.getEventManager().registerEventListener(this);

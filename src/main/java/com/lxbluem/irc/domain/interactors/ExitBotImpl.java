@@ -29,9 +29,7 @@ public class ExitBotImpl implements ExitBot {
     public void handle(RequestedExitCommand requestedExitCommand) {
         String botNickName = requestedExitCommand.getBotNickName();
         botStorage.get(botNickName)
-                .orElseThrow(() ->
-                        new BotNotFoundException(botNickName)
-                );
+                .orElseThrow(() -> new BotNotFoundException(botNickName));
         commonExit(botNickName, "requested shutdown");
     }
 

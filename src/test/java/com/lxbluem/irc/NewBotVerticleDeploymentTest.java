@@ -16,7 +16,9 @@ import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.reactivex.ext.unit.Async;
 import io.vertx.reactivex.ext.unit.TestContext;
 import lombok.Data;
@@ -28,7 +30,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 @ExtendWith(VertxExtension.class)
@@ -65,7 +69,7 @@ class NewBotVerticleDeploymentTest {
 
     @Test
     @Timeout(value = 3)
-    void register_route(TestContext context) {
+    void register_route(VertxTestContext context) {
         @Data
         class ExpectedRouteRegistry {
             final String path;
@@ -77,18 +81,17 @@ class NewBotVerticleDeploymentTest {
                 new ExpectedRouteRegistry("/xfers/:botname", "NewBotVerticle:DELETE:/xfers/:botname", "DELETE")
         ).iterator();
 
-        Async botConnect = context.async(2);
+        Checkpoint botConnect = context.checkpoint(2);
         vertx.eventBus()
                 .<JsonObject>consumer("route", m -> {
-                    botConnect.countDown();
+                    botConnect.flag();
                     JsonObject body = m.body();
                     ExpectedRouteRegistry expected = expectedIterator.next();
-                    context.assertEquals(expected.getPath(), body.getString("path"));
-                    context.assertEquals(expected.getTarget(), body.getString("target"));
-                    context.assertEquals(expected.getMethod(), body.getString("method"));
+                    context.verify(() -> assertThat(body)
+                            .isEqualTo(JsonObject.mapFrom(expected))
+                    );
                 });
 
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
-        botConnect.await();
+        vertx.deployVerticle(verticle, context.succeeding());
     }
 }

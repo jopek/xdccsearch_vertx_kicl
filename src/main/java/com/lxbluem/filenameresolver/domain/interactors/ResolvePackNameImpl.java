@@ -62,14 +62,14 @@ public class ResolvePackNameImpl implements ResolvePackName {
                 .reduce(0, Math::max);
 
 
-        if (complete.size() > 0) {
+        if (!complete.isEmpty()) {
             String fullPath = complete.get(complete.size() - 1);
             String path = String.format("%s/%s", downloadsPath, basename(fullPath));
             Response response = new Response(path, fileSizes.get(fullPath), true);
             return Single.just(response);
         }
 
-        if (partials.size() > 0) {
+        if (!partials.isEmpty()) {
             Map<String, FileEntity> fileEntityMap = storage
                     .findByNameAndSize(requestedFilename, requestedFileSize)
                     .stream()

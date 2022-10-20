@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -216,9 +217,12 @@ class StateTest {
                 .serverPort(6667)
                 .channelName("#MainChannel")
                 .build();
+
         assertNull(pack.getNickName());
-        new State(pack, () -> {
-        });
+        assertThatThrownBy(() -> new State(pack, () -> {
+        }))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("remote user bot cannot be null");
     }
 
     private Pack getPack() {

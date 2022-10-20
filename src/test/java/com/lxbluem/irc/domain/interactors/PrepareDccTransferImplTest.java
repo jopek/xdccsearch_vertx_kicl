@@ -58,8 +58,6 @@ class PrepareDccTransferImplTest {
         botMessaging = mock(BotMessaging.class);
         ircBot = mock(IrcBot.class);
         eventDispatcher = mock(EventDispatcher.class);
-        NameGenerator nameGenerator = mock(NameGenerator.class);
-        when(nameGenerator.getNick()).thenReturn("Andy");
 
         StateStorage stateStorage = new InMemoryStateStorage();
         BotStorage botStorage = new InMemoryBotStorage();

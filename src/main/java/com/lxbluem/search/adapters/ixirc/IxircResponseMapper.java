@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class IxircResponseMapper {
+    private IxircResponseMapper(){}
+
     public static SearchGateway.SearchResponse mapToSearchResponse(JsonObject jsonObject) {
         JsonArray ixircResults = jsonObject.getJsonArray("results", new JsonArray());
         int pageCount = jsonObject.getInteger("pc", 0);

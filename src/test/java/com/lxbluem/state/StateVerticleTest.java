@@ -8,7 +8,9 @@ import com.lxbluem.state.domain.model.State;
 import com.lxbluem.state.domain.ports.StateRepository;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.reactivex.ext.unit.Async;
 import io.vertx.reactivex.ext.unit.TestContext;
 import io.vertx.rxjava.core.Vertx;
@@ -26,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +53,8 @@ class StateVerticleTest {
 
 
     @Test
-    void register_route(TestContext context) {
+//    @Timeout(5)
+    void register_route(VertxTestContext context) throws InterruptedException {
         @Data
         class ExpectedRouteRegistry {
             final String path;
@@ -62,19 +66,27 @@ class StateVerticleTest {
                 new ExpectedRouteRegistry("/state", "StateVerticle:GET:/state", "GET")
         ).iterator();
 
-        Async registerRoutes = context.async(2);
+        context.checkpoint(2);
         vertx.eventBus()
                 .<JsonObject>consumer("route", m -> {
-                    registerRoutes.countDown();
+                    context.checkpoint();
                     JsonObject body = m.body();
                     ExpectedRouteRegistry expected = expectedIterator.next();
-                    context.assertEquals(expected.getPath(), body.getString("path"));
-                    context.assertEquals(expected.getTarget(), body.getString("target"));
-                    context.assertEquals(expected.getMethod(), body.getString("method"));
+                    assertThat(expected)
+                            .extracting(
+                                    ExpectedRouteRegistry::getPath,
+                                    ExpectedRouteRegistry::getTarget,
+                                    ExpectedRouteRegistry::getMethod
+                            )
+                            .containsExactlyInAnyOrder(
+                                    body.getString("path"),
+                                    body.getString("target"),
+                                    body.getString("method")
+                            );
                 });
 
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess());
-        registerRoutes.await();
+        vertx.deployVerticle(verticle, context.completing());
+        context.awaitCompletion(100, TimeUnit.MILLISECONDS);
     }
 
     private Pack testPack() {
@@ -106,7 +118,7 @@ class StateVerticleTest {
 
     @Test
     @Timeout(value = 30)
-    void initialise_state(TestContext context) {
+    void initialise_state(VertxTestContext context) {
 
         vertx.eventBus().addOutboundInterceptor(
                 dc -> {
@@ -117,15 +129,13 @@ class StateVerticleTest {
                     dc.next();
                 });
 
-        Async stateSent = context.async();
         vertx.eventBus().<JsonObject>consumer(Address.STATE.address(), m -> {
             JsonObject body = m.body();
-            context.verify(ignored -> assertEquals(expectedInitialState().encodePrettily(), body.encodePrettily()));
-            stateSent.complete();
+            context.verify(() -> assertEquals(expectedInitialState().encodePrettily(), body.encodePrettily()));
         });
-        Async deploymentComplete = context.async();
-        vertx.deployVerticle(verticle, context.asyncAssertSuccess(result -> deploymentComplete.complete()));
-        deploymentComplete.await();
+
+        Checkpoint deploymentComplete = context.checkpoint();
+        vertx.deployVerticle(verticle, context.succeeding(result -> deploymentComplete.flag()));
 
         JsonObject init_message = new JsonObject()
                 .put("bot", "Andy")
@@ -133,7 +143,6 @@ class StateVerticleTest {
                 .put("pack", JsonObject.mapFrom(testPack()));
         vertx.eventBus().publish(Address.BOT_INITIALIZED.address(), init_message);
 
-        stateSent.await();
     }
 
     private JsonObject expectedInitialState() {

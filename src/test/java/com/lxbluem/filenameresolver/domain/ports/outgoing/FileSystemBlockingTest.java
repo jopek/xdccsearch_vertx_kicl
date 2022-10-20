@@ -2,9 +2,11 @@ package com.lxbluem.filenameresolver.domain.ports.outgoing;
 
 import com.lxbluem.filenameresolver.domain.interactors.FileSystemBlockingImpl;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.reactivex.ext.unit.TestContext;
 import io.vertx.rxjava.core.Vertx;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -18,12 +20,13 @@ class FileSystemBlockingTest {
     private FileSystemBlocking fs;
 
     @BeforeEach
-    void setUp(TestContext context) {
+    void setUp() {
         Vertx vertx = Vertx.vertx();
         fs = new FileSystemBlockingImpl(vertx.fileSystem());
     }
 
     @Test
+    @Disabled
     void readdir() {
         List<String> downloads = fs.readDir("downloads");
         System.out.println(String.join("\n", downloads));

@@ -31,8 +31,8 @@ class GeneralQuickTest {
         DecodeTestingClass decoded = Json.decodeValue(content, DecodeTestingClass.class);
         assertEquals("lala", decoded.text);
 
-        DecodeTestingClass decoded2 = Json.decodeValue("", DecodeTestingClass.class);
-        assertEquals("", decoded2.text);
+        DecodeTestingClass decoded2 = Json.decodeValue("{}", DecodeTestingClass.class);
+        assertNull(decoded2.text);
 
     }
 

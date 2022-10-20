@@ -8,11 +8,13 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryContext;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.reactivex.ext.unit.Async;
-import io.vertx.reactivex.ext.unit.TestContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,20 +22,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EventbusInterceptorVerticleTest {
     @Test
     @Timeout(5)
-    void interceptMessages(TestContext context) {
+    void interceptMessages(VertxTestContext context) throws InterruptedException {
         Vertx vertx = Vertx.vertx();
         vertx.eventBus().addOutboundInterceptor(interceptor("out"));
         vertx.eventBus().addInboundInterceptor(interceptor("in"));
-
         Verticle testVerticle = new TestVerticle();
-        Async async = context.async();
-        vertx.deployVerticle(testVerticle, context.asyncAssertSuccess(v -> async.complete()));
-        async.await();
+        vertx.deployVerticle(testVerticle, context.succeeding());
+
         vertx.eventBus()
-                .request("topic", "TEST", context.asyncAssertSuccess(m -> System.out.println(m.body())));
+                .request("topic", "TEST", context.completing());
 
-        assertTrue(async.isCompleted());
+        context.awaitCompletion(100, TimeUnit.MILLISECONDS);
 
+        assertTrue(context.completed());
     }
 
     private Handler<DeliveryContext<Object>> interceptor(String direction) {

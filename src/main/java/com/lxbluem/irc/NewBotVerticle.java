@@ -60,7 +60,8 @@ public class NewBotVerticle extends AbstractRouteVerticle {
             InitializeBotCommand initializeBotCommand = new InitializeBotCommand(pack);
             String botNickName = initializeBot.handle(initializeBotCommand);
             result.complete(new JsonObject().put("bot", botNickName));
-        } catch (Throwable t) {
+            System.out.println(">>>>>>>>>");
+        } catch (Exception t) {
             result.fail(t);
         }
     }
@@ -71,7 +72,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         try {
             exitBot.handle(new RequestedExitCommand(botNickName));
             result.complete(new JsonObject().put("bot", botNickName));
-        } catch (Throwable t) {
+        } catch (Exception t) {
             result.fail(t);
         }
     }
@@ -81,7 +82,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
                 .<JsonObject>consumer(address.address(), event -> {
                     try {
                         method.call(event.body());
-                    } catch (Throwable t) {
+                    } catch (Exception t) {
                         event.fail(500, t.getMessage());
                     }
                 });

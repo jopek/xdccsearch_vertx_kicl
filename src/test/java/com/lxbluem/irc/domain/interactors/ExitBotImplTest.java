@@ -76,8 +76,8 @@ class ExitBotImplTest {
 
         verify(ircBot, never()).cancelDcc("keex");
         verify(ircBot).terminate();
-        verify(eventDispatcher, times(1)).dispatch(any(BotExitedEvent.class));
-        verifyNoInteractions(ircBot, botMessaging, eventDispatcher);
+        verify(eventDispatcher).dispatch(any(BotExitedEvent.class));
+        verifyNoMoreInteractions(ircBot, botMessaging, eventDispatcher);
 
         state.channelNickList("#download", Arrays.asList("keex", "user2", "user3"));
 
@@ -156,7 +156,6 @@ class ExitBotImplTest {
     void terminate_bot_manually_for_missing_bot() {
         RequestedExitCommand nonexistent = new RequestedExitCommand("nonexistent");
         assertThrows(BotNotFoundException.class, () -> exitBot.handle(nonexistent));
-        verify(ircBot).terminate();
 
         verifyNoMoreInteractions(botMessaging, ircBot, eventDispatcher);
     }

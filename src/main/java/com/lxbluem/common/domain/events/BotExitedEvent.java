@@ -1,13 +1,11 @@
 package com.lxbluem.common.domain.events;
 
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@EqualsAndHashCode
 public class BotExitedEvent extends BotEvent {
     private String message;
 
@@ -15,5 +13,23 @@ public class BotExitedEvent extends BotEvent {
     public BotExitedEvent(String botNickName, String message) {
         super.bot = botNickName;
         this.message = message;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BotExitedEvent)) return false;
+        if (!super.equals(o)) return false;
+
+        BotExitedEvent that = (BotExitedEvent) o;
+
+        return getMessage().equals(that.getMessage());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + getMessage().hashCode();
+        return result;
     }
 }

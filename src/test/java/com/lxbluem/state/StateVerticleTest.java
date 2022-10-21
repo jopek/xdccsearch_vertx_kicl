@@ -11,8 +11,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.reactivex.ext.unit.Async;
-import io.vertx.reactivex.ext.unit.TestContext;
 import io.vertx.rxjava.core.Vertx;
 import lombok.Data;
 import org.junit.jupiter.api.AfterEach;
@@ -85,8 +83,7 @@ class StateVerticleTest {
                             );
                 });
 
-        vertx.deployVerticle(verticle, context.completing());
-        context.awaitCompletion(100, TimeUnit.MILLISECONDS);
+        vertx.deployVerticle(verticle, context.succeedingThenComplete());
     }
 
     private Pack testPack() {

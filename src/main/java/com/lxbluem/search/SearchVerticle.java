@@ -5,7 +5,6 @@ import com.lxbluem.common.infrastructure.AbstractRouteVerticle;
 import com.lxbluem.common.infrastructure.SerializedRequest;
 import com.lxbluem.search.domain.callback.Callback;
 import com.lxbluem.search.domain.ports.ListMatchingPacks;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -42,7 +41,7 @@ public class SearchVerticle extends AbstractRouteVerticle {
     }
 
     @Override
-    public void start(Future<Void> startFuture) {
+    public void start(Promise<Void> startFuture) {
         registerRoute(GET, "/search", this::handleRoutedHttpSearchRequest)
                 .onComplete(startFuture);
     }

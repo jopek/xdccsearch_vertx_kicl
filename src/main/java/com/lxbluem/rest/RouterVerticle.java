@@ -2,8 +2,8 @@ package com.lxbluem.rest;
 
 import com.lxbluem.common.infrastructure.Address;
 import com.lxbluem.common.infrastructure.SerializedRequest;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.BridgeEventType;
@@ -35,7 +35,7 @@ public class RouterVerticle extends AbstractVerticle {
     private final Map<String, AtomicInteger> verticleCounter = new HashMap<>();
 
     @Override
-    public void start(Future<Void> startFuture) {
+    public void start(Promise<Void> start) {
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
         router.route("/eventbus/*").subRouter(eventBusHandler());
@@ -44,16 +44,16 @@ public class RouterVerticle extends AbstractVerticle {
 
         Router api = Router.router(vertx);
         api.route("/time").handler(rc -> rc.response().end(String.valueOf(Instant.now().toEpochMilli())));
-        router.mountSubRouter("/api", api);
+        router.route("/api/*").subRouter(api);
 
         vertx.createHttpServer()
                 .requestHandler(router)
                 .listen(8080, event -> {
                     if (event.succeeded()) {
                         LOG.info("listening on port {}  [deployid:{}]", event.result().actualPort(), deploymentID());
-                        startFuture.complete();
+                        start.complete();
                     } else {
-                        startFuture.fail(event.cause());
+                        start.fail(event.cause());
                     }
                 });
 
@@ -137,7 +137,7 @@ public class RouterVerticle extends AbstractVerticle {
 
                     SerializedRequest serializedRequest = SerializedRequest.builder()
                             .method(method)
-                            .body(rc.getBody().toString())
+                            .body(rc.body().toString())
                             .headers(headers)
                             .params(params)
                             .build();

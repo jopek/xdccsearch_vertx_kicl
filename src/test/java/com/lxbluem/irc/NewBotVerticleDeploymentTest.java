@@ -19,8 +19,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.reactivex.ext.unit.Async;
-import io.vertx.reactivex.ext.unit.TestContext;
 import lombok.Data;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,6 +90,6 @@ class NewBotVerticleDeploymentTest {
                     );
                 });
 
-        vertx.deployVerticle(verticle, context.succeeding());
+        vertx.deployVerticle(verticle, context.succeedingThenComplete());
     }
 }

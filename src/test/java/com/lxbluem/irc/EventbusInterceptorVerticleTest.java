@@ -1,15 +1,14 @@
 package com.lxbluem.irc;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryContext;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.reactivex.ext.unit.Async;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,10 +26,10 @@ class EventbusInterceptorVerticleTest {
         vertx.eventBus().addOutboundInterceptor(interceptor("out"));
         vertx.eventBus().addInboundInterceptor(interceptor("in"));
         Verticle testVerticle = new TestVerticle();
-        vertx.deployVerticle(testVerticle, context.succeeding());
+        vertx.deployVerticle(testVerticle, context.succeedingThenComplete());
 
         vertx.eventBus()
-                .request("topic", "TEST", context.completing());
+                .request("topic", "TEST", context.succeedingThenComplete());
 
         context.awaitCompletion(100, TimeUnit.MILLISECONDS);
 
@@ -49,7 +48,7 @@ class EventbusInterceptorVerticleTest {
 
     private static class TestVerticle extends AbstractVerticle {
         @Override
-        public void start(Future<Void> startFuture) {
+        public void start(Promise<Void> startFuture) {
             EventBus eventBus = vertx.eventBus();
             eventBus.consumer("topic")
                     .handler(message -> {

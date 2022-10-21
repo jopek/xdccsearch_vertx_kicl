@@ -14,7 +14,6 @@ import com.lxbluem.irc.domain.model.request.ToggleDccTransferStartedCommand;
 import com.lxbluem.irc.domain.ports.incoming.ExitBot;
 import com.lxbluem.irc.domain.ports.incoming.InitializeBot;
 import com.lxbluem.irc.domain.ports.incoming.ToggleDccTransferStarted;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -46,7 +45,7 @@ public class NewBotVerticle extends AbstractRouteVerticle {
     }
 
     @Override
-    public void start(Future<Void> start) {
+    public void start(Promise<Void> start) {
         registerRoute(POST, "/xfers", this::startTransfer);
         registerRoute(DELETE, "/xfers/:botname", this::stopTransfer)
                 .onComplete(start);

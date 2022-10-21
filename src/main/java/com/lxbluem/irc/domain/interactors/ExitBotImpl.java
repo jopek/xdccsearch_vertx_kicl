@@ -12,6 +12,8 @@ import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
 
+import java.util.Optional;
+
 public class ExitBotImpl implements ExitBot {
     private final BotStorage botStorage;
     private final StateStorage stateStorage;
@@ -29,9 +31,9 @@ public class ExitBotImpl implements ExitBot {
     @Override
     public void handle(RequestedExitCommand requestedExitCommand) {
         String botNickName = requestedExitCommand.getBotNickName();
-        IrcBot ircBot = botStorage.get(botNickName)
-                .orElseThrow(() -> new BotNotFoundException(botNickName));
-        commonExit(ircBot.getBotName(), "requested shutdown");
+        if (botStorage.get(botNickName).isEmpty())
+            throw new BotNotFoundException(botNickName);
+        commonExit(botNickName, "requested shutdown");
     }
 
     @Override

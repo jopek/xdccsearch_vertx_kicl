@@ -1,18 +1,8 @@
 package com.lxbluem.state.domain.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+public record Progress(long size, long time) {
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class Progress {
-    public long size;
-    public long time;
-
-    public void setProgress(Progress other) {
-        size = other.size;
-        time = other.time;
+    public Progress(Progress other) {
+        this(other.size, other.time);
     }
 }

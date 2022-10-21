@@ -29,13 +29,13 @@ public class MovingAverage {
         Progress lastElement = q.get(index);
 
         Progress reference = q.stream()
-                .filter(p -> p.time + secondsToSave * 1000L < lastElement.time)
+                 .filter(p -> p.time() + secondsToSave * 1000L < lastElement.time())
                 .findFirst()
                 .orElse(q.get(0));
 
-        long dt = lastElement.time - reference.time;
+        long dt = lastElement.time() - reference.time();
 
-        return (dt == 0) ? lastElement.size : 1d * (lastElement.size - reference.size) / dt;
+        return (dt == 0) ? lastElement.size() : 1d * (lastElement.size() - reference.size()) / dt;
     }
 
     public void addValue(Progress val) {

@@ -32,25 +32,43 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(VertxExtension.class)
 class NewBotVerticleTest {
 
-    private IrcBot mockBot;
-    private final String startAddress = "NewBotVerticle:POST:/xfers";
-    private final String stopAddress = "NewBotVerticle:DELETE:/xfers/:botname";
-    private final JsonObject startMessage = new JsonObject()
+
+    public static final JsonObject PACK = new JsonObject()
+            .put("cname", "#download")
+            .put("n", 1)
+            .put("name", "lala")
+            .put("gets", 0)
+            .put("nname", "local")
+            .put("naddr", "192.168.99.100")
+            .put("nport", 6668)
+            .put("uname", "remoteBotName")
+            .put("sz", 0)
+            .put("szf", null)
+            .put("age", 0)
+            .put("agef", null)
+            .put("last", 0)
+            .put("lastf", null);
+    public static final Instant INSTANT = Instant.ofEpochMilli(1666650521368L);
+    private static final String START_ADDRESS = "NewBotVerticle:POST:/xfers";
+    private static final String STOP_ADDRESS = "NewBotVerticle:DELETE:/xfers/:botname";
+    private static final JsonObject START_MESSAGE = new JsonObject()
             .put("method", "POST")
-            .put("body", "{  \"name\": \"lala\",  \"nname\": \"local\",  \"naddr\": \"192.168.99.100\",  \"nport\": 6668,  \"cname\": \"#download\",  \"uname\": \"remoteBotName\",  \"n\": 1}");
+            .put("body", PACK.encode());
+    private IrcBot mockBot;
 
     @BeforeEach
     void setUp(VertxTestContext context, Vertx vertx) {
@@ -59,7 +77,7 @@ class NewBotVerticleTest {
         String botNickName = "Andy";
         NameGenerator nameGenerator = () -> botNickName;
 
-        Clock clock = Clock.systemDefaultZone();
+        Clock clock = Clock.fixed(INSTANT, ZoneId.systemDefault());
         BotStorage botStorage = new InMemoryBotStorage();
         StateStorage stateStorage = new InMemoryStateStorage();
         mockBot = mock(IrcBot.class);
@@ -82,43 +100,59 @@ class NewBotVerticleTest {
 
     @Test
     @Timeout(value = 3_000)
-    void startTransfer_bot_connects_to_irc(VertxTestContext context, Vertx vertx) {
+    void startTransfer_bot_connects_to_irc(VertxTestContext context, Vertx vertx) throws Throwable {
         vertx.eventBus()
-                .<JsonObject>request(startAddress, startMessage, context.succeeding(m ->
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
                         assertThat(m.body().getString("bot")).isEqualTo("Andy")));
 
-        Checkpoint botConnect = context.checkpoint();
-        vertx.eventBus().consumer("bot.init", m -> botConnect.flag());
+        BotConnectionDetails expected = new BotConnectionDetails(
+                "192.168.99.100",
+                6668,
+                "Andy",
+                "name_Andy",
+                "user_Andy",
+                "realname_Andy");
+        Checkpoint checkpoint = context.checkpoint();
+        vertx.eventBus().consumer("bot.init", message -> {
+            checkpoint.flag();
+        });
+        context.awaitCompletion(4, TimeUnit.SECONDS);
+        context.verify(() -> {
+            verify(mockBot).connect(expected);
+            verify(mockBot).joinChannel("#download");
+        });
+    }
 
-        ArgumentCaptor<BotConnectionDetails> connectionDetailsCaptor = ArgumentCaptor.forClass(BotConnectionDetails.class);
-        verify(mockBot).connect(connectionDetailsCaptor.capture());
+    @Test
+    @Timeout(value = 3_000)
+    void startTransfer_sends_event(VertxTestContext context, Vertx vertx) throws InterruptedException {
+        vertx.eventBus()
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
+                        assertThat(m.body().getString("bot")).isEqualTo("Andy")));
 
-        BotConnectionDetails connectionDetails = connectionDetailsCaptor.getValue();
-        assertThat(connectionDetails).isEqualTo(
-                new BotConnectionDetails(
-                        "192.168.99.100",
-                        6668,
-                        "Andy",
-                        "name_Andy",
-                        "user_Andy",
-                        "realname_Andy"
-                )
-        );
+        JsonObject expectedMessage = new JsonObject()
+                .put("timestamp", INSTANT.toEpochMilli())
+                .put("bot", "Andy")
+                .put("pack", PACK);
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(mockBot).joinChannel(captor.capture());
-        assertEquals("#download", captor.getValue());
+        Checkpoint checkpoint = context.checkpoint();
+        vertx.eventBus().consumer("bot.init", message -> {
+            checkpoint.flag();
+            context.verify(
+                    () -> assertThat(message.body()).isEqualTo(expectedMessage)
+            );
+        });
     }
 
     @Test()
     @Timeout(value = 3_000)
     void stopTransfer_fails_when_bot_missing(VertxTestContext context, Vertx vertx) {
-        JsonObject stopMessage = new JsonObject()
+        JsonObject failingMessage = new JsonObject()
                 .put("method", "DELETE")
                 .put("params", new JsonObject().put("botname", "missing"));
 
         vertx.eventBus()
-                .request(stopAddress, stopMessage, context.failing(
+                .request(STOP_ADDRESS, failingMessage, context.failing(
                         reply -> {
                             assertThat(reply).hasMessage("bot 'missing' not found");
                             context.completeNow();
@@ -130,7 +164,7 @@ class NewBotVerticleTest {
     @Timeout(value = 3_000)
     void stopTransfer_via_request(VertxTestContext context, Vertx vertx) {
         vertx.eventBus()
-                .<JsonObject>request(startAddress, startMessage, context.succeeding(m ->
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
                         assertThat(m.body().getString("bot")).isEqualTo("Andy"))
                 );
 
@@ -138,8 +172,10 @@ class NewBotVerticleTest {
         vertx.eventBus()
                 .<JsonObject>consumer(Address.BOT_EXITED.address(), result -> {
                     JsonObject body = result.body();
-                    assertThat(body.getString("bot")).isEqualTo("Andy");
-                    assertThat(body.getMap().keySet()).containsAll(List.of("bot", "timestamp"));
+                    context.verify(() -> {
+                        assertThat(body.getMap().keySet()).containsAll(List.of("bot", "timestamp", "message"));
+                        assertThat(body.getString("bot")).isEqualTo("Andy");
+                    });
                     messageCp.flag();
                 });
 
@@ -151,7 +187,7 @@ class NewBotVerticleTest {
         System.out.printf("serialized https request: %s\n", stopMessage.encode());
         Checkpoint replyCp = context.checkpoint();
         vertx.eventBus()
-                .<JsonObject>request(stopAddress, stopMessage, context.succeeding(reply -> {
+                .<JsonObject>request(STOP_ADDRESS, stopMessage, context.succeeding(reply -> {
                     JsonObject body = reply.body();
                     assertThat(body.getString("bot")).isEqualTo("Andy");
                     replyCp.flag();
@@ -162,7 +198,7 @@ class NewBotVerticleTest {
     @Timeout(value = 3_000)
     void stopTransfer_because_dcc_transfer_finished(VertxTestContext context, Vertx vertx) {
         vertx.eventBus()
-                .<JsonObject>request(startAddress, startMessage, context.succeeding(m ->
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
                         assertThat(m.body().getString("bot")).isEqualTo("Andy")));
 
         Checkpoint messageCp = context.checkpoint();
@@ -186,7 +222,7 @@ class NewBotVerticleTest {
     @Timeout(value = 3_000)
     void stopTransfer_because_dcc_transfer_failed(VertxTestContext context, Vertx vertx) {
         vertx.eventBus()
-                .<JsonObject>request(startAddress, startMessage, context.succeeding(m ->
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
                         assertThat(m.body().getString("bot")).isEqualTo("Andy")));
 
         Checkpoint exitAsync = context.checkpoint();
@@ -210,7 +246,7 @@ class NewBotVerticleTest {
     @Timeout(value = 3_000)
     void stopTransfer_via_request_cancels_transfer_when_dcc_transfer_started(VertxTestContext context, Vertx vertx) {
         vertx.eventBus()
-                .<JsonObject>request(startAddress, startMessage, context.succeeding(m ->
+                .<JsonObject>request(START_ADDRESS, START_MESSAGE, context.succeeding(m ->
                         assertThat(m.body().getString("bot")).isEqualTo("Andy")));
 
         Checkpoint messageCp = context.checkpoint();
@@ -235,7 +271,7 @@ class NewBotVerticleTest {
 
         System.out.printf("serialized https request: %s\n", stopMessage.encode());
         vertx.eventBus()
-                .<JsonObject>request(stopAddress, stopMessage, context.succeeding(reply -> {
+                .<JsonObject>request(STOP_ADDRESS, stopMessage, context.succeeding(reply -> {
                     JsonObject body = reply.body();
                     assertThat(body.getString("bot")).isEqualTo("Andy");
                     System.out.printf("stop request reply: %s\n", body.encode());

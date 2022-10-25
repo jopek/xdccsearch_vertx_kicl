@@ -18,10 +18,8 @@ public class BotExitedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BotExitedEvent)) return false;
+        if (!(o instanceof BotExitedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        BotExitedEvent that = (BotExitedEvent) o;
 
         return getMessage().equals(that.getMessage());
     }

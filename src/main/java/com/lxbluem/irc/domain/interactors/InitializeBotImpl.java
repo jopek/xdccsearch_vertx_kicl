@@ -13,9 +13,11 @@ import com.lxbluem.irc.domain.ports.outgoing.BotStorage;
 import com.lxbluem.irc.domain.ports.outgoing.IrcBot;
 import com.lxbluem.irc.domain.ports.outgoing.NameGenerator;
 import com.lxbluem.irc.domain.ports.outgoing.StateStorage;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.Consumer;
 
+@Slf4j
 public class InitializeBotImpl implements InitializeBot {
     private final NameGenerator nameGenerator;
     private final BotFactory botFactory;

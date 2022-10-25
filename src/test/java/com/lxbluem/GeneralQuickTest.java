@@ -1,5 +1,6 @@
 package com.lxbluem;
 
+import com.lxbluem.common.infrastructure.SerializedRequest;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.DecodeException;
@@ -7,13 +8,16 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 //@Ignore
@@ -109,5 +113,35 @@ class GeneralQuickTest {
         assertTrue(StringUtils.containsOnly("", valid));
         assertFalse(StringUtils.containsOnly(null, valid));
         assertFalse(StringUtils.containsOnly("undefined", valid));
+    }
+
+    @Test
+    void serialization_via_strings() {
+        record SimpleNest(String text){}
+        record Simple(String text, SimpleNest nested){}
+        Simple simple = new Simple("aaa", new SimpleNest("inside"));
+
+        String entriesEncodePrettily = Json.encode(simple);
+        JsonObject entriesMapFrom = JsonObject.mapFrom(simple);
+        System.out.println(entriesEncodePrettily);
+        System.out.println(entriesMapFrom);
+
+        Object decodeValue = Json.decodeValue(entriesEncodePrettily, Simple.class);
+        Simple mapTo = entriesMapFrom.mapTo(Simple.class);
+        assertThat(mapTo).isEqualTo(simple);
+    }
+
+    @Test
+    void serialization_via_jsons() {
+        String encode = new JsonObject().put("kkey", "vval").encode();
+        SerializedRequest sr = new SerializedRequest(
+                "GET",
+                Map.of(),
+                Map.of(),
+                encode);
+
+        JsonObject entries = JsonObject.mapFrom(sr);
+
+        SerializedRequest decodeValue = Json.decodeValue(entries.encode(), SerializedRequest.class);
     }
 }

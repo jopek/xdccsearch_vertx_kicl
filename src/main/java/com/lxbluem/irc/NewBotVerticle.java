@@ -19,9 +19,9 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.functions.Action1;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static com.lxbluem.common.infrastructure.Address.DCC_FAILED;
 import static com.lxbluem.common.infrastructure.Address.DCC_FINISHED;
@@ -78,11 +78,11 @@ public class NewBotVerticle extends AbstractRouteVerticle {
         }
     }
 
-    private void handle(Address address, Action1<JsonObject> method) {
+    private void handle(Address address, Consumer<JsonObject> method) {
         vertx.eventBus()
                 .<JsonObject>consumer(address.address(), event -> {
                     try {
-                        method.call(event.body());
+                        method.accept(event.body());
                     } catch (Exception t) {
                         event.fail(500, t.getMessage());
                     }

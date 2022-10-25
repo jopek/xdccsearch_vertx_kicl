@@ -13,11 +13,14 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SyncStorageFromFsImplTest {
     private FileSystemBlocking fileSystem;
     private FileEntityStorage storage;
+
     private SyncStorageFromFs uut;
 
     @BeforeEach
@@ -72,5 +75,12 @@ class SyncStorageFromFsImplTest {
         assertFalse(storage.findByFileName("File._x1x_.part").isPresent());
         assertTrue(storage.findByFileName("File._x0x_.part").isPresent());
         assertTrue(storage.findByFileName("AnotherFile._x0x_.part").isPresent());
+    }
+
+    @Test
+    void createDownloadsDirectoryWhenMissing() {
+        when(fileSystem.fileOrDirExists(anyString())).thenReturn(false);
+        uut.execute();
+        verify(fileSystem).mkdir("downloads");
     }
 }

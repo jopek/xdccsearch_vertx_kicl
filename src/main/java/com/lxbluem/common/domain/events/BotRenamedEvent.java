@@ -21,10 +21,8 @@ public class BotRenamedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BotRenamedEvent)) return false;
+        if (!(o instanceof BotRenamedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        BotRenamedEvent that = (BotRenamedEvent) o;
 
         if (!getRenameto().equals(that.getRenameto())) return false;
         return getMessage().equals(that.getMessage());

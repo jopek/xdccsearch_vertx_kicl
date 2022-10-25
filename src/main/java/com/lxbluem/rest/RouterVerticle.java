@@ -137,7 +137,7 @@ public class RouterVerticle extends AbstractVerticle {
 
                     SerializedRequest serializedRequest = SerializedRequest.builder()
                             .method(method)
-                            .body(rc.body().toString())
+                            .body(rc.body().asString())
                             .headers(headers)
                             .params(params)
                             .build();

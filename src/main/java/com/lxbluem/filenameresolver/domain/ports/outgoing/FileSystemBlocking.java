@@ -3,7 +3,7 @@ package com.lxbluem.filenameresolver.domain.ports.outgoing;
 import java.util.List;
 
 public interface FileSystemBlocking {
-    Boolean fileOrDirExists(String path);
+    boolean fileOrDirExists(String path);
 
     void mkdir(String path);
 

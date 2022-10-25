@@ -16,7 +16,7 @@ public class FileSystemBlockingImpl implements FileSystemBlocking {
 
 
     @Override
-    public Boolean fileOrDirExists(String path) {
+    public boolean fileOrDirExists(String path) {
         return vertxFileSystem.existsBlocking(path);
     }
 

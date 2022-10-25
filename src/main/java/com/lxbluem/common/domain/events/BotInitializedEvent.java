@@ -19,10 +19,8 @@ public class BotInitializedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BotInitializedEvent)) return false;
+        if (!(o instanceof BotInitializedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        BotInitializedEvent that = (BotInitializedEvent) o;
 
         return getPack().equals(that.getPack());
     }

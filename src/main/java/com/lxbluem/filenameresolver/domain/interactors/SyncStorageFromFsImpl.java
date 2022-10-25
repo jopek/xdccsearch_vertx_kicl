@@ -20,6 +20,7 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
 
     @Override
     public void execute() {
+        ensureDestinationDirectoryExists();
         List<String> directoryListing = fileSystem.readDir(downloadsPath)
                 .stream()
                 .map(this::basename)
@@ -39,6 +40,13 @@ public class SyncStorageFromFsImpl implements SyncStorageFromFs {
         toAdd.forEach(fileEntity -> fileEntity.setInUse(false));
 
         fileEntityStorage.saveAll(toAdd);
+    }
+
+    private void ensureDestinationDirectoryExists() {
+        boolean fileOrDirExists = fileSystem.fileOrDirExists(downloadsPath);
+        if (fileOrDirExists)
+            return;
+        fileSystem.mkdir(downloadsPath);
     }
 
     private String basename(String canonicalPath) {

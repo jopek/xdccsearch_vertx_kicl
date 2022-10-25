@@ -18,10 +18,8 @@ public class DccFailedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DccFailedEvent)) return false;
+        if (!(o instanceof DccFailedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        DccFailedEvent that = (DccFailedEvent) o;
 
         return getMessage().equals(that.getMessage());
     }

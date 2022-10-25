@@ -18,10 +18,8 @@ public class DccQueuedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DccQueuedEvent)) return false;
+        if (!(o instanceof DccQueuedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        DccQueuedEvent that = (DccQueuedEvent) o;
 
         return getMessage().equals(that.getMessage());
     }

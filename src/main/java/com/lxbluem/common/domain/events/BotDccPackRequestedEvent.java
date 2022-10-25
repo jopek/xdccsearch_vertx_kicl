@@ -22,10 +22,8 @@ public class BotDccPackRequestedEvent extends BotEvent {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BotDccPackRequestedEvent)) return false;
+        if (!(o instanceof BotDccPackRequestedEvent that)) return false;
         if (!super.equals(o)) return false;
-
-        BotDccPackRequestedEvent that = (BotDccPackRequestedEvent) o;
 
         if (getPackNumber() != that.getPackNumber()) return false;
         if (!getMessage().equals(that.getMessage())) return false;

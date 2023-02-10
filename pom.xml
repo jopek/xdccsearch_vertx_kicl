@@ -11,7 +11,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>17</java.version>
-        <vertx.version>4.3.4</vertx.version>
+        <vertx.version>4.3.8</vertx.version>
         <kitteh.irc.client-lib.version>7.2.0</kitteh.irc.client-lib.version>
         <lombok.version>1.18.24</lombok.version>
         <main.verticle>com.lxbluem.Starter</main.verticle>
